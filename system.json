@@ -1,46 +1,44 @@
 {
-    "id": "lotm",
-    "title": "Lord of The Mysteries System",
-    "description": "The TTRPG system for Lord of The Mysteries",
-    "version": "0.0.1",
-    "authors": [
-        {
-            "name": "DrTrog"
-        }
-    ],
-    "compatibility":{
-        "minimum": 14,
-        "verified": "14.359"
-    },
-    "esmodules": [
-        "lotm.js"
-    ],
-    "styles": [
-        "lotm.css"
-    ],
-    "languages": [
-        {
-            "lang": "en",
-            "name": "English",
-            "path": "lang/en.json"
-        }
-    ],
-    "socket": false,
-    "grid": {
-        "distance": 1,
-        "units": "Meter"
-    },
-    "url": "https://github.com/DrTrogalstaid/Lord_of_The_Mysteries_TTRPG_v3_FoundryVTT_System",
-    "manifest": "https://github.com/DrTrogalstaid/Lord_of_The_Mysteries_TTRPG_v3_FoundryVTT_System/blob/main/system.json",
-    "download": "",
-    "background": "systems/lotm/assets/backgrounds/lotm-background-main.jpg",
-    "documentTypes": {
-        "Actor": {
-            "Player_Character": {
-                "htmlFields": [
-                    "details.description"
-                ]
-            }
-        }
+  "id": "lotm",
+  "title": "Lord Of The Mysteries",
+  "description": "The Lord Of The Mysteries system for FoundryVTT!",
+  "authors": [
+    {
+      "name": "DrTrog"
     }
+  ],
+  "url": "https://github.com/DrTrogalstaid/Lord_of_The_Mysteries_TTRPG_v3_FoundryVTT_System.git",
+  "license": "LICENSE.txt",
+  "readme": "README.md",
+  "media": [
+    {
+      "type": "setup",
+      "url": "systems/lotm/assets/anvil-impact.png",
+      "thumbnail": "systems/lotm/assets/anvil-impact.png"
+    }
+  ],
+  "version": "0.0.1",
+  "compatibility": {
+    "minimum": 14,
+    "verified": "14.365"
+  },
+  "esmodules": ["module/lotm.mjs"],
+  "styles": ["css/lotm.css"],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "packs": [],
+  "packFolders": [],
+  "socket": false,
+  "manifest": "Replace this with a link to the /latest release system.json so people can receive updates after they've installed the system",
+  "download": "This must link to a .zip file of the current version",
+  "background": "systems/lotm/assets/backgrounds/lotm-background-main.jpg",
+  "gridDistance": 5,
+  "gridUnits": "ft",
+  "primaryTokenAttribute": "health",
+  "secondaryTokenAttribute": "power"
 }
