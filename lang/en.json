@@ -1,6 +1,6 @@
 {
   "LORD_OF_THE_MYSTERIES": {
-    "attributes": {
+    "Attributes": {
       "Str": { "long": "Strength", "abbr": "str" },
       "Agi": { "long": "Agility", "abbr": "agi" },
       "Wil": { "long": "Wilpower", "abbr": "wil" },
@@ -11,6 +11,14 @@
       "Edu": { "long": "Education", "abbr": "edu" }
     },
     
+    "Resources": {
+      "Health": { "long": "Health", "abbr": "hp" },
+      "Spirit": { "long": "Spirit", "abbr": "sp" },
+      "Rationality": { "long": "Rationality", "abbr": "rp" },
+      "Luck": { "long": "Luck", "abbr": "lp" },
+      "Spirituality": { "long": "Spirituality", "abbr": "spp" }
+    },
+
     "SheetLabels": {
       "Actor": "LordOfTheMysteries Actor Sheet",
       "Item": "LordOfTheMysteries Item Sheet"

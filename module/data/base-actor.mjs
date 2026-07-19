@@ -12,28 +12,47 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
       const requiredInteger = { required: true, nullable: false, integer: true };
       const schema = {};
 
-      schema.resources = new fields.SchemaField({
-          health: new fields.SchemaField({
-              value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 }),
-              max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 })
-          }),
-          spirit: new fields.SchemaField({
-              value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
-              max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
-          }),
-          rationality: new fields.SchemaField({
-              value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
-              max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
-          }),
-          luck: new fields.SchemaField({
-              value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          spirituality: new fields.SchemaField({
-              value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          })
-      });
+    // Iterate over attribute names and create a new SchemaField for each.
+    schema.resources = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.resources).reduce((obj, resource) => {
+        obj[resource] = new fields.SchemaField({
+            value: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
+            max: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0}),
+        });
+        return obj;
+    }, {}));
+
+    schema.resources = new fields.SchemaField({
+        health: new fields.SchemaField({
+            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 }),
+            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 })
+        }),
+        spirit: new fields.SchemaField({
+            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
+            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
+        }),
+        rationality: new fields.SchemaField({
+            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
+            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
+        }),
+        luck: new fields.SchemaField({
+            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+        }),
+        spirituality: new fields.SchemaField({
+            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+        })
+    });
+
+    // Iterate over attribute names and create a new SchemaField for each.
+    schema.attributes = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.attributes).reduce((obj, attribute) => {
+        obj[attribute] = new fields.SchemaField({
+            base: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
+            beyonder_bonus: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
+            corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0})
+        });
+        return obj;
+    }, {}));
 
       // schema.attributes = new fields.SchemaField({
       //     strength: new fields.SchemaField({
