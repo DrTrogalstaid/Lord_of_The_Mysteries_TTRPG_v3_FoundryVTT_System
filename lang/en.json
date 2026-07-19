@@ -1,13 +1,16 @@
 {
   "LORD_OF_THE_MYSTERIES": {
-    "Ability": {
+    "attributes": {
       "Str": { "long": "Strength", "abbr": "str" },
-      "Con": { "long": "Constitution", "abbr": "con" },
-      "Dex": { "long": "Dexterity", "abbr": "dex" },
-      "Int": { "long": "Intelligence", "abbr": "int" },
-      "Wis": { "long": "Wisdom", "abbr": "wis" },
-      "Cha": { "long": "Charisma", "abbr": "cha" }
+      "Agi": { "long": "Agility", "abbr": "agi" },
+      "Wil": { "long": "Wilpower", "abbr": "wil" },
+      "Phy": { "long": "Physique", "abbr": "phy" },
+      "Cha": { "long": "Charisma", "abbr": "cha" },
+      "Ins": { "long": "Inspiration", "abbr": "ins" },
+      "Luc": { "long": "Luck", "abbr": "luc" },
+      "Edu": { "long": "Education", "abbr": "edu" }
     },
+    
     "SheetLabels": {
       "Actor": "LordOfTheMysteries Actor Sheet",
       "Item": "LordOfTheMysteries Item Sheet"

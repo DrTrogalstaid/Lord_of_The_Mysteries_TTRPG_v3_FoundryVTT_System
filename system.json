@@ -13,8 +13,8 @@
   "media": [
     {
       "type": "setup",
-      "url": "systems/lotm/assets/anvil-impact.png",
-      "thumbnail": "systems/lotm/assets/anvil-impact.png"
+      "url": "systems/lotm/assets/backgrounds/lotm-background-main.jpg",
+      "thumbnail": "systems/lotm/assets/backgrounds/lotm-background-main.jpg"
     }
   ],
   "version": "0.0.1",
