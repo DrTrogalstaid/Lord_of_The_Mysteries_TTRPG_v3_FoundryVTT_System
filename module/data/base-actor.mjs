@@ -35,48 +35,48 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
           })
       });
 
-      schema.attributes = new fields.SchemaField({
-          strength: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          agility: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          willpower: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          physique: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          charisma: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          inspiration: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          luck: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-          education: new fields.SchemaField({
-              base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-              corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-          }),
-      });
+      // schema.attributes = new fields.SchemaField({
+      //     strength: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     agility: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     willpower: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     physique: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     charisma: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     inspiration: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     luck: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      //     education: new fields.SchemaField({
+      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
+      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
+      //     }),
+      // });
 
       schema.armor = new fields.NumberField({ required: true, integer: true, min: 0, initial: 0});
       schema.dodge = new fields.NumberField({ required: true, integer: true, min: 0, initial: 0});

@@ -4,20 +4,25 @@ export const LORD_OF_THE_MYSTERIES = {};
  * The set of Ability Scores used within the system.
  * @type {Object}
  */
-LORD_OF_THE_MYSTERIES.abilities = {
-  str: 'LORD_OF_THE_MYSTERIES.Ability.Str.long',
-  dex: 'LORD_OF_THE_MYSTERIES.Ability.Dex.long',
-  con: 'LORD_OF_THE_MYSTERIES.Ability.Con.long',
-  int: 'LORD_OF_THE_MYSTERIES.Ability.Int.long',
-  wis: 'LORD_OF_THE_MYSTERIES.Ability.Wis.long',
-  cha: 'LORD_OF_THE_MYSTERIES.Ability.Cha.long',
+LORD_OF_THE_MYSTERIES.attributes = {
+    str: 'LORD_OF_THE_MYSTERIES.Ability.Str.long',
+    agi: 'LORD_OF_THE_MYSTERIES.Ability.Agi.long',
+    wil: 'LORD_OF_THE_MYSTERIES.Ability.Wil.long',
+    phy: 'LORD_OF_THE_MYSTERIES.Ability.Phy.long',
+    cha: 'LORD_OF_THE_MYSTERIES.Ability.Cha.long',
+    ins: 'LORD_OF_THE_MYSTERIES.Ability.Ins.long',
+    luc: 'LORD_OF_THE_MYSTERIES.Ability.Luc.long',
+    edu: 'LORD_OF_THE_MYSTERIES.Ability.Edu.long',
+
 };
 
-LORD_OF_THE_MYSTERIES.abilityAbbreviations = {
-  str: 'LORD_OF_THE_MYSTERIES.Ability.Str.abbr',
-  dex: 'LORD_OF_THE_MYSTERIES.Ability.Dex.abbr',
-  con: 'LORD_OF_THE_MYSTERIES.Ability.Con.abbr',
-  int: 'LORD_OF_THE_MYSTERIES.Ability.Int.abbr',
-  wis: 'LORD_OF_THE_MYSTERIES.Ability.Wis.abbr',
-  cha: 'LORD_OF_THE_MYSTERIES.Ability.Cha.abbr',
+LORD_OF_THE_MYSTERIES.attributeAbbreviations = {
+    str: 'LORD_OF_THE_MYSTERIES.Ability.Str.abbr',
+    agi: 'LORD_OF_THE_MYSTERIES.Ability.Agi.abbr',
+    wil: 'LORD_OF_THE_MYSTERIES.Ability.Wil.abbr',
+    phy: 'LORD_OF_THE_MYSTERIES.Ability.Phy.abbr',
+    cha: 'LORD_OF_THE_MYSTERIES.Ability.Cha.abbr',
+    ins: 'LORD_OF_THE_MYSTERIES.Ability.Ins.abbr',
+    luc: 'LORD_OF_THE_MYSTERIES.Ability.Luc.abbr',
+    edu: 'LORD_OF_THE_MYSTERIES.Ability.Edu.abbr'
 };
