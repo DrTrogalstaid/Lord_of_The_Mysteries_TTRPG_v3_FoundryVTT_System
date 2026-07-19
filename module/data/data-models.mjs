@@ -1,12 +1,6 @@
-const {
-  HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, ObjectField
-} = foundry.data.fields;
-
 /*------------------*/
 /* Actor Models     */
 /*------------------*/
-
-
 class ActorData extends foundry.abstract.TypeDataModel {
     static defineSchema(){
         return {
@@ -137,16 +131,6 @@ class PlayerCharacterData extends ActorData {
             occupation: new StringField({ required: true}),
             race: new StringField({ required: true}),
             gender: new StringField({ required: true}),
-        };
-    }
-}
-
-
-class NPCData extends ActorData {
-    static defineSchema(){
-        return {
-            ...super.defineSchema(),
-
         };
     }
 }
