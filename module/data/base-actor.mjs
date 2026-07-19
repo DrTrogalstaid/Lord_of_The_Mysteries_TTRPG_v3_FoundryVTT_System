@@ -12,7 +12,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
       const requiredInteger = { required: true, nullable: false, integer: true };
       const schema = {};
 
-    // Iterate over attribute names and create a new SchemaField for each.
+    // Iterate over resources names and create a new SchemaField for each.
+    //TODO: Find a way to do this and set Luck and luck and spirituality to 0 on init
     schema.resources = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.resources).reduce((obj, resource) => {
         obj[resource] = new fields.SchemaField({
             value: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
@@ -21,30 +22,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         return obj;
     }, {}));
 
-    schema.resources = new fields.SchemaField({
-        health: new fields.SchemaField({
-            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 }),
-            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10 })
-        }),
-        spirit: new fields.SchemaField({
-            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
-            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
-        }),
-        rationality: new fields.SchemaField({
-            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10}),
-            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 10})
-        }),
-        luck: new fields.SchemaField({
-            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-        }),
-        spirituality: new fields.SchemaField({
-            value: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-            max: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-        })
-    });
-
-    // Iterate over attribute names and create a new SchemaField for each.
+    // Iterate over attributes names and create a new SchemaField for each.
     schema.attributes = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.attributes).reduce((obj, attribute) => {
         obj[attribute] = new fields.SchemaField({
             base: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
@@ -53,49 +31,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         });
         return obj;
     }, {}));
-
-      // schema.attributes = new fields.SchemaField({
-      //     strength: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     agility: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     willpower: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     physique: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     charisma: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     inspiration: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     luck: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      //     education: new fields.SchemaField({
-      //         base: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         beyonder_bonus: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0}),
-      //         corruption: new fields.NumberField({ required: true, integer: true, min: 0, initial: 0})
-      //     }),
-      // });
 
       schema.armor = new fields.NumberField({ required: true, integer: true, min: 0, initial: 0});
       schema.dodge = new fields.NumberField({ required: true, integer: true, min: 0, initial: 0});
@@ -111,11 +46,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         new fields.StringField({ required: true})
       );
 
-    
-    schema.power = new fields.SchemaField({
-      value: new fields.NumberField({ ...requiredInteger, initial: 5, min: 0 }),
-      max: new fields.NumberField({ ...requiredInteger, initial: 5 })
-    });
     schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
     return schema;

@@ -12,11 +12,11 @@
     },
     
     "Resources": {
-      "Health": { "long": "Health", "abbr": "hp" },
-      "Spirit": { "long": "Spirit", "abbr": "sp" },
-      "Rationality": { "long": "Rationality", "abbr": "rp" },
-      "Luck": { "long": "Luck", "abbr": "lp" },
-      "Spirituality": { "long": "Spirituality", "abbr": "spp" }
+      "Health": { "long": "Health Points", "abbr": "hp" },
+      "Spirit": { "long": "Spirit Points", "abbr": "sp" },
+      "Rationality": { "long": "Rationality Points", "abbr": "rp" },
+      "Luck": { "long": "Luck Points", "abbr": "lp" },
+      "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
     },
 
     "SheetLabels": {

@@ -14,27 +14,29 @@
         and it will add a small amount of padding, a border, and will
         center all of its child elements content and text. --}}
         <div class="resource flex-group-center">
-          <label for="system.resources.health.value" class="resource-label">Health</label>
+          <label for="system.resources.hp.value" class="resource-label">Health</label>
           <div class="resource-content flexrow flex-center flex-between">
-          <input type="text" name="system.resources.health.value" value="{{system.resources.health.value}}" data-dtype="Number"/>
+          <input type="text" name="system.resources.health.value" value="{{system.resources.hp.value}}" data-dtype="Number"/>
           <span> / </span>
-          <input type="text" name="system.resources.health.max" value="{{system.resources.health.max}}" data-dtype="Number"/>
+          <input type="text" name="system.resources.health.max" value="{{system.resources.hp.max}}" data-dtype="Number"/>
           </div>
         </div>
 
         <div class="resource flex-group-center">
-          <label for="system.power.value" class="resource-label">Power</label>
+          <label for="system.resources.sp" class="resource-label">Spirit</label>
           <div class="resource-content flexrow flex-center flex-between">
-          <input type="text" name="system.power.value" value="{{system.power.value}}" data-dtype="Number"/>
+          <input type="text" name="system.resources.sp" value="{{system.resources.sp.value}}" data-dtype="Number"/>
           <span> / </span>
-          <input type="text" name="system.power.max" value="{{system.power.max}}" data-dtype="Number"/>
+          <input type="text" name="system.resources.sp.max" value="{{system.resources.sp.max}}" data-dtype="Number"/>
           </div>
         </div>
 
         <div class="resource flex-group-center">
-          <label for="system.attributes.level.value" class="resource-label">Level</label>
+          <label for="system.resources.ra" class="resource-label">Rationality</label>
           <div class="resource-content flexrow flex-center flex-between">
-          <input type="text" name="system.attributes.level.value" value="{{system.attributes.level.value}}" data-dtype="Number"/>
+          <input type="text" name="system.resources.rp" value="{{system.resources.rp.value}}" data-dtype="Number"/>
+          <span> / </span>
+          <input type="text" name="system.resources.rp.max" value="{{system.resources.rp.max}}" data-dtype="Number"/>
           </div>
         </div>
 
