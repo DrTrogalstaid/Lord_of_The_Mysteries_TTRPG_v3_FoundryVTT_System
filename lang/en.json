@@ -35,6 +35,17 @@
       "Temporary": "Temporary Effects",
       "Passive": "Passive Effects",
       "Inactive": "Inactive Effects"
+    },
+    "SheetTitles": {
+        "PlayerCharacter": "Player Character"
+    },
+    "Tabs": {
+        "Character": "Character Info",
+        "Biography": "Biography",
+        "Strength": "Strength",
+        "Charisma": "Charisma",
+        "Agility": "Agility",
+        "Perception": "Perception"
     }
   },
 

@@ -2,6 +2,7 @@
 import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
 // Import sheet classes.
+import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
 import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
 // Import helper/utility classes and constants.
@@ -63,6 +64,12 @@ Hooks.once('init', function () {
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
   });
+  Actors.registerSheet('lotm', PlayerCharacterSheet, {
+    types: ['character'], // whatever `type` PlayerCharacterData is registered under
+    makeDefault: true,
+    label: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
+  });
+
   Items.unregisterSheet('core', ItemSheet);
   Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
     makeDefault: true,

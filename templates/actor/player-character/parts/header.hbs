@@ -1,0 +1,50 @@
+<section class="pc-header-box">
+
+  <div class="name-row">
+    <label for="actor-name">Name:</label>
+    <input id="actor-name" type="text" name="name" value="{{actor.name}}" placeholder="Name" />
+  </div>
+
+  <div class="header-main">
+
+    <div class="portrait-box" data-action="editImage" data-edit="img">
+      <img class="portrait-img" src="{{actor.img}}" alt="{{actor.name}}" />
+    </div>
+
+    <div class="header-info">
+
+      <div class="sequence-row">
+        <span class="sequence-title-label">Sequence Title:</span>
+        <input
+          class="sequence-title-input"
+          type="text"
+          name="system.SequenceData.current_sequence.title"
+          value="{{system.SequenceData.current_sequence.title}}"
+        />
+        <span class="pathway-label">({{system.SequenceData.pathway.common_name}})</span>
+      </div>
+
+      <div class="basic-info-row">
+        <div class="info-field">
+          <label>Age:</label>
+          <input type="number" name="system.age" value="{{system.age}}" />
+        </div>
+        <div class="info-field">
+          <label>Occupation:</label>
+          <input type="text" name="system.occupation" value="{{system.occupation}}" />
+        </div>
+        <div class="info-field">
+          <label>Race:</label>
+          <input type="text" name="system.race" value="{{system.race}}" />
+        </div>
+        <div class="info-field">
+          <label>Gender:</label>
+          <input type="text" name="system.gender" value="{{system.gender}}" />
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
