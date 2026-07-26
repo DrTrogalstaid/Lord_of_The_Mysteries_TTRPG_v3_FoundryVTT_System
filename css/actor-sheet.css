@@ -21,7 +21,7 @@
    with display: grid so the parts can be arranged with grid-template-areas instead. */
 .lotm.sheet.actor .window-content {
   display: grid;
-  grid-template-columns: 184px 1fr;
+  grid-template-columns: 190px 1fr;
   grid-template-rows: auto auto 1fr;
   grid-template-areas:
     "header header"
@@ -178,8 +178,8 @@
 
 .lotm.sheet.actor .sheet-sidebar {
   border: 1px solid var(--psx-border);
-  border-radius: var(--psx-radius);
-  padding: 4px;
+  border-radius: 10px;
+  padding: 6px;
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
@@ -187,9 +187,27 @@
   overflow-y: auto;
 }
 
+.lotm.sheet.actor .pool-container,
+.lotm.sheet.actor .defense-box {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--psx-border);
+  padding-bottom: 6px;
+}
+
 .lotm.sheet.actor .pool-row {
   display: flex;
   gap: 6px;
+  align-self: center;
+}
+
+.lotm.sheet.actor .pool-box {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
 }
 
 .lotm.sheet.actor .pool-box,
@@ -200,10 +218,11 @@
   background: var(--psx-panel);
   padding: 4px;
   text-align: center;
+  width: 50%;
 }
 
 .lotm.sheet.actor .pool-box.centered {
-  width: 70%;
+  width: 50%;
   align-self: center;
 }
 
@@ -235,6 +254,8 @@
 .lotm.sheet.actor .rest-row {
   display: flex;
   gap: 6px;
+  border-bottom: 1px solid var(--psx-border);
+  padding-bottom: 6px;
 }
 
 .lotm.sheet.actor .rest-btn,

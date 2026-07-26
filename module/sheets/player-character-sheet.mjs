@@ -19,7 +19,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   static DEFAULT_OPTIONS = {
     classes: ["lotm", "sheet", "actor", "player-character"],
     position: {
-      width: 660,
+      width: 850,
       height: 830
     },
     window: {
