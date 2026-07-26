@@ -21,7 +21,7 @@
    with display: grid so the parts can be arranged with grid-template-areas instead. */
 .lotm.sheet.actor .window-content {
   display: grid;
-  grid-template-columns: 175px 1fr;
+  grid-template-columns: 184px 1fr;
   grid-template-rows: auto auto 1fr;
   grid-template-areas:
     "header header"
@@ -110,6 +110,11 @@
   flex: 1;
 }
 
+.lotm.sheet.actor .header-rows {
+  display: flex;
+  flex-direction: row;
+}
+
 .lotm.sheet.actor .header-main {
   display: flex;
   gap: 12px;
@@ -120,7 +125,7 @@
   height: 96px;
   flex: 0 0 auto;
   border: 1px solid var(--psx-border);
-  border-radius: 50%;
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
 }
@@ -136,6 +141,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  padding-left: 10px;
 }
 
 .lotm.sheet.actor .sequence-title-label {
@@ -171,6 +177,9 @@
 /* -------------------------------------------------------------------- */
 
 .lotm.sheet.actor .sheet-sidebar {
+  border: 1px solid var(--psx-border);
+  border-radius: var(--psx-radius);
+  padding: 4px;
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
@@ -187,7 +196,7 @@
 .lotm.sheet.actor .stat-box {
   flex: 1;
   border: 1px solid var(--psx-border);
-  border-radius: 6px;
+  border-radius: 0px;
   background: var(--psx-panel);
   padding: 4px;
   text-align: center;
@@ -339,7 +348,7 @@
 
 .lotm.sheet.actor .attribute-cell {
   border: 1px solid var(--psx-border);
-  border-radius: 6px;
+  border-radius: 0px;
   text-align: center;
   padding: 4px;
 }
