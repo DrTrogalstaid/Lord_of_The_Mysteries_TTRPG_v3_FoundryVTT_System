@@ -3,11 +3,11 @@ import {
   prepareActiveEffectCategories,
 } from '../helpers/effects.mjs';
 
-/**
- * Extend the basic ActorSheet with some very simple modifications
- * @extends {ActorSheet}
- */
-export class LordOfTheMysteriesActorSheet extends ActorSheet {
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
+
+
+export class LordOfTheMysteriesActorSheet extends HandlebarsApplicationMixin(ActorSheetV2){
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {

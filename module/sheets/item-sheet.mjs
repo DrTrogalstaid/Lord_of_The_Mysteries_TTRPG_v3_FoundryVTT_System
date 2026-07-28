@@ -3,11 +3,12 @@ import {
   prepareActiveEffectCategories,
 } from '../helpers/effects.mjs';
 
-/**
- * Extend the basic ItemSheet with some very simple modifications
- * @extends {ItemSheet}
- */
-export class LordOfTheMysteriesItemSheet extends ItemSheet {
+
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ItemSheetV2 } = foundry.applications.sheets;
+
+
+export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /** @override */
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {

@@ -59,19 +59,19 @@ Hooks.once('init', function () {
   CONFIG.ActiveEffect.legacyTransferral = false;
 
   // Register sheet application classes
-  Actors.unregisterSheet('core', ActorSheet);
-  Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
+  foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
+  foundry.documents.collections.Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
   });
-  Actors.registerSheet('lotm', PlayerCharacterSheet, {
+  foundry.documents.collections.Actors.registerSheet('lotm', PlayerCharacterSheet, {
     types: ['character'], // whatever `type` PlayerCharacterData is registered under
     makeDefault: true,
     label: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
   });
 
-  Items.unregisterSheet('core', ItemSheet);
-  Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
+  foundry.documents.collections.Items.unregisterSheet('core', foundry.appv1.sheets.ItemSheet);
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Item',
   });
