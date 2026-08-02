@@ -3,6 +3,29 @@
  * @extends {Actor}
  */
 export class LordOfTheMysteriesActor extends Actor {
+  /**
+   * Fallback portrait used whenever an actor is created without a valid image.
+   * Covers every creation path (UI, macros, compendium imports, module code),
+   * not just the "Create Actor" dialog.
+   * @type {Record<string, string>}
+   */
+  static DEFAULT_IMAGES = {
+    character: "icons/svg/mystery-man.svg",
+    npc: "icons/svg/mystery-man.svg"
+  };
+
+  /** @override */
+  async _preCreate(data, options, user) {
+    const allowed = await super._preCreate(data, options, user);
+    if (allowed === false) return false;
+
+    const validExtension = /\.(png|jpeg|webp|svg|gif|avif|bmp)$/i;
+    if (!data.img || !validExtension.test(data.img)) {
+      const fallback = LordOfTheMysteriesActor.DEFAULT_IMAGES[data.type] ?? "icons/svg/mystery-man.svg";
+      this.updateSource({ img: fallback });
+    }
+  }
+
   /** @override */
   prepareData() {
     // Prepare data for the actor. Calling the super version of this executes

@@ -116,7 +116,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.tab = context.tabs.biography;
         // Single journal-style field for now (system.biography is a plain StringField).
         // Swap/extend this once the full Biography page layout is designed.
-        context.enrichedBiography = await TextEditor.enrichHTML(
+        context.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
           this.actor.system.biography ?? "",
           {
             secrets: this.actor.isOwner,
@@ -191,7 +191,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   static _onEditImage(event, target) {
     const attr = target.dataset.edit || "img";
     const current = foundry.utils.getProperty(this.actor, attr);
-    const fp = new FilePicker({
+    const fp = new foundry.applications.apps.FilePicker.implementation({
       type: "image",
       current,
       callback: path => this.actor.update({ [attr]: path })
