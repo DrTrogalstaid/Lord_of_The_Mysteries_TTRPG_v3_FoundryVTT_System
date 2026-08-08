@@ -17,7 +17,20 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /** @override */
   static DEFAULT_OPTIONS = {
+
+    tag: "form",
     classes: ["lotm", "sheet", "actor", "player-character"],
+    actions: {
+      shortRest: PlayerCharacterSheet._onShortRest,
+      longRest: PlayerCharacterSheet._onLongRest,
+      spendLuck: PlayerCharacterSheet._onSpendLuck,
+      spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
+      editImage: PlayerCharacterSheet._onEditImage
+    },
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false
+    },
     position: {
       width: 850,
       height: 830
@@ -25,43 +38,23 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     window: {
       resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
-    },
-    form: {
-      submitOnChange: true
-    },
-    actions: {
-      shortRest: PlayerCharacterSheet._onShortRest,
-      longRest: PlayerCharacterSheet._onLongRest,
-      spendLuck: PlayerCharacterSheet._onSpendLuck,
-      spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
-      editImage: PlayerCharacterSheet._onEditImage
     }
   };
 
   /** @override */
+  /** Pieces of the sheet that can be viewed and reloaded independently */
   static PARTS = {
-    header: {
-      template: "systems/lotm/templates/actor/player-character/parts/header.hbs"
-    },
-    sidebar: {
-      template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs"
-    },
-    tabs: {
-      // Doubles as the "Character Info" box header / page-selector shown in the mockup.
-      template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs"
-    },
-    character: {
-      template: "systems/lotm/templates/actor/player-character/character.hbs",
-      scrollable: [""]
-    },
-    biography: {
-      template: "systems/lotm/templates/actor/player-character/parts/biography.hbs",
-      scrollable: [""]
-    }
+
+    header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
+    sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
+    tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
+    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", scrollable: [""] },
+    biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] }
   };
 
   /** @override */
   static TABS = {
+    
     // The "Character Info" box's page selector (Character Info / Biography).
     sheet: {
       tabs: [
@@ -88,8 +81,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /* -------------------------------------------- */
 
   /** @override */
+  /** Creates Basic Datamodel, which is used to fill the HTML together with Handlbars with Data */
   async _prepareContext(options) {
+    
     const context = await super._prepareContext(options);
+    
     context.actor = this.actor;
     context.system = this.actor.system;
     context.source = this.actor.toObject().system;

@@ -1,13 +1,16 @@
 // Import document classes.
 import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
+
 // Import sheet classes.
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
 import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
+
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
+
 // Import DataModel classes
 import * as models from './data/_module.mjs';
 
