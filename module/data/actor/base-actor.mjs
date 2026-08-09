@@ -1,4 +1,4 @@
-import LordOfTheMysteriesDataModel from "./base-model.mjs";
+import LordOfTheMysteriesDataModel from "../base-model.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField
