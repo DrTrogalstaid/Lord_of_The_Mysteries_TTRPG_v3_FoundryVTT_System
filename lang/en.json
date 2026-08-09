@@ -1,0 +1,63 @@
+{
+  "LORD_OF_THE_MYSTERIES": {
+    "Attributes": {
+      "Str": { "long": "Strength", "abbr": "str" },
+      "Agi": { "long": "Agility", "abbr": "agi" },
+      "Wil": { "long": "Wilpower", "abbr": "wil" },
+      "Phy": { "long": "Physique", "abbr": "phy" },
+      "Cha": { "long": "Charisma", "abbr": "cha" },
+      "Ins": { "long": "Inspiration", "abbr": "ins" },
+      "Luc": { "long": "Luck", "abbr": "luc" },
+      "Edu": { "long": "Education", "abbr": "edu" }
+    },
+    
+    "Resources": {
+      "Health": { "long": "Health Points", "abbr": "hp" },
+      "Spirit": { "long": "Spirit Points", "abbr": "sp" },
+      "Rationality": { "long": "Rationality Points", "abbr": "rp" },
+      "Luck": { "long": "Luck Points", "abbr": "lp" },
+      "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
+    },
+
+    "SheetLabels": {
+      "Actor": "LordOfTheMysteries Actor Sheet",
+      "Item": "LordOfTheMysteries Item Sheet"
+    },
+    "Item": {
+      "Spell": {
+        "SpellLVL": "Level {level} Spells",
+        "AddLVL": "Add LVL {level}"
+      }
+    },
+    "Effect": {
+      "Source": "Source",
+      "Toggle": "Toggle Effect",
+      "Temporary": "Temporary Effects",
+      "Passive": "Passive Effects",
+      "Inactive": "Inactive Effects"
+    },
+    "SheetTitles": {
+        "PlayerCharacter": "Player Character"
+    },
+    "Tabs": {
+        "Character": "Character Info",
+        "Biography": "Biography",
+        "Strength": "Strength",
+        "Charisma": "Charisma",
+        "Agility": "Agility",
+        "Perception": "Perception"
+    }
+  },
+
+  "TYPES": {
+    "Actor": {
+      "character": "Character",
+      "npc": "NPC"
+    },
+    "Item": {
+      "item": "Item",
+      "feature": "Feature",
+      "spell": "Spell"
+    }
+  }
+}

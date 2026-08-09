@@ -1,0 +1,67 @@
+<section class="tab character-tab {{tab.cssClass}}" data-group="sheet" data-tab="character">
+
+  <div class="attributes-box">
+    <div class="box-title">Attributes</div>
+    <div class="attributes-grid">
+      {{#each attributesList}}
+      <div class="attribute-cell">
+        <div class="attribute-label">{{localize this.label}}</div>
+        <div class="attribute-total">{{this.total}}</div>
+        <div class="attribute-breakdown">
+          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
+          <span>+</span>
+          <input type="number" name="system.attributes.{{this.key}}.beyonder_bonus" value="{{this.beyonder_bonus}}" title="Beyonder Bonus" />
+          <span>+</span>
+          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="languages-box">
+    <span class="collapse-toggle" title="Collapse (not yet wired up)">&minus;</span>
+    <div class="box-title">Languages</div>
+    <div class="languages-columns">
+      <div class="language-column">
+        <label>Normal Languages:</label>
+        <ul class="language-list">
+          {{#each system.languages}}
+          {{#unless this.mystical}}
+          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
+          {{/unless}}
+          {{/each}}
+        </ul>
+      </div>
+      <div class="language-column">
+        <label>Mystical Languages:</label>
+        <ul class="language-list">
+          {{#each system.languages}}
+          {{#if this.mystical}}
+          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
+          {{/if}}
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+
+    <div class="skills-box">
+      <nav class="skill-tabs tabs" data-group="skills">
+        {{#each skillTabs}}
+        <a class="skill-tab {{this.cssClass}}" data-action="tab" data-group="skills" data-tab="{{this.id}}">
+          <span class="skill-tab-icon">+</span>{{localize this.label}}
+        </a>
+        {{/each}}
+      </nav>
+      <div class="skills-content">
+        {{#each skillTabs}}
+        <div class="tab skill-tab-panel {{this.cssClass}}" data-group="skills" data-tab="{{this.id}}">
+          <p class="placeholder-note">{{localize this.label}} skills coming soon.</p>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+
+  </div>
+
+</section>
