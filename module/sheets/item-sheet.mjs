@@ -54,7 +54,18 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
   /** @override */
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
-    parts.form.template = `systems/lotm/templates/item/item-${this.item.type}-sheet.hbs`;
+    
+    switch(this.document.type)
+    {
+      case "sequence":
+        parts.form.template = `systems/lotm/templates/item/character_building/sequence.hbs`;
+        break;
+      //TODO: Change this from the boilerplate. I dislike this naming convention.
+      default:
+        parts.form.template = `systems/lotm/templates/item/item-${this.item.type}-sheet.hbs`;
+        break;
+    }
+
     return parts;
   }
 

@@ -53,7 +53,8 @@ Hooks.once('init', function () {
   CONFIG.Item.dataModels = {
     item: models.LordOfTheMysteriesItem,
     feature: models.LordOfTheMysteriesFeature,
-    spell: models.LordOfTheMysteriesSpell
+    spell: models.LordOfTheMysteriesSpell,
+    sequence: models.LordOfTheMysteriesSequence
   }
 
   // Active Effects are never copied to the Actor,

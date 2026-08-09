@@ -6,15 +6,9 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     const fields = foundry.data.fields;
     const schema = super.defineSchema();
 
-    const fields = foundry.data.fields;
-    const requiredInteger = { required: true, nullable: false, integer: true };
-    const schema = {};
-    
     // Basic Information
-    schema.title = new fields.StringField({ required: true});
-    schema.appearance = new fields.StringField({ required: true});
-    schema.pathway = new fields.StringField({ required: true});
-    schema.sequence_number = new fields.NumberField(requiredInteger);
+    schema.pathway = new fields.StringField({ required: true, initial: "Pathway"});
+    schema.sequence_number = new fields.NumberField({ required: true, nullable: false, integer: true , initial: 9});
     
     // Bonuses
     schema.attribute_gain = new fields.ArrayField(
@@ -33,7 +27,7 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     );
 
     // Abilities
-    // NOTE: Each item in this list must mach the name of an ability
+    // NOTE: Each item in this list must mach the name of an ability/
     schema.abilities_gained = new fields.ArrayField(
         new fields.StringField({required: true})
     );
