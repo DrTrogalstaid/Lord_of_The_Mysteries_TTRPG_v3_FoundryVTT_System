@@ -37,7 +37,8 @@
       "Inactive": "Inactive Effects"
     },
     "SheetTitles": {
-        "PlayerCharacter": "Player Character"
+        "PlayerCharacter": "Player Character",
+        "Sequence": "Sequence"
     },
     "Tabs": {
         "Character": "Character Info",

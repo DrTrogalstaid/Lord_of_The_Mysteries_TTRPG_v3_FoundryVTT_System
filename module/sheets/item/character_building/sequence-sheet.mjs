@@ -1,36 +1,38 @@
+
 import {
   onManageActiveEffect,
   prepareActiveEffectCategories,
-} from '../helpers/effects.mjs';
-
+} from '../../../helpers/effects.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 
-export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['lotm', 'sheet', 'item'],
+  static DEFAULT_OPTIONS = {
+    tag: "form",
+    classes: ['lotm', 'sheet', 'item', 'sequence'],
+    form: {
+      submitOnChange: true,
+      closeOnSubmit: false
+    },
+    position: {
       width: 520,
       height: 480,
-      tabs: [
-        {
-          navSelector: '.sheet-tabs',
-          contentSelector: '.sheet-body',
-          initial: 'description',
-        },
-      ],
-    });
-  }
+    },
+    window: {
+      resizable: true,
+      title: "LORD_OF_THE_MYSTERIES.SheetTitles.Sequence"
+    }
+  };
 
   /** @override */
   // Placeholder path — the real per-type template is resolved in
   // _configureRenderParts() below, the V2 replacement for the old
   // `get template()` getter.
   static PARTS = {
-    form: { template: 'systems/lotm/templates/item/item-sheet.hbs'},
+    form: { template: 'systems/lotm/templates/item/character_building/sequence-sheet.hbs'},
   };
 
   /** @override */
@@ -55,8 +57,8 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
     
-    //TODO: Change this from the boilerplate. I dislike this naming convention. Use "this.document.type"
-    parts.form.template = `systems/lotm/templates/item/item-${this.item.type}-sheet.hbs`;
+    parts.form.template = `systems/lotm/templates/item/character_building/sequence.hbs`;
+                           
 
     return parts;
   }

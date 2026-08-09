@@ -6,6 +6,7 @@ import { LordOfTheMysteriesItem } from './documents/item.mjs';
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
 import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
+import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_building/sequence-sheet.mjs';
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
@@ -78,6 +79,11 @@ Hooks.once('init', function () {
   foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Item',
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesSequenceSheet, {
+    types: ['sequence'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Sequence'
   });
 
   // Preload Handlebars templates.
