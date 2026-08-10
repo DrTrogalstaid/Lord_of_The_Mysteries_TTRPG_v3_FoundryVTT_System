@@ -32,6 +32,7 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
   // _configureRenderParts() below, the V2 replacement for the old
   // `get template()` getter.
   static PARTS = {
+    header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
     form: { template: 'systems/lotm/templates/item/character_building/sequence-sheet.hbs'},
   };
 
