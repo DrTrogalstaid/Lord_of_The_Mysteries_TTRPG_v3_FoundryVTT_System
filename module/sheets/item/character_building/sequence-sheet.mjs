@@ -41,6 +41,7 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
     sheet: {
       tabs: [
         { id: 'description', label: 'LORD_OF_THE_MYSTERIES.Tabs.Description' },
+        { id: 'details', label: 'LORD_OF_THE_MYSTERIES.Tabs.Details'},
       ],
       initial: 'description',
     },
@@ -64,25 +65,23 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
     return parts;
   }
 
+
   /** @override */
-  async getData() {
+  async _prepareContext(options){
     // Retrieve base data structure.
-    const context = super.getData();
+    const context = await super._prepareContext(options);
 
     // Use a safe clone of the item data for further operations.
     const itemData = this.document.toPlainObject();
 
+    context.item = this.item;
+
     // Enrich description info for display
-    // Enrichment turns text like `[[/r 1d20]]` into buttons
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       this.item.system.description,
       {
         // Whether to show secret blocks in the finished html
         secrets: this.document.isOwner,
-        // Necessary in v11, can be removed in v12
-        async: true,
-        // Data to fill in for inline rolls
-        rollData: this.item.getRollData(),
         // Relative UUID resolution
         relativeTo: this.item,
       }
@@ -102,22 +101,21 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
   }
 
 
-  
-  /* -------------------------------------------- */
-
   /** @override */
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    super._onRender(context, options);
 
-    // Everything below here is only needed if the sheet is editable
+    this.element.querySelectorAll('prose-mirror').forEach((editor) => {
+      editor.addEventListener('save', () => this.submit());
+    });
+
     if (!this.isEditable) return;
 
-    // Roll handlers, click handlers, etc. would go here.
-
-    // Active Effect management
-    html.on('click', '.effect-control', (ev) =>
-      onManageActiveEffect(ev, this.item)
-    );
+    this.element.querySelectorAll('.effect-control').forEach((el) => {
+      el.addEventListener('click', (ev) => onManageActiveEffect(ev, this.item));
+    });
   }
+
+  /* -------------------------------------------- */
 
 }

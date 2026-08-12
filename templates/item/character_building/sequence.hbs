@@ -1,31 +1,43 @@
 <!--TODO: Change this to a sheet that can be filled out based on Sequence's data model data -->
-<form class="{{cssClass}}" autocomplete="off">
+<div class="{{cssClass}}">
 
   {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item" data-tab="description">Description</a>
-    <a class="item" data-tab="attributes">Attributes</a>
-    <a class="item" data-tab="effects">Effects</a>
+  <nav class="sheet-tabs tabs" data-group="sheet">
+    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
+    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
   </nav>
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
 
     {{!-- Description Tab --}}
-    <div class="tab" data-group="primary" data-tab="description">
+    <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
       {{!-- Editors must receive enriched text data from getData to properly handle rolls --}}
-      {{editor enrichedDescription target="system.description" engine="prosemirror" button=true editable=editable}}
+      {{#if editable}}
+        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
+          {{{enrichedDescription}}}
+        </prose-mirror>
+      {{else}}
+        {{{enrichedDescription}}}
+      {{/if}}
+
     </div>
 
-    {{!-- Attributes Tab --}}
-    <div class="tab attributes" data-group="primary" data-tab="attributes">
-      {{!-- As you add new fields, add them in here! --}}
+    {{!-- Details Tab --}}
+    <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
+      <!--Sequence Number (sequence number - overrides lower sequences on actor sheets)-->
+      <div class="resource flexrow">TODO</div>
+      <!--Acting Principals (string GM secret)-->
+      <div>TODO</div>
+      <!--Attribute Gain (list of attribute increases)-->
+      <div>TODO</div>
+      <!--Skill Increase (list of skill items/increases to add to actor)-->
+      <div>TODO</div>
+      <!--Abilities Gain (list of ability items that are added to actor)-->
+      <div>TODO</div>
+
     </div>
 
-    {{!-- Effects Tab --}}
-    <div class="tab effects" data-group="primary" data-tab="effects">
-      {{> "systems/lotm/templates/item/parts/item-effects.hbs"}}
-    </div>
   </section>
 
-</form>
+</div>

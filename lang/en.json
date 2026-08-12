@@ -46,7 +46,9 @@
         "Strength": "Strength",
         "Charisma": "Charisma",
         "Agility": "Agility",
-        "Perception": "Perception"
+        "Perception": "Perception",
+        "Description": "Description",
+        "Details": "Details"
     }
   },
 
