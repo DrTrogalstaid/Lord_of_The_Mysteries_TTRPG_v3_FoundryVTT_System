@@ -26,15 +26,30 @@
     {{!-- Details Tab --}}
     <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
       <!--Sequence Number (sequence number - overrides lower sequences on actor sheets)-->
-      <div class="resource flexrow">TODO</div>
+      <div class="sequenceNumber flexrow">
+        <label>Sequence Number</label>
+        <input type="number" name="system.sequence_number" value="{{system.sequence_number}}" data-dtype="Number"/>
+      </div>
       <!--Acting Principals (string GM secret)-->
-      <div>TODO</div>
+      <div class="actingPrincipals flexrow">
+        <label>Acting Principals</label>
+        <input type="text" name="system.acting_principals" value="{{system.acting_principals}}" data-dtype="Text"/>
+      </div>
       <!--Attribute Gain (list of attribute increases)-->
-      <div>TODO</div>
+      <div class="attributeGain flexrow">
+        <label>Attribute Gain</label>
+        <input type="text" name="system.attribute_gain" value="{{system.attribute_gain}}" data-dtype="Array"/>
+      </div>
       <!--Skill Increase (list of skill items/increases to add to actor)-->
-      <div>TODO</div>
+      <div class="skillIncrease flexrow">
+        <label>Attribute Gain</label>
+        <input type="text" name="system.skill_increase" value="{{system.skill_increase}}" data-dtype="Array"/>
+      </div>
       <!--Abilities Gain (list of ability items that are added to actor)-->
-      <div>TODO</div>
+      <div class="skillIncrease flexrow">
+        <label>Abilities Gained</label>
+        <input type="text" name="system.abilities_gained" value="{{system.abilities_gained}}" data-dtype="Array"/>
+      </div>
 
     </div>
 
