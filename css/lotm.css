@@ -238,10 +238,40 @@
 .lotm .sheet-tabs {
   flex: 0;
 }
-.lotm .sheet-body,
-.lotm .sheet-body .tab,
-.lotm .sheet-body .tab .editor {
+/* Scrollable Details tab (Sequence sheet). .sequence-sheet-root is the root
+   div rendered by sequence.hbs itself — see the class added there. It sits
+   directly inside Foundry's .window-content, which is where the sheet's
+   actual bounded height comes from; everything below needs to inherit that
+   bound down to .tab.details so overflow can kick in there specifically. */
+.lotm .sequence-sheet-root {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.lotm .sequence-sheet-root .sheet-tabs {
+  flex: 0 0 auto;
+}
+.lotm .sequence-sheet-root .sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.lotm .sheet-body,
+.lotm .sheet-body .tab {
+  height: 100%;
+  min-height: 0;
+}
+/* Only the Description tab's editor should fill the full tab height —
+   Acting Principals is a small inline editor inside a fieldset in the
+   Details tab and must NOT inherit this, or it collapses to 0 height. */
+.lotm .sheet-body .tab.description .editor {
+  height: 100%;
+  min-height: 0;
+}
+.lotm .sheet-body .tab.details {
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .lotm .tox .tox-editor-container {
   background: #fff;
@@ -363,4 +393,30 @@
 }
 .lotm .effects .item .effect-controls {
   border: none;
+}
+.lotm .details fieldset {
+  border: 1px solid #c9c7b8;
+  border-radius: 3px;
+  margin: 8px 0;
+  padding: 5px 8px 8px;
+}
+.lotm .details legend {
+  font-weight: bold;
+  padding: 0 4px;
+}
+.lotm .details .actingPrincipals prose-mirror,
+.lotm .details .actingPrincipals .editor {
+  min-height: 100px;
+}
+.lotm .details .add-row {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.lotm .details .drop-hint {
+  justify-content: center;
+  color: #782e22;
+  font-style: italic;
+  padding: 6px 0;
+  border-bottom: none;
 }

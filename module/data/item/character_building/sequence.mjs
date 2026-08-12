@@ -15,23 +15,23 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     // Bonuses
     schema.attribute_gain = new fields.ArrayField(
         new fields.SchemaField({
-            // NOTE: Each attribute_name must match the name of an attribute
-            attribute_name: new fields.StringField({ required: true}),
-            value : new fields.NumberField({required: true, integer: true, min: 0})
+            // NOTE: Each attribute_name must match a key in CONFIG.LORD_OF_THE_MYSTERIES.attributes (e.g. "str", "agi")
+            attribute_name: new fields.StringField({ required: true, blank: false }),
+            value : new fields.NumberField({required: true, integer: true, min: 0, initial: 1})
         })
     );
     schema.skill_increase = new fields.ArrayField(
         new fields.SchemaField({
-            // NOTE: Each skill_name must match the name of a skill
-            skill_name: new fields.StringField({ required: true}),
-            value : new fields.NumberField({required: true, integer: true, min: 0})
+            // The UUID of the Skill Item this increase applies to
+            skill_uuid: new fields.DocumentUUIDField({ type: "Item", required: true }),
+            value : new fields.NumberField({required: true, integer: true, min: 0, initial: 1})
         })
     );
 
     // Abilities
-    // NOTE: Each item in this list must mach the name of an ability/
+    // Each entry is the UUID of an Item (e.g. a Feature) granted by this Sequence
     schema.abilities_gained = new fields.ArrayField(
-        new fields.StringField({required: true})
+        new fields.DocumentUUIDField({ type: "Item", required: true })
     );
     return schema;
   }
