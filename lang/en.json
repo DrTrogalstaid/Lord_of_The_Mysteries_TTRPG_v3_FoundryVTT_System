@@ -23,12 +23,14 @@
       "Actor": "LordOfTheMysteries Actor Sheet",
       "Item": "LordOfTheMysteries Item Sheet"
     },
+
     "Item": {
       "Spell": {
         "SpellLVL": "Level {level} Spells",
         "AddLVL": "Add LVL {level}"
       }
     },
+
     "Effect": {
       "Source": "Source",
       "Toggle": "Toggle Effect",
@@ -36,10 +38,12 @@
       "Passive": "Passive Effects",
       "Inactive": "Inactive Effects"
     },
+
     "SheetTitles": {
         "PlayerCharacter": "Player Character",
         "Sequence": "Sequence"
     },
+
     "Tabs": {
         "Character": "Character Info",
         "Biography": "Biography",
@@ -49,6 +53,97 @@
         "Perception": "Perception",
         "Description": "Description",
         "Details": "Details"
+    },
+
+    "Skill_Level": {
+      "untrained": "Untrained",
+      "trained": "Trained",
+      "proficient": "Proficient",
+      "advanced": "Advanced",
+      "mastery": "Mastery",
+      "lore": "Lore",
+      "grandMaster": "Grand Master"
+    },
+
+    "Skill_Name": {
+      "Throwing": "Throwing",
+      "Climbing": "Climbing",
+      "Fighting": "Fighting",
+      "Melee (Sword)": "Melee (Sword)",
+      "Melee (Pole Weapon)": "Melee (Pole Weapon)",
+      "Melee (Giant Weapon)": "Melee (Giant Weapon)",
+      "Melee (Special)": "Melee (Special)",
+      "Intimidate": "Intimidate",
+      "Jump": "Jump",
+      "Beast Taming": "Beast Taming",
+      "Stealth": "Stealth",
+      "Clever Hands": "Clever Hands",
+      "Swim": "Swim",
+      "Shooting (Pistol)": "Shooting (Pistol)",
+      "Shooting (Rifle)": "Shooting (Rifle)",
+      "Shooting (Shotgun)": "Shooting (Shotgun)",
+      "Shooting (Crossbow)": "Shooting (Crossbow)",
+      "Shooting (Bow and Arrow)": "Shooting (Bow and Arrow)",
+      "Gunnery": "Gunnery",
+      "Locksmith": "Locksmith",
+      "Dodge": "Dodge",
+      "Driving": "Driving",
+      "Heavy Machinery": "",
+      "Listening": "Listening",
+      "Reconnaissance": "Reconnaissance",
+      "Mechanical Maintenance": "Mechanical Maintenance",
+      "Occultism": "Occultism",
+      "Psychology": "Psychology",
+      "Cooking": "Cooking",
+      "Art (Literary)": "Art (Literary)",
+      "Art (Singing)": "Art (Singing)",
+      "Art (Music Theory)": "Art (Music Theory)",
+      "Art (Drawing)": "Art (Drawing)",
+      "Art (Craft Manufacturing)": "Art (Craft Manufacturing)",
+      "Tracking": "Tracking",
+      "Lip Reading": "Lip Reading",
+      "Navigate": "Navigate",
+      "Trade": "Trade",
+      "Medicine": "Medicine",
+      "Library Use": "Library Use",
+      "Writing": "Writing",
+      "Blasting": "Blasting",
+      "Survival": "Survival",
+      "Knowledge (Law)": "Knowledge (Law)",
+      "Knowledge (Archeology)": "Knowledge (Archeology)",
+      "Knowledge (Religion)": "Knowledge (Religion)",
+      "Knowledge (Chemistry)": "Knowledge (Chemistry)",
+      "Knowledge (Biology)": "Knowledge (Biology)",
+      "Knowledge (Pharmacy)": "Knowledge (Pharmacy)",
+      "Knowledge (Sociology)": "Knowledge (Sociology)",
+      "Knowledge (Astronomy)": "Knowledge (Astronomy)",
+      "Knowledge (Botany)": "Knowledge (Botany)",
+      "Knowledge (Agriculture)": "Knowledge (Agriculture)",
+      "Knowledge (History)": "Knowledge (History)",
+      "Knowledge (Engineering)": "Knowledge (Engineering)",
+      "Natural History": "Natural History",
+      "Occult Language(Elvish)": "Occult Language(Elvish)",
+      "Occult Language(Dragonese)": "Occult Language(Dragonese)",
+      "Occult Language(Jotun)": "Occult Language(Jotun)",
+      "Occult Language(Devil)": "Occult Language(Devil)",
+      "Occult Language(Ancient Hermes)": "Occult Language(Ancient Hermes)",
+      "Occult Language(Hermes)": "Occult Language(Hermes)",
+      "Common Language(Ancient Feysac)": "Common Language(Ancient Feysac)",
+      "Common Language (Loenese)": "Common Language (Loenese)",
+      "Common Language (Intisian)": "Common Language (Intisian)",
+      "Common Language (Faysac)": "Common Language (Faysac)",
+      "Common Language (Lenburg)": "Common Language (Lenburg)",
+      "Common Language (Highland)": "Common Language (Highland)",
+      "Common Language (Dutanese)": "Common Language (Dutanese)",
+      "Charm": "Charm",
+      "Deception": "Deception",
+      "Speech": "Speech",
+      "Persuasion": "Persuasion",
+      "Mental Guidance (Hypnosis)": "Mental Guidance (Hypnosis)",
+      "Mental Guidance (Psychotherapy)": "Mental Guidance (Psychotherapy)",
+      "Performance": "Performance",
+      "Disguise": "Disguise",
+      "Reputation": "Reputation"
     }
   },
 
@@ -57,11 +152,14 @@
       "character": "Character",
       "npc": "NPC"
     },
+    
     "Item": {
       "item": "Item",
       "feature": "Feature",
       "spell": "Spell",
-      "sequence": "Sequence"
+      "sequence": "Sequence",
+      "skill": "Skill",
+      "ability": "Ability"
     }
   }
 }
