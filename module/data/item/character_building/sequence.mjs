@@ -33,6 +33,9 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     schema.abilities_gained = new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: true })
     );
+
+    //TODO: Add Knowledge and Training bonus section
+
     return schema;
   }
 }
