@@ -25,7 +25,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Iterate over attributes names and create a new SchemaField for each.
         schema.attributes = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.attributes).reduce((obj, attribute) => {
             obj[attribute] = new fields.SchemaField({
-                base: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
+                base: new fields.NumberField({ ...requiredInteger, initial: 2, min: 2 }),
                 beyonder_bonus: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
                 corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0})
             });
@@ -41,12 +41,9 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 value : new fields.NumberField({required: true, integer: true, min: 0})
             })
         );
-        
+
         schema.languages = new fields.ArrayField(
-            new fields.SchemaField({  
-                language: new fields.StringField({ required: true}),
-                mystical: new fields.BooleanField({ required: true, initial: false})
-            })
+            new fields.DocumentUUIDField({ type: "Item", required: true })
         );
 
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields

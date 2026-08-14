@@ -14,17 +14,31 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
     // Actions
     // Each entry is the UUID of an Action granted by this aability
     schema.actions = new fields.ArrayField(
-        new fields.DocumentUUIDField({ type: "Item", required: true })
+      new fields.DocumentUUIDField({ type: "Item", required: true })
     );
 
     schema.can_be_stolen = new fields.BooleanField({ required: true, initial: true})
 
-    //Identification bonus/change
+    //Roll modifiers
+
     //Knowledge gain??
+
     //Vistion/Senses gained
-    //Spirituatlity consumption
+    //TODO: Vistion object? How does foundry handle this??
+
+    //Spirituatlity Cost
+    schema.spirituality_cost = new fields.NumberField({required: false, integer: true, min: 0});
+
     //Higher sequence bonuses (array containing all sequences?)
-    //Range?
+    //TODO: What should this be besides a string?
+    schema.higher_sequence_upgrades = new fields.ArrayField(
+      new fields.StringField({ required: false, initial: "na" })
+    );
+
+    //Range
+    //TODO: Is there something better than int??
+    schema.range = new fields.NumberField({required: false, integer: true, min: 0});
+
 
     return schema;
   }

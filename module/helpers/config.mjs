@@ -53,3 +53,11 @@ LORD_OF_THE_MYSTERIES.skillLevels = {
     lore: 'LORD_OF_THE_MYSTERIES.Skill_Level.lore',
     grandMaster: 'LORD_OF_THE_MYSTERIES.Skill_Level.grandMaster',
 };
+
+LORD_OF_THE_MYSTERIES.actionTypes = {
+    free: 'LORD_OF_THE_MYSTERIES.Skill_Level.free',
+    attack: 'LORD_OF_THE_MYSTERIES.Skill_Level.attack',
+    quick: 'LORD_OF_THE_MYSTERIES.Skill_Level.quick',
+    move: 'LORD_OF_THE_MYSTERIES.Skill_Level.move',
+    full: 'LORD_OF_THE_MYSTERIES.Skill_Level.full',
+};
