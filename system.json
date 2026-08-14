@@ -50,7 +50,10 @@
     "item": {},
     "feature": {},
     "spell": {},
-    "sequence": {}
+    "sequence": {},
+    "skill": {},
+    "ability": {},
+    "action": {}
   }
 }
 }

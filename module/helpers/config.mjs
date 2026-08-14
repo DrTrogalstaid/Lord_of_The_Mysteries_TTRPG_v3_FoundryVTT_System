@@ -43,3 +43,13 @@ LORD_OF_THE_MYSTERIES.resourcesAbbreviations = {
     lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.abbr',
     spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.abbr',
 };
+
+LORD_OF_THE_MYSTERIES.skillLevels = {
+    untrained: 'LORD_OF_THE_MYSTERIES.Skill_Level.untrained',
+    trained: 'LORD_OF_THE_MYSTERIES.Skill_Level.trained',
+    proficient: 'LORD_OF_THE_MYSTERIES.Skill_Level.proficient',
+    advanced: 'LORD_OF_THE_MYSTERIES.Skill_Level.advanced',
+    mastery: 'LORD_OF_THE_MYSTERIES.Skill_Level.mastery',
+    lore: 'LORD_OF_THE_MYSTERIES.Skill_Level.lore',
+    grandMaster: 'LORD_OF_THE_MYSTERIES.Skill_Level.grandMaster',
+};
