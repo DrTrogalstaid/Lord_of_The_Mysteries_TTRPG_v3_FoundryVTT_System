@@ -55,24 +55,24 @@ LORD_OF_THE_MYSTERIES.skillLevels = {
 };
 
 LORD_OF_THE_MYSTERIES.skillCategories = {
-      fighting: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Fighting',
-      firearms: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Firearms',
-      arrow: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Arrow',
-      social: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Social',
-      psychological: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Psychological',
-      drug: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Drug',
-      mystical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Mystical',
-      historical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Historical',
-      languageNorth: 'LORD_OF_THE_MYSTERIES.Skill_Categories.LanguageNorthern',
-      languageSouth: 'LORD_OF_THE_MYSTERIES.Skill_Categories.LanguageSouth',
-      reconnaissance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Reconnaissance',
-      astronomy: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Astronomy',
-      mechanical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Mechanical',
-      medical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Medical',
-      natural: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Natural',
-      music: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Music',
-      performance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Performance',
-      writing: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Writing'
+    arrow: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Arrow',
+    astronomy: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Astronomy',
+    drug: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Drug',
+    fighting: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Fighting',
+    firearms: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Firearms',
+    historical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Historical',
+    social: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Social',
+    languageNorth: 'LORD_OF_THE_MYSTERIES.Skill_Categories.LanguageNorthern',
+    languageSouth: 'LORD_OF_THE_MYSTERIES.Skill_Categories.LanguageSouth',
+    mechanical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Mechanical',
+    medical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Medical',
+    music: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Music',
+    mystical: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Mystical',
+    natural: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Natural',
+    performance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Performance',
+    psychological: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Psychological',
+    reconnaissance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Reconnaissance',
+    writing: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Writing'
 };
 
 LORD_OF_THE_MYSTERIES.skillAttributes = {
