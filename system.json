@@ -44,6 +44,19 @@
         "ASSISTANT": "OWNER"
       },
       "flats": {}
+    },
+        {
+      "name": "sequence_compendium",
+      "label": "Sequences",
+      "path": "packs/sequences_compendium",
+      "type": "Item",
+      "banner": "systems/lotm/assets/compendium_packs/Path_of_the_Divine.webp",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
     }
   ],
   "packFolders": [],

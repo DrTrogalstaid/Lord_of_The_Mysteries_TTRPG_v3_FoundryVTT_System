@@ -76,6 +76,7 @@
       "Throwing": "Throwing",
       "Climbing": "Climbing",
       "Fighting": "Fighting",
+      "Melee": "Melee",
       "Sword": "Sword",
       "Pole Weapon": "Pole Weapon",
       "Giant Weapon": "Giant Weapon",
@@ -151,7 +152,29 @@
       "Performance": "Performance",
       "Disguise": "Disguise",
       "Reputation": "Reputation"
+    },
+
+    "Skill_Categories": {
+      "Fighting": "Fighting",
+      "Firearms": "Firearms",
+      "Arrow": "Arrow",
+      "Social": "Social",
+      "Psychological": "Psychological",
+      "Drug": "Drug",
+      "Mystical": "Mystical",
+      "Historical": "Historical",
+      "LanguageNorthern": "Language (Northern Continent)",
+      "LanguageSouth": "Language (Southern Continent)",
+      "Reconnaissance": "Reconnaissance",
+      "Astronomy": "Astronomy",
+      "Mechanical": "Mechanical",
+      "Medical": "Medical",
+      "Natural": "Natural",
+      "Music": "Music",
+      "Performance": "Performance",
+      "Writing": "Writing"
     }
+    
   },
 
   "TYPES": {
