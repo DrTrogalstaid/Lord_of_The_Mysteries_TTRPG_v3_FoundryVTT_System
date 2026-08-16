@@ -15,16 +15,6 @@ export default class LordOfTheMysteriesCharacter extends LordOfTheMysteriesActor
         return schema;
     }
 
-    prepareDerivedData() {
-        // Loop through attribute scores, and add their modifiers to our sheet output.
-        for (const key in this.attributes) {
-            // Calculate the modifier using d20 rules.
-            this.attributes[key].mod = Math.floor((this.attributes[key].value - 10) / 2);
-            // Handle attribute label localization.
-            this.attributes[key].label = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[key]) ?? key;
-        }
-    }
-
   // getRollData() {
   //   const data = {};
 

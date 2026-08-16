@@ -31,7 +31,34 @@
       "path": "lang/en.json"
     }
   ],
-  "packs": [],
+  "packs": [
+    {
+      "name": "skills_compendium",
+      "label": "Skills",
+      "path": "packs/skills_compendium",
+      "type": "Item",
+      "banner": "systems/lotm/assets/compendium_packs/Ingredient_-_Real_Ancient_Historical_Records.webp",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+        {
+      "name": "sequence_compendium",
+      "label": "Sequences",
+      "path": "packs/sequences_compendium",
+      "type": "Item",
+      "banner": "systems/lotm/assets/compendium_packs/Path_of_the_Divine.webp",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    }
+  ],
   "packFolders": [],
   "socket": false,
   "manifest": "Replace this with a link to the /latest release system.json so people can receive updates after they've installed the system",
@@ -49,7 +76,11 @@
   "Item": {
     "item": {},
     "feature": {},
-    "spell": {}
+    "spell": {},
+    "sequence": {},
+    "skill": {},
+    "ability": {},
+    "action": {}
   }
 }
 }

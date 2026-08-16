@@ -26,17 +26,40 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
   }
 
   /** @override */
-  get template() {
-    const path = 'systems/lotm/templates/item';
-    // Return a single sheet for all item types.
-    // return `${path}/item-sheet.hbs`;
+  // Placeholder path — the real per-type template is resolved in
+  // _configureRenderParts() below, the V2 replacement for the old
+  // `get template()` getter.
+  static PARTS = {
+    form: { template: 'systems/lotm/templates/item/item-sheet.hbs'},
+  };
 
-    // Alternatively, you could use the following return statement to do a
-    // unique item sheet by type, like `weapon-sheet.hbs`.
-    return `${path}/item-${this.item.type}-sheet.hbs`;
-  }
+  /** @override */
+  static TABS = {
+    sheet: {
+      tabs: [
+        { id: 'description', label: 'LORD_OF_THE_MYSTERIES.Tabs.Description' },
+      ],
+      initial: 'description',
+    },
+  };
 
   /* -------------------------------------------- */
+
+  /**
+   * Resolve a distinct template per item type, e.g.
+   * item-item-sheet.hbs, item-feature-sheet.hbs, item-spell-sheet.hbs
+   * (one .hbs file per type registered in CONFIG.Item.dataModels).
+   * This is the V2 replacement for overriding the old `get template()` getter.
+   */
+  /** @override */
+  _configureRenderParts(options) {
+    const parts = super._configureRenderParts(options);
+    
+    //TODO: Change this from the boilerplate. I dislike this naming convention. Use "this.document.type"
+    parts.form.template = `systems/lotm/templates/item/item-${this.item.type}-sheet.hbs`;
+
+    return parts;
+  }
 
   /** @override */
   async getData() {
@@ -75,6 +98,8 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
     return context;
   }
 
+
+  
   /* -------------------------------------------- */
 
   /** @override */
@@ -91,4 +116,5 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
       onManageActiveEffect(ev, this.item)
     );
   }
+
 }

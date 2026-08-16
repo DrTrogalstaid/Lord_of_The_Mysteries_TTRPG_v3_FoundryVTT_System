@@ -6,6 +6,11 @@ import { LordOfTheMysteriesItem } from './documents/item.mjs';
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
 import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
+import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_building/sequence-sheet.mjs';
+import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/skill-sheet.mjs';
+import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building/ability-sheet.mjs';
+import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
+
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
@@ -53,7 +58,11 @@ Hooks.once('init', function () {
   CONFIG.Item.dataModels = {
     item: models.LordOfTheMysteriesItem,
     feature: models.LordOfTheMysteriesFeature,
-    spell: models.LordOfTheMysteriesSpell
+    spell: models.LordOfTheMysteriesSpell,
+    sequence: models.LordOfTheMysteriesSequence,
+    skill: models.LordOfTheMysteriesSkill,
+    ability: models.LordOfTheMysteriesAbility,
+    action: models.LordOfTheMysteriesAction
   }
 
   // Active Effects are never copied to the Actor,
@@ -64,6 +73,7 @@ Hooks.once('init', function () {
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
   foundry.documents.collections.Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
+    types: ['npc'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
   });
@@ -77,6 +87,26 @@ Hooks.once('init', function () {
   foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Item',
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesSequenceSheet, {
+    types: ['sequence'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Sequence'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesSkillSheet, {
+    types: ['skill'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Skill'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesAbilitySheet, {
+    types: ['ability'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Ability'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesActionSheet, {
+    types: ['action'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Action'
   });
 
   // Preload Handlebars templates.

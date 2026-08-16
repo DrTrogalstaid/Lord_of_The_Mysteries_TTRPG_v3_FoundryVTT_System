@@ -208,7 +208,7 @@
   font-family: "Roboto", sans-serif;
 }
 .lotm .sheet-header {
-  flex: 0 auto;
+  flex: 0 0 auto;
   overflow: hidden;
   display: flex;
   flex-direction: row;
@@ -217,8 +217,8 @@
   margin-bottom: 10px;
 }
 .lotm .sheet-header .profile-img {
-  flex: 0 0 100px;
-  height: 100px;
+  flex: 0 0 64px;
+  height: 64px;
   margin-right: 10px;
 }
 .lotm .sheet-header .header-fields {
@@ -238,10 +238,31 @@
 .lotm .sheet-tabs {
   flex: 0;
 }
+.lotm .sequence-sheet-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.lotm .sequence-sheet-root .sheet-tabs {
+  flex: 0 0 auto;
+}
+.lotm .sequence-sheet-root .sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .lotm .sheet-body,
-.lotm .sheet-body .tab,
-.lotm .sheet-body .tab .editor {
+.lotm .sheet-body .tab {
   height: 100%;
+  min-height: 0;
+}
+.lotm .sheet-body .tab.description .editor {
+  height: 100%;
+  min-height: 0;
+}
+.lotm .sheet-body .tab.details {
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .lotm .tox .tox-editor-container {
   background: #fff;
@@ -363,4 +384,30 @@
 }
 .lotm .effects .item .effect-controls {
   border: none;
+}
+.lotm .details fieldset {
+  border: 1px solid #c9c7b8;
+  border-radius: 3px;
+  margin: 8px 0;
+  padding: 5px 8px 8px;
+}
+.lotm .details legend {
+  font-weight: bold;
+  padding: 0 4px;
+}
+.lotm .details .actingPrincipals prose-mirror,
+.lotm .details .actingPrincipals .editor {
+  min-height: 100px;
+}
+.lotm .details .add-row {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.lotm .details .drop-hint {
+  justify-content: center;
+  color: #782e22;
+  font-style: italic;
+  padding: 6px 0;
+  border-bottom: none;
 }

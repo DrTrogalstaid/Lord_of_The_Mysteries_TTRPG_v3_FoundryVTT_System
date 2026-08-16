@@ -19,8 +19,8 @@
     </div>
   </div>
 
-  <div class="languages-box">
-    <span class="collapse-toggle" title="Collapse (not yet wired up)">&minus;</span>
+  <div class="skills-box">
+    <span class="collapse-toggle" title="Collapse (not yet wired up)"></span>
     <div class="box-title">Languages</div>
     <div class="languages-columns">
       <div class="language-column">
@@ -49,14 +49,34 @@
       <nav class="skill-tabs tabs" data-group="skills">
         {{#each skillTabs}}
         <a class="skill-tab {{this.cssClass}}" data-action="tab" data-group="skills" data-tab="{{this.id}}">
-          <span class="skill-tab-icon">+</span>{{localize this.label}}
+          {{localize this.label}}
         </a>
         {{/each}}
       </nav>
       <div class="skills-content">
-        {{#each skillTabs}}
-        <div class="tab skill-tab-panel {{this.cssClass}}" data-group="skills" data-tab="{{this.id}}">
-          <p class="placeholder-note">{{localize this.label}} skills coming soon.</p>
+        {{#each skillTabs as |tab|}}
+        <div class="tab skill-tab-panel {{tab.cssClass}}" data-group="skills" data-tab="{{tab.id}}">
+          {{#with (lookup @root.skillsByCategory tab.id) as |categorySkills|}}
+            {{#if categorySkills.length}}
+            <ul class="skill-list">
+              {{#each categorySkills as |entry index|}}
+              <li class="skill-row">
+                <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
+                <a class="modifier rollable-number">
+                  {{numberFormat entry.modifier decimals=0 sign=true}}
+                </a>
+                <span class="skill-name">{{entry.name}}</span>
+                <input type="hidden" name="system.skills.{{tab.id}}.{{index}}.skill" value="{{entry.uuid}}" />
+                <select class="skill-level-select" name="system.skills.{{tab.id}}.{{index}}.level">
+                  {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
+                </select>
+              </li>
+              {{/each}}
+            </ul>
+            {{else}}
+            <p class="placeholder-note">No {{localize tab.label}} skills found in the compendium.</p>
+            {{/if}}
+          {{/with}}
         </div>
         {{/each}}
       </div>

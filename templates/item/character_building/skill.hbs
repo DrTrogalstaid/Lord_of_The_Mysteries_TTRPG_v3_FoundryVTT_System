@@ -1,0 +1,48 @@
+<!--TODO: Change this to a sheet that can be filled out based on Sequence's data model data -->
+<div class="{{cssClass}} sequence-sheet-root">
+
+  {{!-- Sheet Tab Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="sheet">
+    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
+    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Description Tab --}}
+    <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
+      {{#if editable}}
+        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
+          {{{enrichedDescription}}}
+        </prose-mirror>
+      {{else}}
+        {{{enrichedDescription}}}
+      {{/if}}
+
+    </div>
+
+    {{!-- Details Tab --}}
+    <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
+
+      <!--Skill Attribute Drop Down-->
+      <fieldset class="skillAttributes flexrow">
+        <legend>Skill Attribute</legend>
+        <select name="system.skill_attribute" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.skillAttributes selected=system.skill_attribute localize=true}}
+        </select>
+      </fieldset>
+
+      <!--Category-->
+      <fieldset class="category flexrow">
+        <legend>Category</legend>
+          <select name="system.category" {{#unless editable}}disabled{{/unless}}>
+            {{selectOptions config.skillCategories selected=system.category localize=true blank=""}}
+          </select>
+      </fieldset>
+
+    </div>
+
+  </section>
+
+</div>

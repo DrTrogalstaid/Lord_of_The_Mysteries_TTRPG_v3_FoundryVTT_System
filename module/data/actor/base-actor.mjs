@@ -1,7 +1,7 @@
-import LordOfTheMysteriesDataModel from "./base-model.mjs";
+import LordOfTheMysteriesDataModel from "../base-model.mjs";
 
 const {
-    HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField
+    HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
 } = foundry.data.fields;
 
 
@@ -25,9 +25,10 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Iterate over attributes names and create a new SchemaField for each.
         schema.attributes = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.attributes).reduce((obj, attribute) => {
             obj[attribute] = new fields.SchemaField({
-                base: new fields.NumberField({ ...requiredInteger, initial: 10, min: 0 }),
+                base: new fields.NumberField({ ...requiredInteger, initial: 2, min: 2 }),
                 beyonder_bonus: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
-                corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0})
+                corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0}),
+                total: new fields.NumberField({...requiredInteger, initial: 0})
             });
             return obj;
         }, {}));
@@ -42,12 +43,19 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             })
         );
         
-        schema.languages = new fields.ArrayField(
-            new fields.SchemaField({  
-                language: new fields.StringField({ required: true}),
-                mystical: new fields.BooleanField({ required: true, initial: false})
-            })
-        );
+        schema.skills = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders).reduce((obj, compendiumCategory) => {
+            obj[compendiumCategory] = new fields.ArrayField(
+                new fields.SchemaField({
+                    skill: new fields.DocumentUUIDField({type:"Item", required: true}),
+                    level: new fields.StringField({
+                        required: true,
+                        initial: "untrained",
+                        choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels)
+                    })
+                })
+            );
+            return obj;
+        }, {}));
 
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
@@ -65,9 +73,16 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             title: new fields.StringField({ required: true}),
             sequence_number: new fields.NumberField({required: true, integer: true, min: 0})
             })
-          });
+        });
 
         return schema;
+    }
+
+    /** @override */
+    prepareDerivedData() {
+        for (const attr of Object.values(this.attributes)) {
+            attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0) + (attr.corruption ?? 0);
+        }
     }
 
 }
