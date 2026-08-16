@@ -80,9 +80,37 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
     /** @override */
     prepareDerivedData() {
+        
+        /**
+         * Sequence Calculations
+         */
+
+        /**
+         * Attribute Bonus Calculation
+         */
         for (const attr of Object.values(this.attributes)) {
             attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0) + (attr.corruption ?? 0);
         }
+
+        /**
+         * Resource Calculations
+         * NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
+         *       calculating as we go. 
+         */
+        // Health
+        // Spirit
+        // Rationality
+        // Spirituality
+        // Luck
+
+        /**
+         * Defense Calculations
+         */
+        // Armor
+        // Physical
+        // Will
+        // Damage Resistances
+
     }
 
 }
