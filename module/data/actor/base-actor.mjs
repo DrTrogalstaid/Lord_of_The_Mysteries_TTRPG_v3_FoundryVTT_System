@@ -1,7 +1,7 @@
 import LordOfTheMysteriesDataModel from "../base-model.mjs";
 
 const {
-    HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField
+    HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
 } = foundry.data.fields;
 
 
@@ -41,10 +41,20 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 value : new fields.NumberField({required: true, integer: true, min: 0})
             })
         );
-
-        schema.languages = new fields.ArrayField(
-            new fields.DocumentUUIDField({ type: "Item", required: true })
-        );
+        
+        schema.skills = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders).reduce((obj, compendiumCategory) => {
+            obj[compendiumCategory] = new fields.ArrayField(
+                new fields.SchemaField({
+                    skill: new fields.DocumentUUIDField({type:"Item", required: true}),
+                    level: new fields.StringField({
+                        required: true,
+                        initial: "untrained",
+                        choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels)
+                    })
+                })
+            );
+            return obj;
+        }, {}));
 
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
@@ -62,7 +72,9 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             title: new fields.StringField({ required: true}),
             sequence_number: new fields.NumberField({required: true, integer: true, min: 0})
             })
-          });
+        });
+
+
 
         return schema;
     }

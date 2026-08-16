@@ -1,9 +1,11 @@
 <section class="tab biography-tab {{tab.cssClass}}" data-group="sheet" data-tab="biography">
 
-  {{! Single journal-style field for now, bound to system.biography (plain StringField). }}
-  {{! Expand into the full biography layout (height/weight/religion/etc.) later. }}
-  <div class="biography-editor">
-    {{editor enrichedBiography target="system.biography" editable=editable button=true engine="prosemirror" collaborate=false}}
-  </div>
+  {{#if editable}}
+    <prose-mirror name="system.biography" button="true" editable="{{editable}}" toggled="false" value="{{system.biography}}">
+      {{{enrichedBiography}}}
+    </prose-mirror>
+  {{else}}
+    {{{enrichedBiography}}}
+  {{/if}}
 
 </section>

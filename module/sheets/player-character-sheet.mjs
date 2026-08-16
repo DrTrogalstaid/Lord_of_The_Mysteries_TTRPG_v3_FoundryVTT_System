@@ -1,12 +1,6 @@
 /**
  * Player Character sheet.
- *
- * NOTE ON PLACEHOLDER NAME: replace every occurrence of "lotm" in this file
- * (and in the .hbs templates) with your actual system id, i.e. whatever you
- * registered in your system.json's "id" field. It's used in:
- *   - static PARTS template paths ("systems/lotm/templates/...")
- *   - the "lotm" CSS class in DEFAULT_OPTIONS.classes (also referenced by actor-sheet.css)
- */
+ **/
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -44,7 +38,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** @override */
   /** Pieces of the sheet that can be viewed and reloaded independently */
   static PARTS = {
-
     header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
@@ -55,7 +48,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** @override */
   static TABS = {
     
-    // The "Character Info" box's page selector (Character Info / Biography).
+    // The "Character Info" box's page selector (Character Info,Biography, etc.).
     sheet: {
       tabs: [
         { id: "character", label: "LORD_OF_THE_MYSTERIES.Tabs.Character" },
@@ -63,16 +56,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       ],
       initial: "character"
     },
-    // The nested sub-page selector under the Languages box (Strength / Charisma / Agility / Perception).
-    // Content is stubbed out for now - skills will be added later.
+
     skills: {
       tabs: [
-        { id: "strength", label: "LORD_OF_THE_MYSTERIES.Tabs.Strength" },
-        { id: "charisma", label: "LORD_OF_THE_MYSTERIES.Tabs.Charisma" },
-        { id: "agility", label: "LORD_OF_THE_MYSTERIES.Tabs.Agility" },
-        { id: "perception", label: "LORD_OF_THE_MYSTERIES.Tabs.Perception" }
+        { id: "str", label: "LORD_OF_THE_MYSTERIES.Attributes.Str.long" },
+        { id: "agi", label: "LORD_OF_THE_MYSTERIES.Attributes.Agi.long" },
+        { id: "cha", label: "LORD_OF_THE_MYSTERIES.Attributes.Cha.long" },
+        { id: "ins", label: "LORD_OF_THE_MYSTERIES.Attributes.Ins.long" },
+        { id: "edu", label: "LORD_OF_THE_MYSTERIES.Attributes.Edu.long" },
       ],
-      initial: "strength"
+      initial: "str"
     }
   };
 
@@ -90,8 +83,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.system = this.actor.system;
     context.source = this.actor.toObject().system;
 
-    // Two independent tab groups: the "Character Info"/"Biography" page selector,
-    // and the nested skills sub-tabs (Strength/Charisma/Agility/Perception).
+    // Two independent tab groups: the "Character Info","Biography", etc. page selector,
+    // and the nested skills sub-tabs.
     context.tabs = this._prepareTabs("sheet");
     context.skillTabs = this._prepareTabs("skills");
 
@@ -106,6 +99,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       case "character":
         context.tab = context.tabs.character;
         context.attributesList = this._prepareAttributes();
+        context.skillsByCategory = await this._prepareSkillList();
+        context.skillLevelOptions = CONFIG.LORD_OF_THE_MYSTERIES.skillLevels;
         break;
 
       case "biography":
@@ -128,10 +123,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /**
    * Flatten system.attributes into an array of {key, label, base, beyonder_bonus, corruption, total}
-   * for easy iteration in the template. `total` is computed here since the data model doesn't
-   * currently define a derived-data getter for it. Keys/labels come straight from
-   * CONFIG.LORD_OF_THE_MYSTERIES.attributes (str/agi/wil/phy/cha/ins/luc/edu) so this stays in
-   * sync with helpers/config.mjs automatically.
+   * for easy iteration in the template. 
    * @returns {object[]}
    */
   _prepareAttributes() {
@@ -151,10 +143,64 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+  /**
+   * Build the full, per-category skill list shown on the sheet, sourced directly from the
+   * skills_compendium pack's folder structure - NOT from whatever the actor happens to have
+   * stored. Each tab (str/agi/cha/ins/edu/...) corresponds to a Folder of the same name inside
+   * the compendium (see CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders); every Item in that
+   * folder is listed, so the full compendium roster shows up automatically instead of needing to
+   * be dragged on one at a time.
+   *
+   * Folder#contents on a compendium-housed Folder returns index entries (not full Documents) -
+   * {_id, uuid, name, img, type, sort, folder} - so this never needs to fromUuid() each skill
+   * individually, only pack.getIndex() once up front.
+   *
+   * If the actor already has a stored level for a given skill (matched by uuid), that level is
+   * used; otherwise it defaults to "untrained" for display. Nothing is written to the actor here -
+   * persistence happens the normal way, the first time the player changes a level (see the hidden
+   * `skill` uuid input paired with each level <select> in character.hbs): the whole category's
+   * array (all currently-rendered rows, in this same order) is submitted and saved together.
+   * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string}[]>>}
+   */
+  async _prepareSkillList() {
+    const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
+    const skillsByCategory = {};
+
+    if (!pack) {
+      console.warn(`Lord of the Mysteries | Skills compendium "${CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId}" not found.`);
+      return skillsByCategory;
+    }
+
+    await pack.getIndex(); // ensures the index - and therefore each Folder's .contents - is populated
+
+    for (const [category, folderName] of Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders)) {
+      const folder = pack.folders.getName(folderName);
+      if (!folder) {
+        console.warn(`Lord of the Mysteries | No "${folderName}" folder found in the skills compendium (category: ${category}).`);
+      }
+      const indexEntries = folder?.contents ?? [];
+
+      // Preserve whatever level the actor already has recorded for a skill, matched by uuid.
+      // Anything not yet touched simply defaults to "untrained" for display.
+      const stored = this.actor.system.skills[category] ?? [];
+      const levelByUuid = new Map(stored.map(entry => [entry.skill, entry.level]));
+
+      skillsByCategory[category] = indexEntries
+        .map(entry => ({
+          uuid: entry.uuid,
+          name: entry.name,
+          img: entry.img,
+          level: levelByUuid.get(entry.uuid) ?? "untrained"
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return skillsByCategory;
+  }
+
   /* -------------------------------------------- */
   /*  Actions                                      */
   /* -------------------------------------------- */
-  /*  Stubbed per request - wire each of these up to the real macro/logic later. */
 
   /**
    * @this {PlayerCharacterSheet}

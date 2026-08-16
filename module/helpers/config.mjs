@@ -84,6 +84,36 @@ LORD_OF_THE_MYSTERIES.skillAttributes = {
     edu: 'LORD_OF_THE_MYSTERIES.Attributes.Edu.long',
 };
 
+LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
+    str: 'LORD_OF_THE_MYSTERIES.Attributes.Str.long',
+    agi: 'LORD_OF_THE_MYSTERIES.Attributes.Agi.long',
+    cha: 'LORD_OF_THE_MYSTERIES.Attributes.Cha.long',
+    ins: 'LORD_OF_THE_MYSTERIES.Attributes.Ins.long',
+    edu: 'LORD_OF_THE_MYSTERIES.Attributes.Edu.long',
+    languages: 'Languages'
+};
+
+/**
+ * The collection id (package id + pack name) of the compendium that holds all Skill items.
+ */
+LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
+
+/**
+ * Maps each system.skills bucket to the name of the Folder that holds those skills inside
+ * the skills_compendium pack, so the character sheet can list every skill in that folder
+ * without needing them individually dragged on first. Must match the folder names in
+ * packs/skills_compendium exactly (case-sensitive). Categories without a folder here (e.g.
+ * "luc", which has no in-compendium skill list) are simply skipped.
+ */
+LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
+    str: 'Strength',
+    agi: 'Agility',
+    cha: 'Charisma',
+    ins: 'Inspiration',
+    edu: 'Education',
+    languages: 'Languages'
+};
+
 LORD_OF_THE_MYSTERIES.actionTypes = {
     free: 'LORD_OF_THE_MYSTERIES.Skill_Level.free',
     attack: 'LORD_OF_THE_MYSTERIES.Skill_Level.attack',

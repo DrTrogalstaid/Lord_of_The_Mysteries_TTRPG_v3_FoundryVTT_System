@@ -73,6 +73,7 @@ Hooks.once('init', function () {
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
   foundry.documents.collections.Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
+    types: ['npc'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
   });
