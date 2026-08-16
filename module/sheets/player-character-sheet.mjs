@@ -91,6 +91,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return context;
   }
 
+
   /** @override */
   async _preparePartContext(partId, context) {
     context.partId = `${this.id}-${partId}`;
@@ -121,6 +122,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return context;
   }
 
+
   /**
    * Flatten system.attributes into an array of {key, label, base, beyonder_bonus, corruption, total}
    * for easy iteration in the template. 
@@ -132,39 +134,27 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const base = attr.base ?? 0;
       const beyonder_bonus = attr.beyonder_bonus ?? 0;
       const corruption = attr.corruption ?? 0;
+      const total = attr.total ?? 0;
       return {
         key,
         label,
         base,
         beyonder_bonus,
         corruption,
-        total: base + beyonder_bonus + corruption
+        total: total
       };
     });
   }
 
+
   /**
-   * Build the full, per-category skill list shown on the sheet, sourced directly from the
-   * skills_compendium pack's folder structure - NOT from whatever the actor happens to have
-   * stored. Each tab (str/agi/cha/ins/edu/...) corresponds to a Folder of the same name inside
-   * the compendium (see CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders); every Item in that
-   * folder is listed, so the full compendium roster shows up automatically instead of needing to
-   * be dragged on one at a time.
-   *
-   * Folder#contents on a compendium-housed Folder returns index entries (not full Documents) -
-   * {_id, uuid, name, img, type, sort, folder} - so this never needs to fromUuid() each skill
-   * individually, only pack.getIndex() once up front.
-   *
-   * If the actor already has a stored level for a given skill (matched by uuid), that level is
-   * used; otherwise it defaults to "untrained" for display. Nothing is written to the actor here -
-   * persistence happens the normal way, the first time the player changes a level (see the hidden
-   * `skill` uuid input paired with each level <select> in character.hbs): the whole category's
-   * array (all currently-rendered rows, in this same order) is submitted and saved together.
+   * Build the full, per-category skill list from the skills_compendium pack's folder structure
    * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string}[]>>}
    */
   async _prepareSkillList() {
     const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
     const skillsByCategory = {};
+    
 
     if (!pack) {
       console.warn(`Lord of the Mysteries | Skills compendium "${CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId}" not found.`);
@@ -186,17 +176,56 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const levelByUuid = new Map(stored.map(entry => [entry.skill, entry.level]));
 
       skillsByCategory[category] = indexEntries
-        .map(entry => ({
-          uuid: entry.uuid,
-          name: entry.name,
-          img: entry.img,
-          level: levelByUuid.get(entry.uuid) ?? "untrained"
-        }))
+        .map(entry => {
+          const level = levelByUuid.get(entry.uuid) ?? "untrained";
+          const attributeTotal = this.actor.system.attributes[category]?.total ?? 0;
+          return {
+            uuid: entry.uuid,
+            name: entry.name,
+            img: entry.img,
+            level,
+            modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal)
+          };
+        })
         .sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return skillsByCategory;
   }
+
+  
+  static _calculateSkillModifier(skillLevel, attributeTotal)
+  {
+
+    var skillModifier = attributeTotal
+
+    switch(skillLevel)
+    {
+      case "untrained":
+        skillModifier -= 4;
+        break;
+      case "trained":
+        skillModifier += 2;
+        break;
+      case "proficient":
+        skillModifier += 4;
+        break;
+      case "advanced":
+        skillModifier += 5;
+        break;
+      case "mastery":
+        skillModifier += 6;
+        break;
+      case "lore":
+        skillModifier += 7;
+        break;
+      case "grandMaster":
+        skillModifier += 8;
+        break;
+    }
+    return skillModifier;
+  }
+
 
   /* -------------------------------------------- */
   /*  Actions                                      */
@@ -212,20 +241,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     // TODO: call the Short Rest macro, e.g. game.macros.getName("Short Rest")?.execute({actor: this.actor});
   }
 
+
   static _onLongRest(event, target) {
     console.log(`${this.actor.name}: Long Rest triggered (not yet implemented)`);
     // TODO: call the Long Rest macro.
   }
+
 
   static _onSpendLuck(event, target) {
     console.log(`${this.actor.name}: Spend Luck triggered (not yet implemented)`);
     // TODO: call the Spend Luck macro.
   }
 
+
   static _onSpendSpirituality(event, target) {
     console.log(`${this.actor.name}: Spend Spirituality triggered (not yet implemented)`);
     // TODO: call the Spend Spirituality macro.
   }
+
 
   /**
    * Open the core FilePicker to change the actor's portrait image.
@@ -240,4 +273,5 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
     return fp.browse();
   }
+
 }

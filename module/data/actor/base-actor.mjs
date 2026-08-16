@@ -27,7 +27,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             obj[attribute] = new fields.SchemaField({
                 base: new fields.NumberField({ ...requiredInteger, initial: 2, min: 2 }),
                 beyonder_bonus: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
-                corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0})
+                corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0}),
+                total: new fields.NumberField({...requiredInteger, initial: 0})
             });
             return obj;
         }, {}));
@@ -74,9 +75,14 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             })
         });
 
-
-
         return schema;
+    }
+
+    /** @override */
+    prepareDerivedData() {
+        for (const attr of Object.values(this.attributes)) {
+            attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0) + (attr.corruption ?? 0);
+        }
     }
 
 }
