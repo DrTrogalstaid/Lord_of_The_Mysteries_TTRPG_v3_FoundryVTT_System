@@ -5,8 +5,8 @@
     <div class="attributes-grid">
       {{#each attributesList}}
       <div class="attribute-cell">
-        <div class="attribute-label">{{localize this.label}}</div>
-        <div class="attribute-total">{{this.total}}</div>
+        <div class="attribute-label ">{{localize this.label}}</div>
+        <a class="attribute-total rollable-number">{{this.total}}</a>
         <div class="attribute-breakdown">
           <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
           <span>+</span>
