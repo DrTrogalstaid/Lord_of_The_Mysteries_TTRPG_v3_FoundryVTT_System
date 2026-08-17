@@ -29,7 +29,6 @@ LORD_OF_THE_MYSTERIES.attributeAbbreviations = {
 
 LORD_OF_THE_MYSTERIES.resources = {
     hp: 'LORD_OF_THE_MYSTERIES.Attributes.Health.long',
-    sp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirit.long',
     rp: 'LORD_OF_THE_MYSTERIES.Attributes.Rationality.long',
     lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.long',
     spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.long',

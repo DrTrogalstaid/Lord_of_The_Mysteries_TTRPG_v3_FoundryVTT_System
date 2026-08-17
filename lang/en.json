@@ -13,7 +13,6 @@
     
     "Resources": {
       "Health": { "long": "Health Points", "abbr": "hp" },
-      "Spirit": { "long": "Spirit Points", "abbr": "sp" },
       "Rationality": { "long": "Rationality Points", "abbr": "rp" },
       "Luck": { "long": "Luck Points", "abbr": "lp" },
       "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
