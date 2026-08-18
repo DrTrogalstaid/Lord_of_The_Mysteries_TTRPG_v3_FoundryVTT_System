@@ -9,7 +9,6 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     // Basic Information
     schema.pathway = new fields.StringField({ required: true, initial: "Pathway"});
     schema.sequence_number = new fields.NumberField({ required: true, nullable: false, integer: true , initial: 9});
-    schema.description = new fields.StringField({ required: true, initial: "description"});
     schema.acting_principals = new fields.StringField({ required: true, initial: "NA"});
     
     // Bonuses
@@ -35,6 +34,9 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     );
 
     //TODO: Add Knowledge and Training bonus section
+    schema.trainingBonus = new fields.ArrayField(
+        new fields.DocumentUUIDField({ type: "Item", required: true })
+    )
 
     return schema;
   }

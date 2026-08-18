@@ -11,7 +11,6 @@ export default class LordOfTheMysteriesSkill extends LordOfTheMysteriesItemBase 
     schema.modifier = new fields.NumberField({required: true, integer: true, min: 0, initial: 0})
     
     schema.category = new fields.StringField({ required: false, blank: true, initial: "", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories) });
-    schema.description = new fields.StringField({ required: true, initial: "Description" });
 
     return schema;
   }

@@ -6,8 +6,6 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     const fields = foundry.data.fields;
     const schema = {};
 
-    schema.description = new fields.StringField({ required: true, initial: "Description" });
-
     //Action Type (e.i. Attack/Spell, quick action, free action)
     schema.action_type = new fields.StringField({ required: true, initial: "free", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
 

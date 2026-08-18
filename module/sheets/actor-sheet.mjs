@@ -8,25 +8,6 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 
 /**
  * NPC sheet.
- *
- * NOTE: This class now only handles `npc`-type actors. Player characters use
- * PlayerCharacterSheet (see player-character-sheet.mjs). It used to be
- * registered as the catch-all default for every actor type, but it was
- * written against the old FormApplication/ActorSheet (v1) API - `getData()`,
- * `activateListeners()`, `defaultOptions` - none of which ApplicationV2 ever
- * calls, so it was effectively dead code any time it was actually the active
- * sheet. This is the ApplicationV2 equivalent, kept 1:1 in behavior:
- *   getData()          -> _prepareContext()
- *   activateListeners() -> _onRender()   (listeners re-bound defensively,
- *                          since unlike v1, the root element persists across
- *                          re-renders in ApplicationV2 instead of being
- *                          recreated each time)
- *   defaultOptions      -> static DEFAULT_OPTIONS
- *
- * TODO: confirm "systems/lotm/templates/actor/actor-npc-sheet.hbs" is the
- * correct template path - this mirrors the old dynamic
- * `actor-${this.actor.type}-sheet.hbs` getter for the npc case. Update PARTS
- * below if the real path differs.
  */
 export class LordOfTheMysteriesActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
