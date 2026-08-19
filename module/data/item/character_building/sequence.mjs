@@ -28,12 +28,12 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     );
 
     // Abilities
-    // Each entry is the UUID of an Item (e.g. a Feature) granted by this Sequence
+    // Each entry is the UUID of an Item (e.g. a ability) granted by this Sequence
     schema.abilities_gained = new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: true })
     );
 
-    //TODO: Add Knowledge and Training bonus section
+    // Knowledge and Training bonus
     schema.trainingBonus = new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: true })
     )
