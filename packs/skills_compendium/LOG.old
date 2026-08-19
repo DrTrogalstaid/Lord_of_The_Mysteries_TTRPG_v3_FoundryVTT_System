@@ -1,8 +1,5 @@
-2026/08/18-21:51:39.030348 7f029fbfe6c0 Recovering log #107
-2026/08/18-21:51:39.036281 7f029fbfe6c0 Delete type=0 #107
-2026/08/18-21:51:39.036322 7f029fbfe6c0 Delete type=3 #106
-2026/08/18-21:58:58.439627 7f01fcdff6c0 Level-0 table #111: started
-2026/08/18-21:58:58.439664 7f01fcdff6c0 Level-0 table #111: 0 bytes OK
-2026/08/18-21:58:58.443529 7f01fcdff6c0 Delete type=0 #109
-2026/08/18-21:58:58.447715 7f01fcdff6c0 Manual compaction at level-0 from '!folders!2SITI7WQafFQo4xi' @ 72057594037927935 : 1 .. '!items!zEREjtPcL6rrQpAF' @ 0 : 0; will stop at (end)
-2026/08/18-21:58:58.447752 7f01fcdff6c0 Manual compaction at level-1 from '!folders!2SITI7WQafFQo4xi' @ 72057594037927935 : 1 .. '!items!zEREjtPcL6rrQpAF' @ 0 : 0; will stop at (end)
+2026/08/18-22:23:13.687831 7f020c3fb6c0 Log #138: 0 ops saved to Table #141 OK
+2026/08/18-22:23:13.687935 7f020c3fb6c0 Archiving /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/skills_compendium/000138.log: OK
+2026/08/18-22:23:13.688054 7f020c3fb6c0 Table #140: 83 entries OK
+2026/08/18-22:23:13.688163 7f020c3fb6c0 Archiving /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/skills_compendium/MANIFEST-000136: OK
+2026/08/18-22:23:13.690413 7f020c3fb6c0 **** Repaired leveldb /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/skills_compendium; recovered 1 files; 21910 bytes. Some data may have been lost. ****

@@ -9,6 +9,7 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     // Basic Information
     schema.pathway = new fields.StringField({ required: true, initial: "Pathway"});
     schema.sequence_number = new fields.NumberField({ required: true, nullable: false, integer: true , initial: 9});
+    schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.acting_principals = new fields.StringField({ required: true, initial: "NA"});
     
     // Bonuses

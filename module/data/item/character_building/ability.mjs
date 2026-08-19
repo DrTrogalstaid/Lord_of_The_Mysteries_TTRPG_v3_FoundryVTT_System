@@ -5,7 +5,8 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
   static defineSchema() {
     const fields = foundry.data.fields;
     const schema = {};
-
+    
+    schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.trigger = new fields.StringField({ required: false, initial: "na" });
     schema.special = new fields.StringField({ required: false, initial: "na" });
     schema.can_be_stolen = new fields.BooleanField({ required: true, initial: true})
@@ -29,8 +30,8 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
 
     // Spell List
     schema.spellList = new fields.SchemaField({
-      name = new fields.StringField({required: false, initial: "Spells"}),
-      spells = new fields.ArrayField(
+      name: new fields.StringField({required: false, initial: "Spells"}),
+      spells: new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: false })
       ) 
     });
