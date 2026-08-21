@@ -3,10 +3,10 @@
   <div class="biography-box">
     <div class="biography-row edge-divider-top edge-divider-bottom">
       <div class="biography-field">
-        Height:<input id="height" class="blend-input" type="text" name="height" value="{{actor.height}}" placeholder="Height" />
+        Height:<input id="height" class="blend-input" type="text" name="system.height" value="{{system.height}}" placeholder="Height" />
       </div>
       <div class="biography-field biography-field-divided">
-        Weight:<input id="weight" class="blend-input" type="text" name="weight" value="{{actor.weight}}" placeholder="Weight" />
+        Weight:<input id="weight" class="blend-input" type="text" name="system.weight" value="{{system.weight}}" placeholder="Weight" />
       </div>
     </div>
     <div class="box-title">Physical Description</div>
@@ -22,10 +22,10 @@
   <div class="biography-box">
     <div class="biography-row edge-divider-top edge-divider-bottom">
       <div class="biography-field">
-        Religion:<input id="religion" class="blend-input" type="text" name="religion" value="{{actor.religion}}" placeholder="Religion"></input>
+        Religion:<input id="religion" class="blend-input" type="text" name="system.religion" value="{{system.religion}}" placeholder="Religion"></input>
       </div>
       <div class="biography-field biography-field-divided">
-        Prized Possession:<input id="religion" class="blend-input" type="text" name="religion" value="{{actor.prizedPossession}}" placeholder="Prized Possession"></input>
+        Prized Possession:<input id="religion" class="blend-input" type="text" name="system.prizedPossession" value="{{system.prizedPossession}}" placeholder="Prized Possession"></input>
       </div>
     </div>
     <div class="box-title">Ideas & Beliefs</div>
@@ -41,29 +41,19 @@
   <div class="biography-box">
     <div class="biography-row edge-divider-top">
       <div class="biography-field">
-        Favorite Things:<input id="favoriteThings" class="blend-input" type="text" name="favoriteThings" value="{{actor.favoriteThings}}" placeholder="Favorite Things" />
+        Favorite Things:<input id="favoriteThings" class="blend-input" type="text" name="system.favoriteThings" value="{{system.favoriteThings}}" placeholder="Favorite Things" />
       </div>
       <div class="biography-field biography-field-divided">
-        Dislikes:<input id="dislikes" class="blend-input" type="text" name="dislikes" value="{{actor.dislikes}}" placeholder="Dislikes" />
+        Dislikes:<input id="dislikes" class="blend-input" type="text" name="system.dislikes" value="{{system.dislikes}}" placeholder="Dislikes" />
       </div>
     </div>
     <div class="biography-row edge-divider-bottom">
       <div class="biography-field">
-        Birth Date:<input id="birthDate" class="blend-input" type="text" name="birthDate" value="{{actor.birthDate}}" placeholder="Birth Date" />
+        Birth Date:<input id="birthDate" class="blend-input" type="text" name="system.birthDate" value="{{system.birthDate}}" placeholder="Birth Date" />
       </div>
       <div class="biography-field biography-field-divided">
-        Birth Place:<input id="birthPlace" class="blend-input" type="text" name="birthPlace" value="{{actor.birthPlace}}" placeholder="Birth Place" />
+        Birth Place:<input id="birthPlace" class="blend-input" type="text" name="system.birthPlace" value="{{system.birthPlace}}" placeholder="Birth Place" />
       </div>
     </div>
-
-    <div class="box-title">Backstory</div>
-    {{#if editable}}
-      <prose-mirror name="system.backstory" button="true" editable="{{editable}}" toggled="false" value="{{system.backstory}}">
-        {{{enrichedBackstory}}}
-      </prose-mirror>
-    {{else}}
-      {{{enrichedBackstory}}}
-    {{/if}}
-  </div>
 
 </section>

@@ -53,12 +53,15 @@
     "Tabs": {
         "Character": "Character Info",
         "Biography": "Biography",
+        "Backstory": "Backstory",
         "Strength": "Strength",
         "Charisma": "Charisma",
         "Agility": "Agility",
         "Perception": "Perception",
         "Description": "Description",
-        "Details": "Details"
+        "Details": "Details",
+        "Abilities": "Abilities",
+        "Spells": "Spells"
     },
 
     "Skill_Level": {

@@ -567,10 +567,15 @@
   padding: 6px;
 }
 
-.lotm.sheet.actor .biography-editor {
+.lotm.sheet.actor .backstory-box {
+  border: 1px solid var(--psx-border);
+  border-radius: 6px;
+  background: var(--psx-panel);
+  padding: 6px;
+  margin-bottom: 8px;
   height: 100%;
 }
 
-.lotm.sheet.actor .biography-editor .editor {
-  height: 100%;
-}
+.lotm.sheet.actor .backstory-editor {
+  height: 100%
+} 
