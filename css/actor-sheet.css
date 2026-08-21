@@ -197,10 +197,41 @@
   padding-bottom: 6px;
 }
 
-.lotm.sheet.actor .pool-row {
+.lotm.sheet.actor .pool-row, 
+.lotm.sheet.actor .biography-row {
   display: flex;
   gap: 6px;
-  align-self: center;
+  align-items: center;
+}
+
+.lotm.sheet.actor .biography-row {
+  border-bottom: 1px solid var(--psx-border);
+  margin: 0 -6px 6px -6px;   /* -6px cancels the parent's left/right padding */
+  padding: 0 6px 6px 6px;    /* restore the same padding as inner spacing */
+}
+
+.lotm.sheet.actor .edge-divider-bottom {
+  border-bottom: 1px solid var(--psx-border);
+  margin-left: -6px;
+  margin-right: -6px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.lotm.sheet.actor .edge-divider-top {
+  border-top: 1px solid var(--psx-border);
+}
+
+.lotm.sheet.actor .biography-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.lotm.sheet.actor .biography-field-divided {
+  border-left: 1px solid var(--psx-border);
+  padding-left: 10px;
 }
 
 .lotm.sheet.actor .pool-box {
@@ -352,7 +383,8 @@
 }
 
 .lotm.sheet.actor .attributes-box,
-.lotm.sheet.actor .skills-box {
+.lotm.sheet.actor .skills-box ,
+.lotm.sheet.actor .biography-box{
   border: 1px solid var(--psx-border);
   border-radius: 6px;
   background: var(--psx-panel);
@@ -411,6 +443,23 @@
 
 .lotm.sheet.actor .language-list input {
   width: 100%;
+}
+
+.lotm.sheet.actor input.blend-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.lotm.sheet.actor input.blend-input:hover,
+.lotm.sheet.actor input.blend-input:focus {
+  background: #0f0f0f;
+  border-color: var(--psx-border);
+}
+
+.lotm.sheet.actor input.blend-input::placeholder {
+  color: var(--psx-text-dim);
 }
 
 .lotm.sheet.actor .skills-box {

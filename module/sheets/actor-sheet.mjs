@@ -62,9 +62,8 @@ export class LordOfTheMysteriesActorSheet extends HandlebarsApplicationMixin(Act
     this._prepareItems(context);
 
     // Enrich biography info for display.
-    // Enrichment turns text like `[[/r 1d20]]` into buttons.
-    context.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.actor.system.biography,
+    context.enrichedBackstory = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      this.actor.system.backstory,
       {
         secrets: this.actor.isOwner,
         rollData: this.actor.getRollData(),

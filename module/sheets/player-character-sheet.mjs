@@ -106,14 +106,28 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
       case "biography":
         context.tab = context.tabs.biography;
-        // Single journal-style field for now (system.biography is a plain StringField).
-        // Swap/extend this once the full Biography page layout is designed.
-        context.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-          this.actor.system.biography ?? "",
+        context.enrichedBackstory = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.backstory,
           {
             secrets: this.actor.isOwner,
             rollData: this.actor.getRollData(),
-            relativeTo: this.actor
+            relativeTo: this.actor,
+          }
+        );
+        context.enrichedPhysicalDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.physicalDescription,
+          {
+            secrets: this.actor.isOwner,
+            rollData: this.actor.getRollData(),
+            relativeTo: this.actor,
+          }
+        );
+        context.enrichedIdeasAndBeliefs = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.ideasAndBeliefs,
+          {
+            secrets: this.actor.isOwner,
+            rollData: this.actor.getRollData(),
+            relativeTo: this.actor,
           }
         );
         break;

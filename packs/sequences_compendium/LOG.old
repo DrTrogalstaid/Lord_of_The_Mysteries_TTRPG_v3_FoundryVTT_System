@@ -1,4 +1,7 @@
-2026/08/18-22:23:13.700201 7f020c3fb6c0 Log #122: 0 ops saved to Table #123 OK
-2026/08/18-22:23:13.700278 7f020c3fb6c0 Archiving /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/sequences_compendium/000122.log: OK
-2026/08/18-22:23:13.700365 7f020c3fb6c0 Archiving /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/sequences_compendium/MANIFEST-000120: OK
-2026/08/18-22:23:13.702756 7f020c3fb6c0 **** Repaired leveldb /home/drtrog/.local/share/FoundryVTT/Data/systems/lotm/packs/sequences_compendium; recovered 0 files; 0 bytes. Some data may have been lost. ****
+2026/08/20-20:16:15.367739 7f56439ff6c0 Recovering log #128
+2026/08/20-20:16:15.374824 7f56439ff6c0 Delete type=3 #126
+2026/08/20-20:16:15.374958 7f56439ff6c0 Delete type=0 #128
+2026/08/20-20:19:56.995697 7f55a4bff6c0 Level-0 table #133: started
+2026/08/20-20:19:56.995727 7f55a4bff6c0 Level-0 table #133: 0 bytes OK
+2026/08/20-20:19:56.999840 7f55a4bff6c0 Delete type=0 #131
+2026/08/20-20:19:57.004010 7f55a4bff6c0 Manual compaction at level-0 from 'undefined' @ 72057594037927935 : 1 .. 'undefined' @ 0 : 0; will stop at (end)

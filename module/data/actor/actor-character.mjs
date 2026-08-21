@@ -11,6 +11,20 @@ export default class LordOfTheMysteriesCharacter extends LordOfTheMysteriesActor
         schema.occupation = new fields.StringField({ required: true, blank: true });
         schema.race = new fields.StringField({ required: true, blank: true });
         schema.gender = new fields.StringField({ required: true, blank: true });
+        
+        // Biography Tab
+        schema.height = new fields.StringField({ required: true, blank: true });
+        schema.weight = new fields.StringField({ required: true, blank: true });
+        schema.physicalDescription = new fields.StringField({ required: true, blank: true });
+        schema.religion = new fields.StringField({ required: true, blank: true });
+        schema.ideasAndBeliefs = new fields.StringField({ required: true, blank: true });
+        schema.prizedPossession = new fields.StringField({ required: true, blank: true });
+        schema.favoriteThings = new fields.StringField({ required: true, blank: true });
+        schema.dislikes = new fields.StringField({ required: true, blank: true });
+        schema.birthDate = new fields.StringField({ required: true, blank: true });
+        schema.birthPlace = new fields.StringField({ required: true, blank: true });
+        schema.backstory = new fields.StringField({ required: true, blank: true });
+
 
         return schema;
     }
