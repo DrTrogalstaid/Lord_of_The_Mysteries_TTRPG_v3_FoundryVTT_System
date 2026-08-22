@@ -42,6 +42,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
     character: { template: "systems/lotm/templates/actor/player-character/character.hbs", scrollable: [""] },
+    actions:   { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", scrollable: [""] },
+    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
     backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
 
@@ -54,6 +58,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     sheet: {
       tabs: [
         { id: "character", label: "LORD_OF_THE_MYSTERIES.Tabs.Character" },
+        { id: "actions", label: "LORD_OF_THE_MYSTERIES.Tabs.Actions" },
+        { id: "inventory", label: "LORD_OF_THE_MYSTERIES.Tabs.Inventory" },
+        { id: "spells", label: "LORD_OF_THE_MYSTERIES.Tabs.Spells" },
+        { id: "abilities", label: "LORD_OF_THE_MYSTERIES.Tabs.Abilities" },
         { id: "biography", label: "LORD_OF_THE_MYSTERIES.Tabs.Biography" },
         { id: "backstory", label: "LORD_OF_THE_MYSTERIES.Tabs.Backstory"}
       ],
