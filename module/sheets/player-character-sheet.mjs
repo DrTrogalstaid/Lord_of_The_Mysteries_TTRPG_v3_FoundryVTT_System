@@ -46,6 +46,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", scrollable: [""] },
     spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", scrollable: [""] },
     abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", scrollable: [""] },
+    effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
     backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
 
@@ -62,6 +63,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         { id: "inventory", label: "LORD_OF_THE_MYSTERIES.Tabs.Inventory" },
         { id: "spells", label: "LORD_OF_THE_MYSTERIES.Tabs.Spells" },
         { id: "abilities", label: "LORD_OF_THE_MYSTERIES.Tabs.Abilities" },
+        { id: "effects", label: "LORD_OF_THE_MYSTERIES.Tabs.Effects" },
         { id: "biography", label: "LORD_OF_THE_MYSTERIES.Tabs.Biography" },
         { id: "backstory", label: "LORD_OF_THE_MYSTERIES.Tabs.Backstory"}
       ],

@@ -63,7 +63,8 @@
         "Abilities": "Abilities",
         "Spells": "Spells",
         "Actions": "Actions",
-        "Inventory": "Inventory"
+        "Inventory": "Inventory",
+        "Effects": "Effects"
     },
 
     "Skill_Level": {
