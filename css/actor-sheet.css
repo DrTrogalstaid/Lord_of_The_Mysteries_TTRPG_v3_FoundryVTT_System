@@ -1,0 +1,527 @@
+/* ==========================================================================
+   Player Character Sheet
+   Replace ".lotm" below with your actual system id if you change the
+   "classes" array in DEFAULT_OPTIONS.
+   ========================================================================== */
+
+.lotm.sheet.actor {
+  --psx-bg: #161616;
+  --psx-panel: #1c1c1c;
+  --psx-border: #4d4d4d;
+  --psx-text: #e8e8e8;
+  --psx-text-dim: #a8a8a8;
+  --psx-title-bg: #262626;
+  --psx-radius: 8px;
+}
+
+/* This is the actual direct parent of all five rendered parts (header, sidebar,
+   tabs, character, biography) - confirmed via the DevTools export. Foundry's own
+   core CSS makes this element "display: flex; flex-flow: column nowrap" by
+   default, which is why everything was stacking full-width. We override that
+   with display: grid so the parts can be arranged with grid-template-areas instead. */
+.lotm.sheet.actor .window-content {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "header header"
+    "sidebar tabnav"
+    "sidebar content";
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  font-family: signika, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+  background: var(--psx-bg);
+  color: var(--psx-text);
+}
+
+.lotm.sheet.actor input,
+.lotm.sheet.actor select,
+.lotm.sheet.actor textarea {
+  background: #0f0f0f;
+  color: var(--psx-text);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.lotm.sheet.actor label {
+  color: var(--psx-text-dim);
+  font-size: 11px;
+}
+
+.lotm.sheet.actor .box-title {
+  background: var(--psx-title-bg);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+  padding: 2px 0;
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.lotm.sheet.actor .collapse-toggle {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  line-height: 12px;
+  text-align: center;
+  border: 1px solid var(--psx-border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Tabs: hidden unless active. Applies to both the "sheet" group (Character/Biography)
+   and the nested "skills" group (Strength/Charisma/Agility/Perception). */
+.lotm.sheet.actor .tab {
+  display: none;
+}
+.lotm.sheet.actor .tab.active {
+  display: block;
+}
+
+/* -------------------------------------------------------------------- */
+/* Header (Name / Picture / Sequence Title / Pathway / Age.../ etc.)    */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .pc-header-box {
+  grid-area: header;
+  border: 1px solid var(--psx-border);
+  border-radius: var(--psx-radius);
+  background: var(--psx-panel);
+  padding: 8px;
+}
+
+.lotm.sheet.actor .name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lotm.sheet.actor .name-row input {
+  flex: 1;
+}
+
+.lotm.sheet.actor .header-rows {
+  display: flex;
+  flex-direction: row;
+}
+
+.lotm.sheet.actor .header-main {
+  display: flex;
+  gap: 12px;
+}
+
+.lotm.sheet.actor .portrait-box {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  border: 1px solid var(--psx-border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lotm.sheet.actor .header-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-left: 10px;
+}
+
+.lotm.sheet.actor .sequence-title-label {
+  font-weight: bold;
+  text-decoration: underline;
+  margin-right: 6px;
+}
+
+.lotm.sheet.actor .sequence-title-input {
+  width: 180px;
+  margin-right: 8px;
+}
+
+.lotm.sheet.actor .basic-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.lotm.sheet.actor .info-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.sheet.actor .info-field input {
+  width: 80px;
+}
+
+/* -------------------------------------------------------------------- */
+/* Sidebar                                                              */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .sheet-sidebar {
+  border: 1px solid var(--psx-border);
+  border-radius: 10px;
+  padding: 6px;
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.lotm.sheet.actor .pool-container,
+.lotm.sheet.actor .defense-box {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--psx-border);
+  padding-bottom: 6px;
+}
+
+.lotm.sheet.actor .pool-row {
+  display: flex;
+  gap: 6px;
+  align-self: center;
+}
+
+.lotm.sheet.actor .pool-box {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+
+.lotm.sheet.actor .pool-box,
+.lotm.sheet.actor .stat-box {
+  flex: 1;
+  border: 1px solid var(--psx-border);
+  border-radius: 0px;
+  background: var(--psx-panel);
+  padding: 4px;
+  text-align: center;
+  width: 50%;
+}
+
+.lotm.sheet.actor .pool-box.centered {
+  width: 50%;
+  align-self: center;
+}
+
+.lotm.sheet.actor .stat-box.full-width {
+  width: 100%;
+}
+
+.lotm.sheet.actor .pool-values {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.lotm.sheet.actor .pool-values input {
+  width: 32px;
+  text-align: center;
+}
+
+.lotm.sheet.actor .pool-sep {
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .stat-box input {
+  width: 90%;
+  text-align: center;
+}
+
+.lotm.sheet.actor .rest-row {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--psx-border);
+  padding-bottom: 6px;
+}
+
+.lotm.sheet.actor .rest-btn,
+.lotm.sheet.actor .spend-btn {
+  flex: 1;
+  background: var(--psx-title-bg);
+  color: var(--psx-text);
+  border: 1px solid var(--psx-border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 2px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.lotm.sheet.actor .rest-btn:hover,
+.lotm.sheet.actor .spend-btn:hover {
+  background: #333;
+}
+
+.lotm.sheet.actor .spend-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.lotm.sheet.actor .damage-resistance-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lotm.sheet.actor .damage-resistance-row {
+  display: flex;
+  gap: 4px;
+}
+
+.lotm.sheet.actor .dr-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.lotm.sheet.actor .dr-value {
+  width: 32px;
+  text-align: center;
+}
+
+.lotm.sheet.actor .empty-note {
+  color: var(--psx-text-dim);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* -------------------------------------------------------------------- */
+/* Page tab nav ("Character Info" box header)                          */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .sheet-page-tabs {
+  grid-area: tabnav;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  background: var(--psx-title-bg);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  padding: 3px 0;
+}
+
+.lotm.sheet.actor .page-tab {
+  color: var(--psx-text-dim);
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.lotm.sheet.actor .page-tab.active {
+  color: var(--psx-text);
+  text-decoration: underline;
+}
+
+/* -------------------------------------------------------------------- */
+/* Character Info tab content                                          */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .character-tab {
+  grid-area: content;
+  overflow-y: auto;
+  border: 1px solid var(--psx-border);
+  border-radius: 0 0 var(--psx-radius) var(--psx-radius);
+  padding: 6px;
+}
+
+.lotm.sheet.actor .attributes-box,
+.lotm.sheet.actor .skills-box {
+  border: 1px solid var(--psx-border);
+  border-radius: 6px;
+  background: var(--psx-panel);
+  padding: 6px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.lotm.sheet.actor .attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.lotm.sheet.actor .attribute-cell {
+  border: 1px solid var(--psx-border);
+  border-radius: 0px;
+  text-align: center;
+  padding: 4px;
+}
+
+.lotm.sheet.actor .attribute-total {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 2px 0;
+}
+
+.lotm.sheet.actor .attribute-breakdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.lotm.sheet.actor .attribute-breakdown input {
+  width: 26px;
+  text-align: center;
+}
+
+.lotm.sheet.actor .languages-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-top: 1px solid var(--psx-border);
+  padding-top: 6px;
+}
+
+.lotm.sheet.actor .language-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lotm.sheet.actor .language-list input {
+  width: 100%;
+}
+
+.lotm.sheet.actor .skills-box {
+  margin-top: 10px;
+  border-top: 1px solid var(--psx-border);
+  padding-top: 6px;
+}
+
+.lotm.sheet.actor .skill-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.lotm.sheet.actor .skill-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  background: var(--psx-title-bg);
+  color: var(--psx-text-dim);
+  text-decoration: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+.lotm.sheet.actor .skill-tab.active {
+  color: var(--psx-text);
+  border-color: #888;
+}
+
+.lotm.sheet.actor .skill-tab-icon {
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+  line-height: 10px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.lotm.sheet.actor .skills-content {
+  min-height: 200px;
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.lotm.sheet.actor .placeholder-note {
+  color: var(--psx-text-dim);
+  font-style: italic;
+  text-align: center;
+}
+
+.lotm.sheet.actor .skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lotm.sheet.actor .skill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.sheet.actor .skill-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--psx-border);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.lotm.sheet.actor .skill-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lotm.sheet.actor .skill-level-select {
+  flex: 0 0 auto;
+  width: 110px;
+}
+
+/* -------------------------------------------------------------------- */
+/* Biography tab content                                                */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .biography-tab {
+  grid-area: content;
+  overflow-y: auto;
+  border: 1px solid var(--psx-border);
+  border-radius: 0 0 var(--psx-radius) var(--psx-radius);
+  padding: 6px;
+}
+
+.lotm.sheet.actor .biography-editor {
+  height: 100%;
+}
+
+.lotm.sheet.actor .biography-editor .editor {
+  height: 100%;
+}

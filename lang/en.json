@@ -1,0 +1,196 @@
+{
+  "LORD_OF_THE_MYSTERIES": {
+    "Attributes": {
+      "Str": { "long": "Strength", "abbr": "str" },
+      "Agi": { "long": "Agility", "abbr": "agi" },
+      "Wil": { "long": "Wilpower", "abbr": "wil" },
+      "Phy": { "long": "Physique", "abbr": "phy" },
+      "Cha": { "long": "Charisma", "abbr": "cha" },
+      "Ins": { "long": "Inspiration", "abbr": "ins" },
+      "Luc": { "long": "Luck", "abbr": "luc" },
+      "Edu": { "long": "Education", "abbr": "edu" }
+    },
+    
+    "Resources": {
+      "Health": { "long": "Health Points", "abbr": "hp" },
+      "Spirit": { "long": "Spirit Points", "abbr": "sp" },
+      "Rationality": { "long": "Rationality Points", "abbr": "rp" },
+      "Luck": { "long": "Luck Points", "abbr": "lp" },
+      "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
+    },
+
+    "SheetLabels": {
+      "Actor": "Actor",
+      "Item": "Item",
+      "Sequence": "Sequence",
+      "Skill": "Skill",
+      "Ability": "Ability",
+      "Action": "Action"
+    },
+
+    "Item": {
+      "Spell": {
+        "SpellLVL": "Level {level} Spells",
+        "AddLVL": "Add LVL {level}"
+      }
+    },
+
+    "Effect": {
+      "Source": "Source",
+      "Toggle": "Toggle Effect",
+      "Temporary": "Temporary Effects",
+      "Passive": "Passive Effects",
+      "Inactive": "Inactive Effects"
+    },
+
+    "SheetTitles": {
+        "PlayerCharacter": "Player Character",
+        "Sequence": "Sequence",
+        "SKill": "Skill",
+        "Ability": "Ability",
+        "Action": "Action"
+    },
+
+    "Tabs": {
+        "Character": "Character Info",
+        "Biography": "Biography",
+        "Strength": "Strength",
+        "Charisma": "Charisma",
+        "Agility": "Agility",
+        "Perception": "Perception",
+        "Description": "Description",
+        "Details": "Details"
+    },
+
+    "Skill_Level": {
+      "untrained": "Untrained",
+      "trained": "Trained",
+      "proficient": "Proficient",
+      "advanced": "Advanced",
+      "mastery": "Mastery",
+      "lore": "Lore",
+      "grandMaster": "Grand Master"
+    },
+
+    "Skill_Name": {
+      "Throwing": "Throwing",
+      "Climbing": "Climbing",
+      "Fighting": "Fighting",
+      "Melee": "Melee",
+      "Sword": "Sword",
+      "Pole Weapon": "Pole Weapon",
+      "Giant Weapon": "Giant Weapon",
+      "Special": "Special",
+      "Intimidate": "Intimidate",
+      "Jump": "Jump",
+      "Beast Taming": "Beast Taming",
+      "Stealth": "Stealth",
+      "Clever Hands": "Clever Hands",
+      "Swim": "Swim",
+      "Pistol": "Pistol",
+      "Rifle": "Rifle",
+      "Shotgun": "Shotgun",
+      "Crossbow": "Crossbow",
+      "Bow and Arrow": "Bow and Arrow",
+      "Gunnery": "Gunnery",
+      "Locksmith": "Locksmith",
+      "Dodge": "Dodge",
+      "Driving": "Driving",
+      "Heavy Machinery": "",
+      "Listening": "Listening",
+      "Reconnaissance": "Reconnaissance",
+      "Mechanical Maintenance": "Mechanical Maintenance",
+      "Occultism": "Occultism",
+      "Psychology": "Psychology",
+      "Cooking": "Cooking",
+      "Literary": "Literary",
+      "Singing": "Singing",
+      "Music Theory": "Music Theory",
+      "Drawing": "Drawing",
+      "Craft Manufacturing": "Craft Manufacturing",
+      "Tracking": "Tracking",
+      "Lip Reading": "Lip Reading",
+      "Navigate": "Navigate",
+      "Trade": "Trade",
+      "Medicine": "Medicine",
+      "Library Use": "Library Use",
+      "Writing": "Writing",
+      "Blasting": "Blasting",
+      "Survival": "Survival",
+      "Law": "Law",
+      "Archeology": "Archeology",
+      "Religion": "Religion",
+      "Chemistry": "Chemistry",
+      "Biology": "Biology",
+      "Pharmacy": "Pharmacy",
+      "Sociology": "Sociology",
+      "Astronomy": "Astronomy",
+      "Botany": "Botany",
+      "Agriculture": "Agriculture",
+      "History": "History",
+      "Engineering": "Engineering",
+      "Natural History": "Natural History",
+      "Elvish": "Elvish",
+      "Dragonese": "Dragonese",
+      "Jotun": "Jotun",
+      "Devil": "Devil",
+      "Ancient Hermes": "Ancient Hermes",
+      "Hermes": "Hermes",
+      "Ancient Feysac": "Ancient Feysac",
+      "Loenese": "Loenese",
+      "Intisian": "Intisian",
+      "Faysac": "Faysac",
+      "Lenburg": "Lenburg",
+      "Highland": "Highland",
+      "Dutanese": "Dutanese",
+      "Charm": "Charm",
+      "Deception": "Deception",
+      "Speech": "Speech",
+      "Persuasion": "Persuasion",
+      "Hypnosis": "Hypnosis",
+      "Psychotherapy": "Psychotherapy",
+      "Performance": "Performance",
+      "Disguise": "Disguise",
+      "Reputation": "Reputation"
+    },
+
+    "Skill_Categories": {
+      "Fighting": "Fighting",
+      "Firearms": "Firearms",
+      "Arrow": "Arrow",
+      "Social": "Social",
+      "Psychological": "Psychological",
+      "Drug": "Drug",
+      "Mystical": "Mystical",
+      "Historical": "Historical",
+      "LanguageNorthern": "Language (Northern Continent)",
+      "LanguageSouth": "Language (Southern Continent)",
+      "Reconnaissance": "Reconnaissance",
+      "Astronomy": "Astronomy",
+      "Mechanical": "Mechanical",
+      "Medical": "Medical",
+      "Natural": "Natural",
+      "Music": "Music",
+      "Performance": "Performance",
+      "Writing": "Writing"
+    }
+    
+  },
+
+  "TYPES": {
+    "Actor": {
+      "character": "Character",
+      "npc": "NPC"
+    },
+    
+    "Item": {
+      "item": "Item",
+      "feature": "Feature",
+      "spell": "Spell",
+      "sequence": "Sequence",
+      "skill": "Skill",
+      "ability": "Ability",
+      "action": "Action"
+    }
+  }
+}

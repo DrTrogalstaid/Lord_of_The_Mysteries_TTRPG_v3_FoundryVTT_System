@@ -1,0 +1,87 @@
+<section class="tab character-tab {{tab.cssClass}}" data-group="sheet" data-tab="character">
+
+  <div class="attributes-box">
+    <div class="box-title">Attributes</div>
+    <div class="attributes-grid">
+      {{#each attributesList}}
+      <div class="attribute-cell">
+        <div class="attribute-label ">{{localize this.label}}</div>
+        <a class="attribute-total rollable-number">{{this.total}}</a>
+        <div class="attribute-breakdown">
+          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
+          <span>+</span>
+          <input type="number" name="system.attributes.{{this.key}}.beyonder_bonus" value="{{this.beyonder_bonus}}" title="Beyonder Bonus" />
+          <span>+</span>
+          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="skills-box">
+    <span class="collapse-toggle" title="Collapse (not yet wired up)"></span>
+    <div class="box-title">Languages</div>
+    <div class="languages-columns">
+      <div class="language-column">
+        <label>Normal Languages:</label>
+        <ul class="language-list">
+          {{#each system.languages}}
+          {{#unless this.mystical}}
+          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
+          {{/unless}}
+          {{/each}}
+        </ul>
+      </div>
+      <div class="language-column">
+        <label>Mystical Languages:</label>
+        <ul class="language-list">
+          {{#each system.languages}}
+          {{#if this.mystical}}
+          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
+          {{/if}}
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+
+    <div class="skills-box">
+      <nav class="skill-tabs tabs" data-group="skills">
+        {{#each skillTabs}}
+        <a class="skill-tab {{this.cssClass}}" data-action="tab" data-group="skills" data-tab="{{this.id}}">
+          {{localize this.label}}
+        </a>
+        {{/each}}
+      </nav>
+      <div class="skills-content">
+        {{#each skillTabs as |tab|}}
+        <div class="tab skill-tab-panel {{tab.cssClass}}" data-group="skills" data-tab="{{tab.id}}">
+          {{#with (lookup @root.skillsByCategory tab.id) as |categorySkills|}}
+            {{#if categorySkills.length}}
+            <ul class="skill-list">
+              {{#each categorySkills as |entry index|}}
+              <li class="skill-row">
+                <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
+                <a class="modifier rollable-number">
+                  {{numberFormat entry.modifier decimals=0 sign=true}}
+                </a>
+                <span class="skill-name">{{entry.name}}</span>
+                <input type="hidden" name="system.skills.{{tab.id}}.{{index}}.skill" value="{{entry.uuid}}" />
+                <select class="skill-level-select" name="system.skills.{{tab.id}}.{{index}}.level">
+                  {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
+                </select>
+              </li>
+              {{/each}}
+            </ul>
+            {{else}}
+            <p class="placeholder-note">No {{localize tab.label}} skills found in the compendium.</p>
+            {{/if}}
+          {{/with}}
+        </div>
+        {{/each}}
+      </div>
+    </div>
+
+  </div>
+
+</section>
