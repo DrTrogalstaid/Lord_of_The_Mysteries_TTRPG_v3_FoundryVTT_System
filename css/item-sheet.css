@@ -1,0 +1,59 @@
+.lotm.sheet.item {
+  --psx-radius: 8px;
+  --psx-border: #4d4d4d;
+  --psx-text-dim: #a8a8a8;
+}
+
+.lotm.sheet.item .window-content {
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+  font-family: signika, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.lotm.sheet.item .description-box {
+  border: 1px solid var(--color-tabs-border);
+  border-radius: 6px;
+  padding: 6px;
+  margin-bottom: 8px;
+  position: relative;
+  box-sizing: border-box;
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+.lotm.sheet.item .description-box prose-mirror,
+.lotm.sheet.item .description-box .editor {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.lotm.sheet.item .box-title {
+  border: 1px solid var(--color-tabs-border);
+  border-radius: 4px;
+  text-align: center;
+  font-weight: bold;
+  padding: 2px 0;
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.lotm.sheet.item input.blend-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.lotm.sheet.item input.blend-input:hover,
+.lotm.sheet.item input.blend-input:focus {
+  background: #0f0f0f;
+  border-color: var(--psx-border);
+}
+
+.lotm.sheet.item input.blend-input::placeholder {
+  color: var(--psx-text-dim);
+}

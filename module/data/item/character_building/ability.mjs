@@ -9,7 +9,7 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
     schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.trigger = new fields.StringField({ required: false, initial: "na" });
     schema.special = new fields.StringField({ required: false, initial: "na" });
-    schema.can_be_stolen = new fields.BooleanField({ required: true, initial: true})
+    schema.canBeStolen = new fields.BooleanField({ required: true, initial: true})
 
     //Roll modifiers
 
@@ -17,11 +17,11 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
     //TODO: Vistion object? How does foundry handle this??
 
     //Spirituatlity Cost
-    schema.spirituality_cost = new fields.NumberField({required: false, integer: true, min: 0});
+    schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
 
     //Higher sequence bonuses (array containing all sequences?)
     //TODO: What should this be besides a string?
-    schema.higher_sequence_upgrades = new fields.ArrayField(
+    schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );
 

@@ -7,11 +7,11 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 
-export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class LordOfTheMysteriesSpellSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /** @override */
   static DEFAULT_OPTIONS = {
     tag: "form",
-    classes: ['lotm', 'sheet', 'item', 'ability'],
+    classes: ['lotm', 'sheet', 'item', 'spell'],
     form: {
       submitOnChange: true,
       closeOnSubmit: false
@@ -26,16 +26,16 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
     },
     dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
     actions: {
-      addSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onAddSequenceUpgrade,
-      deleteSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onDeleteSequenceUpgrade,
-      deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
+      addSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onAddSequenceUpgrade,
+      deleteSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onDeleteSequenceUpgrade,
+      deleteSpell: LordOfTheMysteriesSpellSheet.#onDeleteSpell,
     },
   };
 
   /** @override */
   static PARTS = {
     header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
-    form: { template: 'systems/lotm/templates/item/character_building/ability-sheet.hbs'},
+    form: { template: 'systems/lotm/templates/item/character_building/spell-sheet.hbs'},
   };
 
   /** @override */
@@ -54,7 +54,7 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
   /** @override */
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
-    parts.form.template = `systems/lotm/templates/item/character_building/ability.hbs`;
+    parts.form.template = `systems/lotm/templates/item/character_building/spell.hbs`;
     return parts;
   }
 

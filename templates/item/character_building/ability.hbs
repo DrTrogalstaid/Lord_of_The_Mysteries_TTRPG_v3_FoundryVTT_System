@@ -12,128 +12,107 @@
 
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
-      {{#if editable}}
-        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
+      <div class="description-box">
+        <div class="box-title">Description</div>
+        {{#if editable}}
+          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
+            {{{enrichedDescription}}}
+          </prose-mirror>
+        {{else}}
           {{{enrichedDescription}}}
-        </prose-mirror>
-      {{else}}
-        {{{enrichedDescription}}}
-      {{/if}}
-
+        {{/if}}
+      </div>
+      <div class="description-box">
+        <div class="box-title">Special</div>
+        {{#if editable}}
+          <prose-mirror name="system.special" button="true" editable="{{editable}}" toggled="false" value="{{system.special}}">
+            {{{enrichedSpecial}}}
+          </prose-mirror>
+        {{else}}
+          {{{enrichedSpecial}}}
+        {{/if}}
+      </div>
     </div>
+    
 
     {{!-- Details Tab --}}
     <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
 
-      <!--Sequence Number (sequence number - overrides lower sequences on actor sheets)-->
-      {{!-- <div class="sequenceNumber flexrow">
-        <label>Sequence Number</label>
-        <input type="number" name="system.sequence_number" value="{{system.sequence_number}}" data-dtype="Number"/>
-      </div> --}}
+      <!--TODO: Put Trigger, Spirituality Cost, and Range in a sidebar-->
+      <!--Trigger-->
+      <fieldset>
+        <legend>Trigger</legend>
+          <input id="trigger" class="blend-input" type="text" name="system.trigger" value="{{system.trigger}}" placeholder="Trigger" />
+      </fieldset>
 
-      <!--Acting Principals (string GM secret)-->
-      {{!-- <fieldset class="actingPrincipals flexrow">
-        <legend>Acting Principals</legend>
-        {{#if editable}}
-          <prose-mirror name="system.acting_principals" button="true" editable="{{editable}}" toggled="false" value="{{system.acting_principals}}">
-            {{{enrichedActingPrincipals}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedActingPrincipals}}}
-        {{/if}}
-      </fieldset> --}}
+      <!--Spirituality Cost-->
+      <fieldset>
+        <legend>Spirituality Cost</legend>
+          <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" />
+      </fieldset>
+      
+      <!--Range-->
+      <fieldset>
+        <legend>Range</legend>
+          <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" />
+      </fieldset>
 
-      <!--Attribute Gain (list of attribute increases)-->
-      {{!-- <fieldset class="attribute-gain">
-        <legend>Attribute Gain</legend>
+      <!--Sequence Upgrades-->
+      <fieldset class="sequence-upgrades">
+        <legend>Sequence Upgrades</legend>
         <ol class="items-list">
-          <li class="items-header flexrow">
-            <div class="item-name">Attribute</div>
-            <div class="item-prop">Value</div>
-            <div class="item-controls"></div>
-          </li>
-          {{#each attributeGain as |row|}}
+          {{#each higherSequenceUpgrades as |row|}}
           <li class="item flexrow">
-            <div class="item-name">
-              <select name="system.attribute_gain.{{row.index}}.attribute_name">
-                {{selectOptions ../attributeChoices selected=row.attribute_name localize=true}}
-              </select>
-            </div>
-            <div class="item-prop">
-              <input type="number" name="system.attribute_gain.{{row.index}}.value" value="{{row.value}}" data-dtype="Number"/>
-            </div>
+            <input type="text" class="blend-input flexlarge"
+                  name="system.higherSequenceUpgrades.{{row.index}}"
+                  value="{{row.value}}" placeholder="Upgrade description" />
             <div class="item-controls">
-              <a class="item-control" data-action="deleteAttributeGain" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteSequenceUpgrade" data-index="{{row.index}}" title="Delete">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
         </ol>
-        <a class="item-control add-row" data-action="addAttributeGain">
-          <i class="fas fa-plus"></i> Add Attribute
+        <a class="item-control add-row" data-action="addSequenceUpgrade">
+          <i class="fas fa-plus"></i> Add Upgrade
         </a>
-      </fieldset> --}}
+      </fieldset>
 
-      <!--Skill Increase -->
-      {{!-- <fieldset class="skill-increase" data-drop-zone="skill_increase">
-        <legend>Skill Increase</legend>
+      <!--Spell List-->
+      <fieldset class="spell-list" data-drop-zone="spellList">
+        <legend>
+          <input type="text" class="blend-input" name="system.spellList.name"
+                value="{{system.spellList.name}}" placeholder="Spells" />
+        </legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Skill</div>
-            <div class="item-prop">Value</div>
+            <div class="item-name">Spell</div>
             <div class="item-controls"></div>
           </li>
-          {{#each skillIncrease as |row|}}
-          <li class="item flexrow" data-uuid="{{row.uuid}}">
-            <div class="item-name">
-              <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
-              <h4>{{row.name}}</h4>
-            </div>
-            <div class="item-prop">
-              <input type="number" name="system.skill_increase.{{row.index}}.value" value="{{row.value}}" data-dtype="Number"/>
-              <input type="hidden" name="system.skill_increase.{{row.index}}.skill_uuid" value="{{row.uuid}}"/>
-            </div>
-            <div class="item-controls">
-              <a class="item-control" data-action="deleteSkillIncrease" data-index="{{row.index}}" title="Delete">
-                <i class="fas fa-trash"></i>
-              </a>
-            </div>
-          </li>
-          {{/each}}
-          {{#unless skillIncrease.length}}
-          <li class="item flexrow drop-hint">Drag a Skill</li>
-          {{/unless}}
-        </ol>
-      </fieldset> --}}
-
-      <!--Abilities Gained -->
-      {{!-- <fieldset class="abilities-gained" data-drop-zone="abilities_gained">
-        <legend>Abilities Gained</legend>
-        <ol class="items-list">
-          <li class="items-header flexrow">
-            <div class="item-name">Ability</div>
-            <div class="item-controls"></div>
-          </li>
-          {{#each abilitiesGained as |row|}}
+          {{#each spellListSpells as |row|}}
           <li class="item flexrow" data-uuid="{{row.uuid}}">
             <div class="item-name">
               <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteAbilityGained" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteSpell" data-index="{{row.index}}" title="Delete">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
-          {{#unless abilitiesGained.length}}
-          <li class="item flexrow drop-hint">Drag an Ability</li>
+          {{#unless spellListSpells.length}}
+          <li class="item flexrow drop-hint">Drag a Spell</li>
           {{/unless}}
         </ol>
-      </fieldset> --}}
-
+      </fieldset>
+      <!--Can Be Stolen-->
+      <fieldset>
+        <legend>Can Be Stolen/Recorded</legend>
+          <input id="canBeStolen" class="blend-input" type="bool" name="system.canBeStolen" value="{{system.canBeStolen}}" placeholder="Can Be Stolen" />
+      </fieldset>
     </div>
 
   </section>

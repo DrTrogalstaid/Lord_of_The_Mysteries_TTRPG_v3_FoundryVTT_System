@@ -23,7 +23,7 @@
     "verified": "14.367"
   },
   "esmodules": ["module/lotm.mjs"],
-  "styles": ["css/lotm.css","css/actor-sheet.css"],
+  "styles": ["css/lotm.css","css/actor-sheet.css", "css/item-sheet.css"],
   "languages": [
     {
       "lang": "en",
