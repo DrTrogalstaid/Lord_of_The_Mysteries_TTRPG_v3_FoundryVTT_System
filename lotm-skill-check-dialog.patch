@@ -1,0 +1,849 @@
+diff --git a/css/lotm.css b/css/lotm.css
+index 66e86b0..1b8fbc0 100644
+--- a/css/lotm.css
++++ b/css/lotm.css
+@@ -411,3 +411,54 @@
+   padding: 6px 0;
+   border-bottom: none;
+ }
++.lotm .skill-check-dialog .skill-check-header {
++  display: flex;
++  flex-direction: column;
++  margin-bottom: 8px;
++}
++.lotm .skill-check-dialog .skill-check-header .skill-name {
++  font-weight: bold;
++  font-size: 1.1em;
++}
++.lotm .skill-check-dialog .skill-check-header .skill-level,
++.lotm .skill-check-dialog .skill-check-header .skill-flat-modifier {
++  font-size: 0.9em;
++  opacity: 0.8;
++}
++.lotm .skill-check-dialog .override-hint {
++  font-size: 0.8em;
++  font-style: italic;
++  opacity: 0.8;
++  margin: 4px 0 0;
++}
++.lotm .skill-check-dialog .modifiers {
++  list-style: none;
++  margin: 8px 0;
++  padding: 0;
++}
++.lotm .skill-check-dialog .modifiers li {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 2px 0;
++}
++.lotm .skill-check-dialog .modifiers li .mod-label {
++  flex: 1;
++}
++.lotm .skill-check-dialog .modifiers li .mod-value {
++  margin: 0 8px;
++}
++.lotm .skill-check-dialog .add-modifier-row {
++  display: flex;
++  gap: 4px;
++  margin-bottom: 8px;
++}
++.lotm .skill-check-dialog .add-modifier-row .mod-name {
++  flex: 2;
++}
++.lotm .skill-check-dialog .add-modifier-row .mod-value {
++  flex: 1;
++}
++.lotm .skill-check-dialog footer button[type=submit] {
++  width: 100%;
++}
+diff --git a/lang/en.json b/lang/en.json
+index 1e612cf..2334e42 100644
+--- a/lang/en.json
++++ b/lang/en.json
+@@ -51,6 +51,22 @@
+         "Action": "Action"
+     },
+ 
++    "SkillCheck": {
++        "Title": "Skill Check",
++        "RollTooltip": "Roll this skill",
++        "LinkedAttribute": "Linked Attribute",
++        "Override": "override",
++        "OverrideHint": "Rolling with a different attribute than this skill's default. This applies to this roll only.",
++        "ItemModifier": "Item Modifier",
++        "ModifierLabel": "Modifier label",
++        "AddModifier": "Add",
++        "RemoveModifier": "Remove modifier",
++        "InvalidModifier": "Enter a non-zero modifier value.",
++        "Roll": "Roll",
++        "Flavor": "{skill} Check ({attribute})",
++        "FlavorOverride": "{skill} Check ({attribute} instead of {defaultAttribute})"
++    },
++
+     "Tabs": {
+         "Character": "Character Info",
+         "Biography": "Biography",
+diff --git a/module/apps/skill-check-dialog.mjs b/module/apps/skill-check-dialog.mjs
+new file mode 100644
+index 0000000..9483e49
+--- /dev/null
++++ b/module/apps/skill-check-dialog.mjs
+@@ -0,0 +1,230 @@
++import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
++import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
++
++const { HandlebarsApplicationMixin } = foundry.applications.api;
++const { ApplicationV2 } = foundry.applications.api;
++
++/**
++ * SkillCheckDialog
++ * -----------------
++ * Popup shown when a player clicks a skill's modifier on the character sheet.
++ * Lets them:
++ *   - see the skill's normal (compendium-defined) linked attribute
++ *   - override it with ANY of the system's 8 attributes for this roll only,
++ *     to cover the "a skill's related attribute can change based on how it's
++ *     being used" house rule (e.g. rolling Performance with Inspiration
++ *     instead of its default Charisma when the scene calls for it)
++ *   - add any number of ad-hoc situational modifiers (label + value)
++ *   - see the live total before committing
++ *   - roll on submit
++ *
++ * The override is scoped to this one roll -- it never writes back to the
++ * Skill item's own `system.skill_attribute` field, so the compendium
++ * skill's default is untouched for every other character who has it.
++ */
++export default class SkillCheckDialog extends HandlebarsApplicationMixin(ApplicationV2) {
++    static DEFAULT_OPTIONS = {
++        tag: "form",
++        classes: ["lotm", "skill-check-dialog"],
++        window: {
++            title: "LORD_OF_THE_MYSTERIES.SkillCheck.Title",
++            icon: "fa-solid fa-dice-d20",
++            resizable: false
++        },
++        position: { width: 380, height: "auto" },
++        form: {
++            handler: SkillCheckDialog.#onSubmit,
++            submitOnChange: false,
++            closeOnSubmit: true
++        },
++        actions: {
++            addModifier: SkillCheckDialog.#onAddModifier,
++            removeModifier: SkillCheckDialog.#onRemoveModifier
++        }
++    };
++
++    static PARTS = {
++        form: { template: "systems/lotm/templates/apps/skill-check-dialog.hbs" }
++    };
++
++    /**
++     * @param {Actor} actor
++     * @param {object} skillEntry
++     * @param {string} skillEntry.uuid        UUID of the Skill item (compendium or world)
++     * @param {string} skillEntry.name        Display name (avoids an extra fromUuid before render)
++     * @param {string} skillEntry.category    The system.skills bucket this entry lives in (str/agi/cha/ins/edu/languages)
++     * @param {string} skillEntry.level       Current proficiency level for this actor (untrained/trained/.../grandMaster)
++     * @param {string} [skillEntry.attribute] The skill's default linked attribute key, if already known (avoids a fromUuid lookup)
++     */
++    constructor(actor, skillEntry, options = {}) {
++        super(options);
++        this.actor = actor;
++        this.skillEntry = skillEntry;
++        this.defaultAttribute = skillEntry.attribute ?? skillEntry.category;
++        this.attributeKey = this.defaultAttribute;
++        this.modifiers = []; // { id, label, value }
++        this.submitted = false;
++        this.resolve = null;
++    }
++
++    /**
++     * Open the dialog and resolve with the evaluated Roll, or null if the
++     * dialog was cancelled/closed without rolling.
++     * @returns {Promise<Roll|null>}
++     */
++    static async prompt(actor, skillEntry) {
++        return new Promise((resolve) => {
++            const app = new this(actor, skillEntry);
++            app.resolve = resolve;
++            app.addEventListener(
++                "close",
++                () => {
++                    if (!app.submitted) resolve(null);
++                },
++                { once: true }
++            );
++            app.render(true);
++        });
++    }
++
++    /* -------------------------------------------- */
++    /*  Context / rendering                          */
++    /* -------------------------------------------- */
++
++    async _prepareContext() {
++        const attributes = Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, labelKey]) => ({
++            key,
++            label: game.i18n.localize(labelKey),
++            total: this.actor.system.attributes[key]?.total ?? 0,
++            selected: key === this.attributeKey,
++            isDefault: key === this.defaultAttribute
++        }));
++
++        const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
++        const flatModifier = this.skillEntry.flatModifier ?? 0;
++
++        return {
++            skillName: this.skillEntry.name,
++            levelLabel: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level),
++            levelBonus,
++            flatModifier,
++            attributes,
++            attributeChanged: this.attributeKey !== this.defaultAttribute,
++            modifiers: this.modifiers,
++            total: this.#computeTotal(levelBonus, flatModifier)
++        };
++    }
++
++    #computeTotal(levelBonus, flatModifier) {
++        const attrTotal = this.actor.system.attributes[this.attributeKey]?.total ?? 0;
++        const modTotal = this.modifiers.reduce((sum, m) => sum + m.value, 0);
++        return attrTotal + levelBonus + flatModifier + modTotal;
++    }
++
++    _onRender(context, options) {
++        this.element.querySelector("select[name=attribute]")?.addEventListener("change", (ev) => {
++            this.attributeKey = ev.target.value;
++            this.render();
++        });
++
++        this.element.querySelector(".mod-value")?.addEventListener("keydown", (ev) => {
++            if (ev.key === "Enter") {
++                ev.preventDefault();
++                SkillCheckDialog.#onAddModifier.call(this, ev, ev.currentTarget);
++            }
++        });
++    }
++
++    /* -------------------------------------------- */
++    /*  Actions                                      */
++    /* -------------------------------------------- */
++
++    static #onAddModifier(event, target) {
++        const form = this.element;
++        const nameInput = form.querySelector(".mod-name");
++        const valueInput = form.querySelector(".mod-value");
++        const value = Number(valueInput.value);
++
++        if (!value || Number.isNaN(value)) {
++            ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillCheck.InvalidModifier"));
++            return;
++        }
++
++        this.modifiers.push({
++            id: foundry.utils.randomID(),
++            label: nameInput.value.trim() || (value > 0 ? "Bonus" : "Penalty"),
++            value
++        });
++
++        nameInput.value = "";
++        valueInput.value = "";
++        this.render();
++    }
++
++    static #onRemoveModifier(event, target) {
++        const id = target.dataset.modifierId;
++        this.modifiers = this.modifiers.filter((m) => m.id !== id);
++        this.render();
++    }
++
++    static async #onSubmit(event, form, formData) {
++        this.submitted = true;
++
++        const attr = CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.attributeKey];
++        const attrAbbrKey = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations[this.attributeKey];
++        const attrAbbr = game.i18n.localize(attrAbbrKey).toUpperCase();
++        const attrTotal = this.actor.system.attributes[this.attributeKey]?.total ?? 0;
++        const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
++        const levelLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level);
++        const flatModifier = this.skillEntry.flatModifier ?? 0;
++
++        const formula = this.#buildFormula(attrAbbr, attrTotal, levelLabel, levelBonus, flatModifier);
++
++        const roll = new LOTM_VTTRoll(formula, this.actor.getRollData());
++        await roll.evaluate();
++
++        const attributeChanged = this.attributeKey !== this.defaultAttribute;
++        const defaultAttrLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.defaultAttribute]);
++        const flavor = attributeChanged
++            ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.FlavorOverride", {
++                  skill: this.skillEntry.name,
++                  attribute: game.i18n.localize(attr),
++                  defaultAttribute: defaultAttrLabel
++              })
++            : game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.Flavor", {
++                  skill: this.skillEntry.name,
++                  attribute: game.i18n.localize(attr)
++              });
++
++        await roll.toMessage({
++            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
++            flavor,
++            rollMode: game.settings.get("core", "rollMode")
++        });
++
++        this.resolve(roll);
++    }
++
++    /** Build the `N[Label]` formula LOTM_VTTRoll's getTooltip()/cleanFormula expect. */
++    #buildFormula(attrAbbr, attrTotal, levelLabel, levelBonus, flatModifier) {
++        const terms = [
++            "1d20", // adjust to whatever this system's actual base die turns out to be
++            `${this.#signed(attrTotal)}[${attrAbbr}]`,
++            `${this.#signed(levelBonus)}[${levelLabel}]`,
++            // The skill item's own flat system.modifier field (e.g. from a feat/piece
++            // of gear) -- only included when it's actually set to something nonzero.
++            ...(flatModifier ? [`${this.#signed(flatModifier)}[${this.skillEntry.name}]`] : []),
++            ...this.modifiers.map((m) => `${this.#signed(m.value)}[${m.label}]`)
++        ];
++        return terms.join(" ");
++    }
++
++    #signed(n) {
++        return n >= 0 ? `+${n}` : `${n}`;
++    }
++
++    async close(options) {
++        if (!this.submitted) this.resolve?.(null);
++        return super.close(options);
++    }
++}
+diff --git a/module/dice/lotm-roll.mjs b/module/dice/lotm-roll.mjs
+new file mode 100644
+index 0000000..a1ae465
+--- /dev/null
++++ b/module/dice/lotm-roll.mjs
+@@ -0,0 +1,137 @@
++/**
++ * LOTM_VTTRoll
++ * ------------
++ * Moved here, unchanged, from LOTM_VTT/system/rolls/roll.mjs (the older ISDL-
++ * generated prototype under a different system id, "LOTM_VTT" -- that folder
++ * isn't loaded by the active system.json, so this class was previously dead
++ * code). It's re-homed under the active `lotm` module tree and registered in
++ * lotm.mjs so the skill-check dialog (module/apps/skill-check-dialog.mjs) can
++ * use it.
++ *
++ * It adds three things standard Foundry `Roll` doesn't give you for free:
++ *   - getTooltip() also picks up flat NumericTerms (e.g. the `5` in `5[STR]`)
++ *     into the dice breakdown, not just actual dice.
++ *   - cleanFormula strips a formula like `1d20 + 5[STR]` down to `1d20 + STR`
++ *     for display -- this is the convention the skill-check dialog's formula
++ *     builder relies on (every modifier term is tagged `N[Label]`).
++ *   - Config-driven crit/fumble (`roll.options.crit` / `.fumble`, each an
++ *     {op, value} threshold compared against the first die's natural face)
++ *     and dice-pool helpers (successes/countDice/containsDie) for house rules
++ *     that need them later. Nothing in this change sets crit/fumble/success
++ *     options yet -- they're inert until something populates them.
++ *
++ * getTooltip() renders via `this.constructor.TOOLTIP_TEMPLATE`, which isn't
++ * redefined here -- it resolves through static inheritance to Foundry's own
++ * `Roll.TOOLTIP_TEMPLATE` ("templates/dice/tooltip.hbs"), so this works with
++ * no extra template needed.
++ */
++export default class LOTM_VTTRoll extends Roll {
++    async getTooltip() {
++        const parts = [];
++
++        for ( const term of this.terms ) {
++            if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.DiceTerm) ) {
++                parts.push(term.getTooltipData());
++            }
++            else if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.NumericTerm) ) {
++                parts.push({
++                    formula: term.flavor,
++                    total: term.total,
++                    faces: null,
++                    flavor: "",
++                    rolls: []
++                });
++            }
++        }
++
++        return renderTemplate(this.constructor.TOOLTIP_TEMPLATE, { parts });
++    }
++
++    /* -------------------------------------------- */
++
++    get cleanFormula() {
++        // Replace flavor terms such as 5[STR] with just the flavor text
++        let cleanFormula = this._formula;
++        for ( const term of this.terms ) {
++            if ( term.formula && term.flavor ) {
++                cleanFormula = cleanFormula.replace(term.formula, term.flavor);
++            }
++        }
++
++        // If there are still parts of the formula such as 5[STR] then replace them with just the flavor text
++        const rgx = new RegExp(/(\d+)\[(.*?)\]/g);
++        cleanFormula = cleanFormula.replace(rgx, "$2");
++
++        return cleanFormula;
++    }
++
++    /* -------------------------------------------- */
++    /*  Roll result inspection (crit / fumble / dice pools)         */
++    /* -------------------------------------------- */
++
++    // Apply a comparison operator string. A missing operator means equality.
++    _cmp(a, op, b) {
++        switch ( op ) {
++            case "<":  return a <  b;
++            case "<=": return a <= b;
++            case ">":  return a >  b;
++            case ">=": return a >= b;
++            case "!=": return a != b;
++            case "==":
++            default:   return a == b;
++        }
++    }
++
++    // The natural (unmodified) total of the first DiceTerm in the roll.
++    get _firstDieTotal() {
++        const die = this.dice[0];
++        if ( !die ) return this.total;
++        return die.results.filter(r => r.active).reduce((sum, r) => sum + r.result, 0);
++    }
++
++    // Evaluate a crit/fumble config: { op, value } against the first die's natural face.
++    // Returns false when unconfigured.
++    _evalCondition(cfg) {
++        if ( !cfg ) return false;
++        return this._cmp(this._firstDieTotal, cfg.op, cfg.value);
++    }
++
++    // crit/fumble may be set manually (e.g. for game-specific rules that a crit:/fumble:
++    // threshold can't express). A manually-assigned value wins over the param evaluation;
++    // ?? only falls through when no manual value has been set (undefined).
++    get crit()   { return this._critForced ?? this._evalCondition(this.options.crit); }
++    set crit(v)  { this._critForced = v; }
++    get fumble()  { return this._fumbleForced ?? this._evalCondition(this.options.fumble); }
++    set fumble(v) { this._fumbleForced = v; }
++
++    // Every standing face result across all DiceTerms in the roll. Keeps faces dropped
++    // by keep/drop modifiers (so 'any die shows a 1' works on Nd6kh1) but excludes the
++    // pre-reroll value of a rerolled die.
++    get _allResults() {
++        return this.dice.flatMap(d => d.results.filter(r => !r.rerolled).map(r => r.result));
++    }
++
++    // ISDL `r.dice` maps to this getter -- Foundry's Roll#dice returns DiceTerm
++    // objects, so the face-value array gets its own name to avoid clobbering it.
++    get diceFaces() { return this._allResults; }
++
++    get highest() { const r = this._allResults; return r.length ? Math.max(...r) : 0; }
++    get lowest()  { const r = this._allResults; return r.length ? Math.min(...r) : 0; }
++
++    // Success counting: faces matching success:, minus faces matching failure:.
++    get successes() {
++        const s = this.options.success;
++        if ( !s ) return 0;
++        const hits = this._allResults.filter(r => this._cmp(r, s.op, s.value)).length;
++        const f = this.options.failure;
++        const misses = f ? this._allResults.filter(r => this._cmp(r, f.op, f.value)).length : 0;
++        return hits - misses;
++    }
++
++    // count(arg)/contains(arg): arg is a face value or a die predicate function.
++    _predicate(arg) {
++        return typeof arg === "function" ? arg : (r => r === arg);
++    }
++    countDice(arg)   { return this._allResults.filter(this._predicate(arg)).length; }
++    containsDie(arg) { return this._allResults.some(this._predicate(arg)); }
++}
+diff --git a/module/helpers/skill-modifiers.mjs b/module/helpers/skill-modifiers.mjs
+new file mode 100644
+index 0000000..ff618f4
+--- /dev/null
++++ b/module/helpers/skill-modifiers.mjs
+@@ -0,0 +1,39 @@
++/**
++ * The flat bonus/penalty a proficiency level adds on top of an attribute's total.
++ * Pulled out of PlayerCharacterSheet (which used to own this as a private static
++ * method) so it can be shared with SkillCheckDialog without the two modules
++ * importing each other.
++ * @param {string} skillLevel     One of CONFIG.LORD_OF_THE_MYSTERIES.skillLevels' keys.
++ * @param {number} attributeTotal The linked attribute's total. Pass 0 to isolate
++ *                                just the level's own bonus (used by the roll
++ *                                dialog to build a separate `N[Label]` term).
++ * @returns {number}
++ */
++export function calculateSkillModifier(skillLevel, attributeTotal) {
++  var skillModifier = attributeTotal;
++
++  switch (skillLevel) {
++    case "untrained":
++      skillModifier -= 4;
++      break;
++    case "trained":
++      skillModifier += 2;
++      break;
++    case "proficient":
++      skillModifier += 4;
++      break;
++    case "advanced":
++      skillModifier += 5;
++      break;
++    case "mastery":
++      skillModifier += 6;
++      break;
++    case "lore":
++      skillModifier += 7;
++      break;
++    case "grandMaster":
++      skillModifier += 8;
++      break;
++  }
++  return skillModifier;
++}
+diff --git a/module/helpers/templates.mjs b/module/helpers/templates.mjs
+index 9ff2728..5ea2bdd 100644
+--- a/module/helpers/templates.mjs
++++ b/module/helpers/templates.mjs
+@@ -16,6 +16,9 @@ export const preloadHandlebarsTemplates = async function () {
+     'systems/lotm/templates/actor/player-character/parts/sidebar.hbs',
+     'systems/lotm/templates/actor/player-character/parts/tab-nav.hbs',
+ 
++    // App partials
++    'systems/lotm/templates/apps/skill-check-dialog.hbs',
++
+     // Item partials
+     'systems/lotm/templates/item/parts/item-effects.hbs',
+     'systems/lotm/templates/item/parts/item-header.hbs',
+diff --git a/module/lotm.mjs b/module/lotm.mjs
+index 02687c8..26fd181 100644
+--- a/module/lotm.mjs
++++ b/module/lotm.mjs
+@@ -16,6 +16,9 @@ import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/
+ import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
+ import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
+ 
++// Import custom Roll class.
++import LOTM_VTTRoll from './dice/lotm-roll.mjs';
++
+ // Import DataModel classes
+ import * as models from './data/_module.mjs';
+ 
+@@ -44,6 +47,12 @@ Hooks.once('init', function () {
+     decimals: 2,
+   };
+ 
++  // Register the system's custom Roll class as the default, so every roll
++  // (skill checks from the new dialog, but also any inline [[/r ...]] roll
++  // or /roll chat command) gets its tooltip/cleanFormula behavior -- see
++  // module/dice/lotm-roll.mjs for what that adds over the base Roll class.
++  CONFIG.Dice.rolls = [LOTM_VTTRoll];
++
+   // Define custom Document and DataModel classes
+   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;
+ 
+diff --git a/module/sheets/player-character-sheet.mjs b/module/sheets/player-character-sheet.mjs
+index 062a52e..ab737a2 100644
+--- a/module/sheets/player-character-sheet.mjs
++++ b/module/sheets/player-character-sheet.mjs
+@@ -2,6 +2,9 @@
+  * Player Character sheet.
+  **/
+ 
++import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
++import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
++
+ const { HandlebarsApplicationMixin } = foundry.applications.api;
+ const { ActorSheetV2 } = foundry.applications.sheets;
+ 
+@@ -19,7 +22,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
+       longRest: PlayerCharacterSheet._onLongRest,
+       spendLuck: PlayerCharacterSheet._onSpendLuck,
+       spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
+-      editImage: PlayerCharacterSheet._onEditImage
++      editImage: PlayerCharacterSheet._onEditImage,
++      rollSkill: PlayerCharacterSheet._onRollSkill
+     },
+     form: {
+       submitOnChange: true,
+@@ -149,19 +153,22 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
+ 
+   /**
+    * Build the full, per-category skill list from the skills_compendium pack's folder structure
+-   * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string}[]>>}
++   * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string, attribute: string, flatModifier: number, modifier: number}[]>>}
+    */
+   async _prepareSkillList() {
+     const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
+     const skillsByCategory = {};
+-    
++
+ 
+     if (!pack) {
+       console.warn(`Lord of the Mysteries | Skills compendium "${CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId}" not found.`);
+       return skillsByCategory;
+     }
+ 
+-    await pack.getIndex(); // ensures the index - and therefore each Folder's .contents - is populated
++    // Request the two extra system fields the roll dialog needs (the skill's
++    // own linked attribute and its flat item modifier) so opening the dialog
++    // doesn't need a separate fromUuid() round trip per skill.
++    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier"] });
+ 
+     for (const [category, folderName] of Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders)) {
+       const folder = pack.folders.getName(folderName);
+@@ -178,12 +185,22 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
+       skillsByCategory[category] = indexEntries
+         .map(entry => {
+           const level = levelByUuid.get(entry.uuid) ?? "untrained";
++          // NOTE: the sheet's displayed number still uses the tab/category attribute,
++          // same as before this change -- unchanged to avoid shifting every skill's
++          // displayed modifier as a side effect of this PR. The roll dialog instead
++          // defaults to the skill item's own `skill_attribute` field below, which is
++          // the actual rules-relevant "linked attribute" and may differ from the
++          // compendium folder/tab a skill happens to be filed under. Worth reconciling
++          // in a follow-up once you've decided which should really drive the display.
+           const attributeTotal = this.actor.system.attributes[category]?.total ?? 0;
+           return {
+             uuid: entry.uuid,
+             name: entry.name,
+             img: entry.img,
+             level,
++            category,
++            attribute: entry.system?.skill_attribute ?? category,
++            flatModifier: entry.system?.modifier ?? 0,
+             modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal)
+           };
+         })
+@@ -194,36 +211,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
+   }
+ 
+   
+-  static _calculateSkillModifier(skillLevel, attributeTotal)
+-  {
+-
+-    var skillModifier = attributeTotal
+-
+-    switch(skillLevel)
+-    {
+-      case "untrained":
+-        skillModifier -= 4;
+-        break;
+-      case "trained":
+-        skillModifier += 2;
+-        break;
+-      case "proficient":
+-        skillModifier += 4;
+-        break;
+-      case "advanced":
+-        skillModifier += 5;
+-        break;
+-      case "mastery":
+-        skillModifier += 6;
+-        break;
+-      case "lore":
+-        skillModifier += 7;
+-        break;
+-      case "grandMaster":
+-        skillModifier += 8;
+-        break;
+-    }
+-    return skillModifier;
++  // Kept as a thin wrapper (rather than removed) so nothing calling
++  // PlayerCharacterSheet._calculateSkillModifier(...) elsewhere breaks; the
++  // real implementation now lives in helpers/skill-modifiers.mjs so
++  // SkillCheckDialog can use it too without importing this class.
++  static _calculateSkillModifier(skillLevel, attributeTotal) {
++    return calculateSkillModifier(skillLevel, attributeTotal);
+   }
+ 
+ 
+@@ -274,4 +267,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
+     return fp.browse();
+   }
+ 
++  /**
++   * Open SkillCheckDialog for the clicked skill. All the data the dialog
++   * needs (uuid/name/level/category/attribute) travels in via data-*
++   * attributes on the skill row, set from _prepareSkillList()'s entry -
++   * see templates/actor/player-character/character.hbs.
++   */
++  static _onRollSkill(event, target) {
++    const row = target.closest("[data-skill-uuid]");
++    if (!row) return;
++
++    SkillCheckDialog.prompt(this.actor, {
++      uuid: row.dataset.skillUuid,
++      name: row.dataset.skillName,
++      category: row.dataset.category,
++      attribute: row.dataset.attribute || row.dataset.category,
++      level: row.dataset.level,
++      flatModifier: Number(row.dataset.flatModifier) || 0
++    });
++  }
++
+ }
+diff --git a/src/scss/components/_skill-check-dialog.scss b/src/scss/components/_skill-check-dialog.scss
+new file mode 100644
+index 0000000..77d7a53
+--- /dev/null
++++ b/src/scss/components/_skill-check-dialog.scss
+@@ -0,0 +1,64 @@
++.skill-check-dialog {
++  .skill-check-header {
++    display: flex;
++    flex-direction: column;
++    margin-bottom: 8px;
++
++    .skill-name {
++      font-weight: bold;
++      font-size: 1.1em;
++    }
++
++    .skill-level,
++    .skill-flat-modifier {
++      font-size: 0.9em;
++      opacity: 0.8;
++    }
++  }
++
++  .override-hint {
++    font-size: 0.8em;
++    font-style: italic;
++    opacity: 0.8;
++    margin: 4px 0 0;
++  }
++
++  .modifiers {
++    list-style: none;
++    margin: 8px 0;
++    padding: 0;
++
++    li {
++      display: flex;
++      align-items: center;
++      justify-content: space-between;
++      padding: 2px 0;
++
++      .mod-label {
++        flex: 1;
++      }
++
++      .mod-value {
++        margin: 0 8px;
++      }
++    }
++  }
++
++  .add-modifier-row {
++    display: flex;
++    gap: 4px;
++    margin-bottom: 8px;
++
++    .mod-name {
++      flex: 2;
++    }
++
++    .mod-value {
++      flex: 1;
++    }
++  }
++
++  footer button[type="submit"] {
++    width: 100%;
++  }
++}
+diff --git a/src/scss/lotm.scss b/src/scss/lotm.scss
+index 275e632..275139e 100644
+--- a/src/scss/lotm.scss
++++ b/src/scss/lotm.scss
+@@ -18,4 +18,5 @@
+   @import 'components/resource';
+   @import 'components/items';
+   @import 'components/effects';
++  @import 'components/skill-check-dialog';
+ }
+diff --git a/templates/actor/player-character/character.hbs b/templates/actor/player-character/character.hbs
+index 4758ac5..7ead910 100644
+--- a/templates/actor/player-character/character.hbs
++++ b/templates/actor/player-character/character.hbs
+@@ -60,9 +60,15 @@
+             {{#if categorySkills.length}}
+             <ul class="skill-list">
+               {{#each categorySkills as |entry index|}}
+-              <li class="skill-row">
++              <li class="skill-row"
++                  data-skill-uuid="{{entry.uuid}}"
++                  data-skill-name="{{entry.name}}"
++                  data-category="{{tab.id}}"
++                  data-attribute="{{entry.attribute}}"
++                  data-level="{{entry.level}}"
++                  data-flat-modifier="{{entry.flatModifier}}">
+                 <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
+-                <a class="modifier rollable-number">
++                <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+                   {{numberFormat entry.modifier decimals=0 sign=true}}
+                 </a>
+                 <span class="skill-name">{{entry.name}}</span>
+diff --git a/templates/apps/skill-check-dialog.hbs b/templates/apps/skill-check-dialog.hbs
+new file mode 100644
+index 0000000..888e057
+--- /dev/null
++++ b/templates/apps/skill-check-dialog.hbs
+@@ -0,0 +1,49 @@
++<header class="skill-check-header">
++    <span class="skill-name">{{skillName}}</span>
++    <span class="skill-level">{{levelLabel}} ({{numberFormat levelBonus decimals=0 sign=true}})</span>
++    {{#if flatModifier}}
++    <span class="skill-flat-modifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.ItemModifier"}} ({{numberFormat flatModifier decimals=0 sign=true}})</span>
++    {{/if}}
++</header>
++
++<div class="form-group">
++    <label>{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.LinkedAttribute"}}</label>
++    <select name="attribute">
++        {{#each attributes as |a|}}
++            <option value="{{a.key}}" {{#if a.selected}}selected{{/if}}>
++                {{a.label}} ({{numberFormat a.total decimals=0 sign=true}}){{#unless a.isDefault}} — {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Override"}}{{/unless}}
++            </option>
++        {{/each}}
++    </select>
++    {{#if attributeChanged}}
++    <p class="hint override-hint">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.OverrideHint"}}</p>
++    {{/if}}
++</div>
++
++<hr />
++
++<ol class="modifiers">
++    {{#each modifiers as |m|}}
++        <li>
++            <span class="mod-label">{{m.label}}</span>
++            <span class="mod-value">{{numberFormat m.value decimals=0 sign=true}}</span>
++            <a data-action="removeModifier" data-modifier-id="{{m.id}}" title="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RemoveModifier'}}">
++                <i class="fa-solid fa-xmark"></i>
++            </a>
++        </li>
++    {{/each}}
++</ol>
++
++<div class="add-modifier-row">
++    <input type="text" class="mod-name" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.ModifierLabel'}}" />
++    <input type="number" class="mod-value" placeholder="+/-" />
++    <button type="button" data-action="addModifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.AddModifier"}}</button>
++</div>
++
++<hr />
++
++<footer>
++    <button type="submit">
++        {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Roll"}} ({{numberFormat total decimals=0 sign=true}})
++    </button>
++</footer>
