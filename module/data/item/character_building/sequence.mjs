@@ -23,8 +23,8 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     schema.skill_increase = new fields.ArrayField(
         new fields.SchemaField({
             // The UUID of the Skill Item this increase applies to
-            skill_uuid: new fields.DocumentUUIDField({ type: "Item", required: true }),
-            value : new fields.NumberField({required: true, integer: true, min: 0, initial: 1})
+            skill_uuid: new fields.DocumentUUIDField({ type: "Item", required: false }),
+            value : new fields.NumberField({required: false, integer: true, min: 0, initial: 1})
         })
     );
 
