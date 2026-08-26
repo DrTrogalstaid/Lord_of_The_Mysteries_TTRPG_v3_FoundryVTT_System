@@ -11,6 +11,10 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
     schema.special = new fields.StringField({ required: false, initial: "na" });
     schema.canBeStolen = new fields.BooleanField({ required: true, initial: true})
 
+    //Action Type (e.i. Attack/Spell, quick action, free action)
+    schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
+
+
     //Roll modifiers
 
     //Vistion/Senses gained

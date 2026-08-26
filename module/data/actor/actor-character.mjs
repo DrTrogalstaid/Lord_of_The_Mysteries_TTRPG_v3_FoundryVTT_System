@@ -25,7 +25,6 @@ export default class LordOfTheMysteriesCharacter extends LordOfTheMysteriesActor
         schema.birthPlace = new fields.StringField({ required: true, blank: true });
         schema.backstory = new fields.StringField({ required: true, blank: true });
 
-
         return schema;
     }
 

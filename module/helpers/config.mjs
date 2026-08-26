@@ -114,9 +114,9 @@ LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
 };
 
 LORD_OF_THE_MYSTERIES.actionTypes = {
-    free: 'LORD_OF_THE_MYSTERIES.Skill_Level.free',
-    attack: 'LORD_OF_THE_MYSTERIES.Skill_Level.attack',
-    quick: 'LORD_OF_THE_MYSTERIES.Skill_Level.quick',
-    move: 'LORD_OF_THE_MYSTERIES.Skill_Level.move',
-    full: 'LORD_OF_THE_MYSTERIES.Skill_Level.full',
+    free: 'LORD_OF_THE_MYSTERIES.Action_Type.free',
+    attack: 'LORD_OF_THE_MYSTERIES.Action_Type.attack',
+    quick: 'LORD_OF_THE_MYSTERIES.Action_Type.quick',
+    move: 'LORD_OF_THE_MYSTERIES.Action_Type.move',
+    full: 'LORD_OF_THE_MYSTERIES.Action_Type.full',
 };

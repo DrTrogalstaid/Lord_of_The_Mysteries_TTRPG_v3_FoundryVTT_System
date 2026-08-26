@@ -7,29 +7,31 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     const schema = {};
 
     //Action Type (e.i. Attack/Spell, quick action, free action)
-    schema.actionType = new fields.StringField({ required: true, initial: "free", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
+    schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
 
-    schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
     schema.description = new fields.StringField({ required: true, initial: "Description" });
-
-    //Active effects?
+    schema.special = new fields.StringField({ required: true, initial: "na" });
+    
     //Range
     schema.range = new fields.NumberField({required: false, integer: true, min: 0});
-
+    schema.target = new fields.StringField({required: false, blank: true});
+    schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
+    
+    // Attack: string with roll macro?
+    schema.attack = new fields.StringField({ required: false, blank: true});
     //DC_Results
     //TODO: Make an array?? Mayebe, but it could also be a markdown table. Or the sheet would process the array into a markdown table??
     schema.dcResults = new fields.StringField({ required: false, initial: "Results" });
-
-    //Great Success and Big Failure events
-    schema.specialResults = new fields.ArrayField(
-      new fields.StringField({ required: false, initial: "na" })
-    );
 
     schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );
 
     schema.spellMacro = new fields.StringField({ required: false, initial: "na" });
+    //Active effects?
+    //TODO: How do I do this? Is this another object that needs created? Is this the same as a spell macro??
+    //TODO: When a spell active effect is on a player, can I add actions to their actions tab? If so, that might be really nice.
+    schema.activeEffectMacro = new fields.StringField({ required: false, initial: "na" });
 
     /**
      * Exampled of spells for reference

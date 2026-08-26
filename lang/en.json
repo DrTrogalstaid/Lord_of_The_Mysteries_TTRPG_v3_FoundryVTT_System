@@ -67,6 +67,14 @@
         "Effects": "Effects"
     },
 
+    "Action_Type": {
+      "free": "Free",
+      "attack": "Attack",
+      "quick": "Quick",
+      "move": "Move",
+      "full": "Full"
+    },
+
     "Skill_Level": {
       "untrained": "Untrained",
       "trained": "Trained",

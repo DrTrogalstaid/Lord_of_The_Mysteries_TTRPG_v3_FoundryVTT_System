@@ -51,6 +51,13 @@
           <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" />
       </fieldset>
       
+      <fieldset class="actionType ">
+        <legend>Action Type</legend>
+        <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.actionTypes selected=system.actionType localize=true blank=""}}
+        </select>
+      </fieldset>
+
       <!--Range-->
       <fieldset>
         <legend>Range</legend>
