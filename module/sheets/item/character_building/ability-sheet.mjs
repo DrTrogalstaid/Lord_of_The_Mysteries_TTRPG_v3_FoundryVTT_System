@@ -29,6 +29,7 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       addSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onAddSequenceUpgrade,
       deleteSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onDeleteSequenceUpgrade,
       deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
+      deleteAction: LordOfTheMysteriesAbilitySheet.#onDeleteAction,
     },
   };
 
@@ -99,6 +100,19 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
         };
       })
     );
+    
+    context.actionListActions = await Promise.all(
+      (context.system.actionList ?? []).map(async (uuid, index) => {
+        const actionItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: actionItem?.name ?? "Unknown Item",
+          img: actionItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !actionItem,
+        };
+      })
+    );
 
     return context;
   }
@@ -129,23 +143,33 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
    * need to decide what to do with it.
    * @override
    */
-  async _onDropDocument(event, document) {
+async _onDropDocument(event, document) {
     if (document.documentName !== "Item") return super._onDropDocument(event, document);
 
     const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
-    if (dropZone !== "spellList") return document;
 
-    const current = this.item.system.spellList.spells ?? [];
-    if (current.includes(document.uuid)) {
-      ui.notifications.warn(`${document.name} is already in the Spell List.`);
-      return null;
+    if (dropZone === "spellList") {
+      const current = this.item.system.spellList.spells ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already in the Spell List.`);
+        return null;
+      }
+      await this.item.update({ "system.spellList.spells": [...current, document.uuid] });
+      return document;
     }
-    await this.item.update({
-      "system.spellList.spells": [...current, document.uuid],
-    });
+
+    if (dropZone === "actionList") {
+      const current = this.item.system.actionList ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already in the Action List.`);
+        return null;
+      }
+      await this.item.update({ "system.actionList": [...current, document.uuid] });
+      return document;
+    }
 
     return document;
-  }
+}
 
   /* -------------------------------------------- */
   /*  Actions                                      */
@@ -172,6 +196,14 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
     const current = this.item.system.spellList.spells ?? [];
     await this.item.update({
       "system.spellList.spells": current.filter((_, i) => i !== index),
+    });
+  }
+
+  static async #onDeleteAction(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.actionList ?? [];
+    await this.item.update({
+      "system.actionList": current.filter((_, i) => i !== index),
     });
   }
 

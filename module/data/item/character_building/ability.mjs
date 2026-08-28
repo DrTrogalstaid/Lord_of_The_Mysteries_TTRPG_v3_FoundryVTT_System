@@ -40,6 +40,10 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
       ) 
     });
 
+    schema.actionList = new fields.ArrayField(
+        new fields.DocumentUUIDField({ type: "Item", required: false })
+    );
+
     return schema;
   }
 

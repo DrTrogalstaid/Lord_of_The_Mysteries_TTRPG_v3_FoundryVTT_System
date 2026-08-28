@@ -120,3 +120,8 @@ LORD_OF_THE_MYSTERIES.actionTypes = {
     move: 'LORD_OF_THE_MYSTERIES.Action_Type.move',
     full: 'LORD_OF_THE_MYSTERIES.Action_Type.full',
 };
+
+LORD_OF_THE_MYSTERIES.actionCategories = {
+    combat: 'LORD_OF_THE_MYSTERIES.Action_Category.combat',
+    downTime: 'LORD_OF_THE_MYSTERIES.Action_Category.downtime',
+};

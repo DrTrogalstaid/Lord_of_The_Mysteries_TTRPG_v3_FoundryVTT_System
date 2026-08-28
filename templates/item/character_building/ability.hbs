@@ -115,6 +115,34 @@
           {{/unless}}
         </ol>
       </fieldset>
+
+      <!--Action List-->
+      <fieldset class="actions-gained" data-drop-zone="actionList">
+        <legend>Actions</legend>
+        <ol class="items-list">
+          <li class="items-header flexrow">
+            <div class="item-name">Ability</div>
+            <div class="item-controls"></div>
+          </li>
+          {{#each actionListActions as |row|}}
+          <li class="item flexrow" data-uuid="{{row.uuid}}">
+            <div class="item-name">
+              <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
+              <h4>{{row.name}}</h4>
+            </div>
+            <div class="item-controls">
+              <a class="item-control" data-action="deleteAction" data-index="{{row.index}}" title="Delete">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </li>
+          {{/each}}
+          {{#unless actionListActions.length}}
+          <li class="item flexrow drop-hint">Drag an Action</li>
+          {{/unless}}
+        </ol>
+      </fieldset>
+
       <!--Can Be Stolen-->
       <fieldset>
         <legend>Can Be Stolen/Recorded</legend>

@@ -75,6 +75,12 @@
       "full": "Full"
     },
 
+    "Action_Category": {
+      "combat": "Combat",
+      "downtime": "Downtime",
+      "skillCheck": "SKill Check"
+    },
+
     "Skill_Level": {
       "untrained": "Untrained",
       "trained": "Trained",
