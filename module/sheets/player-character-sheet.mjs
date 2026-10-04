@@ -42,7 +42,14 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
     character: { template: "systems/lotm/templates/actor/player-character/character.hbs", scrollable: [""] },
-    biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] }
+    actions:   { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", scrollable: [""] },
+    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", scrollable: [""] },
+    effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
+    biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
+    backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
+
   };
 
   /** @override */
@@ -52,7 +59,13 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     sheet: {
       tabs: [
         { id: "character", label: "LORD_OF_THE_MYSTERIES.Tabs.Character" },
-        { id: "biography", label: "LORD_OF_THE_MYSTERIES.Tabs.Biography" }
+        { id: "actions", label: "LORD_OF_THE_MYSTERIES.Tabs.Actions" },
+        { id: "inventory", label: "LORD_OF_THE_MYSTERIES.Tabs.Inventory" },
+        { id: "spells", label: "LORD_OF_THE_MYSTERIES.Tabs.Spells" },
+        { id: "abilities", label: "LORD_OF_THE_MYSTERIES.Tabs.Abilities" },
+        { id: "effects", label: "LORD_OF_THE_MYSTERIES.Tabs.Effects" },
+        { id: "biography", label: "LORD_OF_THE_MYSTERIES.Tabs.Biography" },
+        { id: "backstory", label: "LORD_OF_THE_MYSTERIES.Tabs.Backstory"}
       ],
       initial: "character"
     },
@@ -106,14 +119,28 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
       case "biography":
         context.tab = context.tabs.biography;
-        // Single journal-style field for now (system.biography is a plain StringField).
-        // Swap/extend this once the full Biography page layout is designed.
-        context.enrichedBiography = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-          this.actor.system.biography ?? "",
+        context.enrichedBackstory = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.backstory,
           {
             secrets: this.actor.isOwner,
             rollData: this.actor.getRollData(),
-            relativeTo: this.actor
+            relativeTo: this.actor,
+          }
+        );
+        context.enrichedPhysicalDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.physicalDescription,
+          {
+            secrets: this.actor.isOwner,
+            rollData: this.actor.getRollData(),
+            relativeTo: this.actor,
+          }
+        );
+        context.enrichedIdeasAndBeliefs = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          this.actor.system.ideasAndBeliefs,
+          {
+            secrets: this.actor.isOwner,
+            rollData: this.actor.getRollData(),
+            relativeTo: this.actor,
           }
         );
         break;

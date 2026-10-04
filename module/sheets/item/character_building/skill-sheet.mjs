@@ -28,6 +28,7 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
     
   };
 
+  
   /** @override */
   // Placeholder path — the real per-type template is resolved in
   // _configureRenderParts() below, the V2 replacement for the old
@@ -36,6 +37,7 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
     header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
     form: { template: 'systems/lotm/templates/item/character_building/skill-sheet.hbs'},
   };
+
 
   /** @override */
   static TABS = {

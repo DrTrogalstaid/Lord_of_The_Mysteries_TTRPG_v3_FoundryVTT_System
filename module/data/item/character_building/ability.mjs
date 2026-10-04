@@ -5,40 +5,44 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
   static defineSchema() {
     const fields = foundry.data.fields;
     const schema = {};
-
+    
     schema.description = new fields.StringField({ required: true, initial: "Description" });
-
     schema.trigger = new fields.StringField({ required: false, initial: "na" });
     schema.special = new fields.StringField({ required: false, initial: "na" });
+    schema.canBeStolen = new fields.BooleanField({ required: true, initial: true})
 
-    // Actions
-    // Each entry is the UUID of an Action granted by this aability
-    schema.actions = new fields.ArrayField(
-      new fields.DocumentUUIDField({ type: "Item", required: true })
-    );
+    //Action Type (e.i. Attack/Spell, quick action, free action)
+    schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
 
-    schema.can_be_stolen = new fields.BooleanField({ required: true, initial: true})
 
     //Roll modifiers
-
-    //Knowledge gain??
 
     //Vistion/Senses gained
     //TODO: Vistion object? How does foundry handle this??
 
     //Spirituatlity Cost
-    schema.spirituality_cost = new fields.NumberField({required: false, integer: true, min: 0});
+    schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
 
     //Higher sequence bonuses (array containing all sequences?)
     //TODO: What should this be besides a string?
-    schema.higher_sequence_upgrades = new fields.ArrayField(
-      new fields.StringField({ required: false, initial: "na" })
+    schema.higherSequenceUpgrades = new fields.ArrayField(
+      new fields.StringField({ required: false, initial: "na" }),
     );
 
     //Range
-    //TODO: Is there something better than int??
     schema.range = new fields.NumberField({required: false, integer: true, min: 0});
 
+    // Spell List
+    schema.spellList = new fields.SchemaField({
+      name: new fields.StringField({required: false, initial: "Spells"}),
+      spells: new fields.ArrayField(
+        new fields.DocumentUUIDField({ type: "Item", required: false })
+      ) 
+    });
+
+    schema.actionList = new fields.ArrayField(
+        new fields.DocumentUUIDField({ type: "Item", required: false })
+    );
 
     return schema;
   }

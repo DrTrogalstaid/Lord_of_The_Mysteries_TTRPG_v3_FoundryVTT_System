@@ -11,14 +11,6 @@
           <input type="number" name="system.resources.hp.max" value="{{system.resources.hp.max}}" readonly/>
         </div>
       </div>
-      <div class="pool-box">
-        <label>Spirit</label>
-        <div class="pool-values">
-          <input type="number" name="system.resources.sp.value" value="{{system.resources.sp.value}}" />
-          <span class="pool-sep">/</span>
-          <input type="number" name="system.resources.sp.max" value="{{system.resources.sp.max}}" readonly/>
-        </div>
-      </div>
     </div>
     <div class="pool-row">
       <div class="pool-box">
@@ -39,19 +31,17 @@
 
   <div class="defense-box">
     <div class="stat-box full-width">
-      <label>Armor</label>
-      <input type="number" name="system.armor" value="{{system.armor}}" />
+      <label>Physical</label>
+      <input type="number" name="system.defenses.physical" value="{{system.defenses.physical}}" readonly/>
     </div>
     <div class="pool-row">
       <div class="stat-box">
-        <label>Physical</label>
-        <input type="number" name="system.dodge" value="{{system.dodge}}" />
+        <label>Physique</label>
+        <input type="number" name="system.defenses.physique" value="{{system.defenses.physique}}" readonly/>
       </div>
       <div class="stat-box">
         <label>Will</label>
-        {{! No schema field exists yet for a "Will" resistance value - see chat notes. }}
-        {{! Once one is added (e.g. system.will_resistance), swap the input below to bind to it. }}
-        <input type="number" disabled title="No matching data model field yet" />
+        <input type="number" name="system.defenses.wil", value="{{system.defenses.will}}" readonly/>
       </div>
     </div>
     <div class="stat-box full-width damage-resistance-box">

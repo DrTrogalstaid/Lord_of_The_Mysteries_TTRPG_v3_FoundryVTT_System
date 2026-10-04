@@ -20,10 +20,10 @@
   "version": "0.0.1",
   "compatibility": {
     "minimum": 14,
-    "verified": "14.365"
+    "verified": "14.368"
   },
   "esmodules": ["module/lotm.mjs"],
-  "styles": ["css/lotm.css","css/actor-sheet.css"],
+  "styles": ["css/lotm.css","css/actor-sheet.css", "css/item-sheet.css"],
   "languages": [
     {
       "lang": "en",
@@ -45,12 +45,37 @@
       },
       "flats": {}
     },
-        {
+    {
       "name": "sequence_compendium",
       "label": "Sequences",
       "path": "packs/sequences_compendium",
       "type": "Item",
       "banner": "systems/lotm/assets/compendium_packs/Path_of_the_Divine.webp",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+    {
+      "name": "ability_compendium",
+      "label": "Abilities",
+      "path": "packs/ability_compendium",
+      "type": "Item",
+      "banner": "systems/lotm/assets/compendium_packs/Ingredient_-_Astronomical,_Geographical,_and_Folkloric_Knowledge_of_Three_Galaxies.webp",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+        {
+      "name": "action_compendium",
+      "label": "Actions",
+      "path": "packs/action_compendium",
+      "type": "Item",
       "system": "lotm",
       "ownershop": {
         "PLAYER": "OBSERVER",

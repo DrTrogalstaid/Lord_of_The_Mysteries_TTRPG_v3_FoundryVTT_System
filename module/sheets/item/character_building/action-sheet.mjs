@@ -87,6 +87,10 @@ export class LordOfTheMysteriesActionSheet extends HandlebarsApplicationMixin(It
         relativeTo: this.item,
       }
     );
+    context.enrichedSpecialResults = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      this.item.system.specialResults,
+      { secrets: this.document.isOwner, relativeTo: this.item }
+    );
 
     // Add the item's data to context.data for easier access, as well as flags.
     context.system = itemData.system;

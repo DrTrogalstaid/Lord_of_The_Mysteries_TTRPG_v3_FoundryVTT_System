@@ -1,0 +1,115 @@
+<div class="{{cssClass}} sequence-sheet-root">
+
+  {{!-- Sheet Tab Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="sheet">
+    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
+    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Description Tab --}}
+    <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
+      <div class="description-box">
+        <div class="box-title">Description</div>
+        {{#if editable}}
+          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
+            {{{enrichedDescription}}}
+          </prose-mirror>
+        {{else}}
+          {{{enrichedDescription}}}
+        {{/if}}
+      </div>
+      <div class="description-box">
+        <div class="box-title">Special</div>
+        {{#if editable}}
+          <prose-mirror name="system.special" button="true" editable="{{editable}}" toggled="false" value="{{system.special}}">
+            {{{enrichedSpecial}}}
+          </prose-mirror>
+        {{else}}
+          {{{enrichedSpecial}}}
+        {{/if}}
+      </div>
+    </div>
+
+    {{!-- Details Tab --}}
+    <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
+
+      <fieldset class="actionType ">
+        <legend>Action Type</legend>
+        <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.actionTypes selected=system.actionType localize=true blank=""}}
+        </select>
+      </fieldset>
+
+      <!--TODO: Put Target, Spirituality Cost, and Range in a sidebar-->
+      <!--Target-->
+      <fieldset>
+        <legend>Target</legend>
+        <input id="target" class="blend-input" type="text" name="system.target" value="{{system.target}}" placeholder="Target" />
+      </fieldset>
+
+      <!--Spirituality Cost-->
+      <fieldset>
+        <legend>Spirituality Cost</legend>
+        <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" />
+      </fieldset>
+      
+      <!--Range-->
+      <fieldset>
+        <legend>Range</legend>
+        <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" />
+      </fieldset>
+
+      <!--Attack-->
+      <fieldset>
+        <legend>Attack</legend>
+        <input id="attack" class="blend-input" type="text" name="system.attack" value="{{system.attack}}" placeholder="Attack" />
+      </fieldset>
+
+      <!--DC Results-->
+      <fieldset>
+        <legend>DC Results</legend>
+        <input id="dcResults" class="blend-input" type="text" name="system.dcResults" value="{{system.dcResults}}" placeholder="DC Results" />
+      </fieldset>
+
+      <!--Sequence Upgrades-->
+      <fieldset class="sequence-upgrades">
+        <legend>Sequence Upgrades</legend>
+        <ol class="items-list">
+          {{#each higherSequenceUpgrades as |row|}}
+          <li class="item flexrow">
+            <input type="text" class="blend-input flexlarge"
+                  name="system.higherSequenceUpgrades.{{row.index}}"
+                  value="{{row.value}}" placeholder="Upgrade description" />
+            <div class="item-controls">
+              <a class="item-control" data-action="deleteSequenceUpgrade" data-index="{{row.index}}" title="Delete">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </li>
+          {{/each}}
+        </ol>
+        <a class="item-control add-row" data-action="addSequenceUpgrade">
+          <i class="fas fa-plus"></i> Add Upgrade
+        </a>
+      </fieldset>
+
+      <!--Spell Macto-->
+      <fieldset>
+        <legend>Spell Macro</legend>
+        <input id="spellMacro" class="blend-input" type="text" name="system.spellMacro" value="{{system.spellMacro}}" placeholder="SpellMacro" />
+      </fieldset>
+
+      <!--Active Effect-->
+      <fieldset>
+        <legend>Active Effect Macro</legend>
+        <input id="activeEffectMacro" class="blend-input" type="text" name="system.activeEffectMacro" value="{{system.activeEffectMacro}}" placeholder="ActiveEffectMacro" />
+      </fieldset>
+
+    </div>
+
+  </section>
+
+</div>

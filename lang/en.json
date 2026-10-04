@@ -13,7 +13,6 @@
     
     "Resources": {
       "Health": { "long": "Health Points", "abbr": "hp" },
-      "Spirit": { "long": "Spirit Points", "abbr": "sp" },
       "Rationality": { "long": "Rationality Points", "abbr": "rp" },
       "Luck": { "long": "Luck Points", "abbr": "lp" },
       "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
@@ -46,7 +45,7 @@
     "SheetTitles": {
         "PlayerCharacter": "Player Character",
         "Sequence": "Sequence",
-        "SKill": "Skill",
+        "Skill": "Skill",
         "Ability": "Ability",
         "Action": "Action"
     },
@@ -54,12 +53,32 @@
     "Tabs": {
         "Character": "Character Info",
         "Biography": "Biography",
+        "Backstory": "Backstory",
         "Strength": "Strength",
         "Charisma": "Charisma",
         "Agility": "Agility",
         "Perception": "Perception",
         "Description": "Description",
-        "Details": "Details"
+        "Details": "Details",
+        "Abilities": "Abilities",
+        "Spells": "Spells",
+        "Actions": "Actions",
+        "Inventory": "Inventory",
+        "Effects": "Effects"
+    },
+
+    "Action_Type": {
+      "free": "Free",
+      "attack": "Attack",
+      "quick": "Quick",
+      "move": "Move",
+      "full": "Full"
+    },
+
+    "Action_Category": {
+      "combat": "Combat",
+      "downtime": "Downtime",
+      "skillCheck": "SKill Check"
     },
 
     "Skill_Level": {

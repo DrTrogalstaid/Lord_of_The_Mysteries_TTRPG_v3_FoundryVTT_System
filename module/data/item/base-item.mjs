@@ -4,7 +4,7 @@ export default class LordOfTheMysteriesItemBase extends LordOfTheMysteriesDataMo
 
   static defineSchema() {
     const fields = foundry.data.fields;
-    const schema = {};
+    const schema = {};    
 
     return schema;
   }

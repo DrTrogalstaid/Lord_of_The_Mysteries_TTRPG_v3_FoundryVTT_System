@@ -1,4 +1,3 @@
-
 import {
   onManageActiveEffect,
   prepareActiveEffectCategories,
@@ -25,13 +24,16 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.Skill"
     },
-    
+    dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
+    actions: {
+      addSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onAddSequenceUpgrade,
+      deleteSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onDeleteSequenceUpgrade,
+      deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
+      deleteAction: LordOfTheMysteriesAbilitySheet.#onDeleteAction,
+    },
   };
 
   /** @override */
-  // Placeholder path — the real per-type template is resolved in
-  // _configureRenderParts() below, the V2 replacement for the old
-  // `get template()` getter.
   static PARTS = {
     header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
     form: { template: 'systems/lotm/templates/item/character_building/ability-sheet.hbs'},
@@ -50,95 +52,67 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
 
   /* -------------------------------------------- */
 
-  /**
-   * Resolve a distinct template per item type, e.g.
-   * item-item-sheet.hbs, item-feature-sheet.hbs, item-spell-sheet.hbs
-   * (one .hbs file per type registered in CONFIG.Item.dataModels).
-   * This is the V2 replacement for overriding the old `get template()` getter.
-   */
   /** @override */
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
-    
     parts.form.template = `systems/lotm/templates/item/character_building/ability.hbs`;
-                           
-
     return parts;
   }
 
 
   /** @override */
   async _prepareContext(options){
-    // Retrieve base data structure.
     const context = await super._prepareContext(options);
-
-    // Use a safe clone of the item data for further operations.
     const itemData = this.document.toPlainObject();
 
     context.item = this.item;
 
-    // Enrich text editors
     context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
       this.item.system.description,
-      {
-        // Whether to show secret blocks in the finished html
-        secrets: this.document.isOwner,
-        // Relative UUID resolution
-        relativeTo: this.item,
-      }
+      { secrets: this.document.isOwner, relativeTo: this.item }
+    );
+    context.enrichedSpecial = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      this.item.system.special,
+      { secrets: this.document.isOwner, relativeTo: this.item }
     );
 
-    // Add the item's data to context.data for easier access, as well as flags.
     context.system = itemData.system;
     context.flags = itemData.flags;
-
-    // Adding a pointer to CONFIG.LORD_OF_THE_MYSTERIES
     context.config = CONFIG.LORD_OF_THE_MYSTERIES;
-
-    // Prepare active effects for easier access
     context.effects = prepareActiveEffectCategories(this.item.effects);
 
-    // ---- Details tab: attribute_gain / skill_increase / abilities_gained ----
+    // Sequence Upgrade rows just need their array index for input naming.
+    context.higherSequenceUpgrades = (context.system.higherSequenceUpgrades ?? []).map((value, index) => ({
+      index,
+      value,
+    }));
 
-    // Flat {key: i18nKey} map for the Attribute <select>, sourced directly
-    // from CONFIG.LORD_OF_THE_MYSTERIES.attributes (see config.mjs) — it's
-    // already in the shape selectOptions wants: { str: "i18n.key", ... }.
-    //context.attributeChoices = CONFIG.LORD_OF_THE_MYSTERIES?.attributes ?? {};
-
-    // Attribute gain rows just need their array index for input naming.
-    // context.attributeGain = (context.system.attribute_gain ?? []).map((row, index) => ({
-    //   index,
-    //   ...row,
-    // }));
-
-    // Skill increase rows reference a Skill Item by UUID — resolve name/img for display.
-    // context.skillIncrease = await Promise.all(
-    //   (context.system.skill_increase ?? []).map(async (row, index) => {
-    //     const skillItem = row.skill_uuid ? await fromUuid(row.skill_uuid).catch(() => null) : null;
-    //     return {
-    //       index,
-    //       value: row.value,
-    //       uuid: row.skill_uuid,
-    //       name: skillItem?.name ?? "Unknown Item",
-    //       img: skillItem?.img ?? "icons/svg/hazard.svg",
-    //       broken: !!row.skill_uuid && !skillItem,
-    //     };
-    //   })
-    // );
-
-    // Abilities gained are a flat array of Item UUIDs — resolve name/img for display.
-    // context.abilitiesGained = await Promise.all(
-    //   (context.system.abilities_gained ?? []).map(async (uuid, index) => {
-    //     const abilityItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
-    //     return {
-    //       index,
-    //       uuid,
-    //       name: abilityItem?.name ?? "Unknown Item",
-    //       img: abilityItem?.img ?? "icons/svg/hazard.svg",
-    //       broken: !!uuid && !abilityItem,
-    //     };
-    //   })
-    // );
+    // Spell List entries reference an Item by UUID — resolve name/img for display.
+    context.spellListSpells = await Promise.all(
+      (context.system.spellList?.spells ?? []).map(async (uuid, index) => {
+        const spellItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: spellItem?.name ?? "Unknown Item",
+          img: spellItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !spellItem,
+        };
+      })
+    );
+    
+    context.actionListActions = await Promise.all(
+      (context.system.actionList ?? []).map(async (uuid, index) => {
+        const actionItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: actionItem?.name ?? "Unknown Item",
+          img: actionItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !actionItem,
+        };
+      })
+    );
 
     return context;
   }
@@ -169,79 +143,68 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
    * need to decide what to do with it.
    * @override
    */
-//   async _onDropDocument(event, document) {
-//     if (document.documentName !== "Item") return super._onDropDocument(event, document);
+async _onDropDocument(event, document) {
+    if (document.documentName !== "Item") return super._onDropDocument(event, document);
 
-//     // const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
-//     // if (!dropZone) return null;
+    const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
 
-//     // if (dropZone === "skill_increase") {
-//     //   const current = this.item.system.skill_increase ?? [];
-//     //   if (current.some((row) => row.skill_uuid === document.uuid)) {
-//     //     ui.notifications.warn(`${document.name} is already in Skill Increase.`);
-//     //     return null;
-//     //   }
-//     //   await this.item.update({
-//     //     "system.skill_increase": [...current, { skill_uuid: document.uuid, value: 1 }],
-//     //   });
-//     // } else if (dropZone === "abilities_gained") {
-//     //   const current = this.item.system.abilities_gained ?? [];
-//     //   if (current.includes(document.uuid)) {
-//     //     ui.notifications.warn(`${document.name} is already in Abilities Gained.`);
-//     //     return null;
-//     //   }
-//     //   await this.item.update({
-//     //     "system.abilities_gained": [...current, document.uuid],
-//     //   });
-//     // }
+    if (dropZone === "spellList") {
+      const current = this.item.system.spellList.spells ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already in the Spell List.`);
+        return null;
+      }
+      await this.item.update({ "system.spellList.spells": [...current, document.uuid] });
+      return document;
+    }
 
-//     return document;
-//   }
+    if (dropZone === "actionList") {
+      const current = this.item.system.actionList ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already in the Action List.`);
+        return null;
+      }
+      await this.item.update({ "system.actionList": [...current, document.uuid] });
+      return document;
+    }
+
+    return document;
+}
 
   /* -------------------------------------------- */
   /*  Actions                                      */
   /* -------------------------------------------- */
 
-  /** Add a blank Attribute Gain row. */
-//   static async #onAddAttributeGain(event, target) {
-//     const choices = Object.keys(CONFIG.LORD_OF_THE_MYSTERIES?.attributes ?? {});
-//     if (!choices.length) {
-//       ui.notifications.error(
-//         "LORD_OF_THE_MYSTERIES.attributes is empty or missing — check config.mjs."
-//       );
-//       return;
-//     }
-//     const current = this.item.system.attribute_gain ?? [];
-//     await this.item.update({
-//       "system.attribute_gain": [...current, { attribute_name: choices[0], value: 1 }],
-//     });
-//   }
+  /** Add a blank Sequence Upgrade row. */
+  static async #onAddSequenceUpgrade(event, target) {
+    const current = this.item.system.higherSequenceUpgrades ?? [];
+    await this.item.update({ "system.higherSequenceUpgrades": [...current, ""] });
+  }
 
-//   /** Remove an Attribute Gain row by index. */
-//   static async #onDeleteAttributeGain(event, target) {
-//     const index = Number(target.dataset.index);
-//     const current = this.item.system.attribute_gain ?? [];
-//     await this.item.update({
-//       "system.attribute_gain": current.filter((_, i) => i !== index),
-//     });
-//   }
+  /** Remove a Sequence Upgrade row by index. */
+  static async #onDeleteSequenceUpgrade(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.higherSequenceUpgrades ?? [];
+    await this.item.update({
+      "system.higherSequenceUpgrades": current.filter((_, i) => i !== index),
+    });
+  }
 
-//   /** Remove a Skill Increase row by index. */
-//   static async #onDeleteSkillIncrease(event, target) {
-//     const index = Number(target.dataset.index);
-//     const current = this.item.system.skill_increase ?? [];
-//     await this.item.update({
-//       "system.skill_increase": current.filter((_, i) => i !== index),
-//     });
-//   }
+  /** Remove a Spell List entry by index. */
+  static async #onDeleteSpell(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.spellList.spells ?? [];
+    await this.item.update({
+      "system.spellList.spells": current.filter((_, i) => i !== index),
+    });
+  }
 
-//   /** Remove an Abilities Gained entry by index. */
-//   static async #onDeleteAbilityGained(event, target) {
-//     const index = Number(target.dataset.index);
-//     const current = this.item.system.abilities_gained ?? [];
-//     await this.item.update({
-//       "system.abilities_gained": current.filter((_, i) => i !== index),
-//     });
-//   }
+  static async #onDeleteAction(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.actionList ?? [];
+    await this.item.update({
+      "system.actionList": current.filter((_, i) => i !== index),
+    });
+  }
 
 }

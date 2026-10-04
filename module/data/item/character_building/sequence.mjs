@@ -9,7 +9,7 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     // Basic Information
     schema.pathway = new fields.StringField({ required: true, initial: "Pathway"});
     schema.sequence_number = new fields.NumberField({ required: true, nullable: false, integer: true , initial: 9});
-    schema.description = new fields.StringField({ required: true, initial: "description"});
+    schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.acting_principals = new fields.StringField({ required: true, initial: "NA"});
     
     // Bonuses
@@ -23,18 +23,21 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     schema.skill_increase = new fields.ArrayField(
         new fields.SchemaField({
             // The UUID of the Skill Item this increase applies to
-            skill_uuid: new fields.DocumentUUIDField({ type: "Item", required: true }),
-            value : new fields.NumberField({required: true, integer: true, min: 0, initial: 1})
+            skill_uuid: new fields.DocumentUUIDField({ type: "Item", required: false }),
+            value : new fields.NumberField({required: false, integer: true, min: 0, initial: 1})
         })
     );
 
     // Abilities
-    // Each entry is the UUID of an Item (e.g. a Feature) granted by this Sequence
+    // Each entry is the UUID of an Item (e.g. a ability) granted by this Sequence
     schema.abilities_gained = new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: true })
     );
 
-    //TODO: Add Knowledge and Training bonus section
+    // Knowledge and Training bonus
+    schema.trainingBonus = new fields.ArrayField(
+        new fields.DocumentUUIDField({ type: "Item", required: true })
+    )
 
     return schema;
   }

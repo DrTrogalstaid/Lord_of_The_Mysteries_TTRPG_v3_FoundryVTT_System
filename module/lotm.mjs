@@ -10,6 +10,7 @@ import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_buildin
 import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/skill-sheet.mjs';
 import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building/ability-sheet.mjs';
 import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
+import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
 
 
 // Import helper/utility classes and constants.
@@ -105,6 +106,11 @@ Hooks.once('init', function () {
   });
   foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesActionSheet, {
     types: ['action'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Action'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesSpellSheet, {
+    types: ['spell'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Action'
   });
