@@ -70,6 +70,18 @@
         "ASSISTANT": "OWNER"
       },
       "flats": {}
+    },
+        {
+      "name": "action_compendium",
+      "label": "Actions",
+      "path": "packs/action_compendium",
+      "type": "Item",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
     }
   ],
   "packFolders": [],
