@@ -1,0 +1,34 @@
+config LOTM_VTT {
+    label = "Lord Of The Mysteries"
+    id = "LOTM_VTT"
+    description = "Game System!"
+    author = "Dr. Trog and Rasaec"
+}
+
+actor PC {
+    health resource HP
+
+    section Attricutes {
+        attribute Charisma(min: 1, max: 10,
+            roll: roll(d20 + self.Charisma))
+        attribute Strength(min: 1, max: 10,
+            roll: roll(d20 + self.Strength))
+        attribute Luck(min: 1, max: 10,
+            roll: roll(d20 + self.Luck))
+        attribute Agility(min: 1, max: 10,
+            roll: roll(d20 + self.Agility))
+        attribute Physique(min: 1, max: 10,
+            roll: roll(d20 + self.Physique))
+        attribute Will(min: 1, max: 10,
+            roll: roll(d20 + self.Will))
+        attribute Inspriation(min: 1, max: 10,
+            roll: roll(d20 + self.Inspriation))
+        attribute Education(min: 1, max: 10,
+            roll: roll(d20 + self.Education))
+    }
+    table<Loot> MyLoot
+}
+
+item Loot {
+    number Value(min: 0)
+}

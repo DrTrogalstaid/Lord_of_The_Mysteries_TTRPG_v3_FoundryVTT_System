@@ -1,0 +1,51 @@
+<div class="skill-check-dialog-content">
+    <header class="skill-check-header">
+        <span class="skill-name">{{skillName}}</span>
+        <span class="skill-level">{{levelLabel}} ({{numberFormat levelBonus decimals=0 sign=true}})</span>
+        {{#if flatModifier}}
+        <span class="skill-flat-modifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.ItemModifier"}} ({{numberFormat flatModifier decimals=0 sign=true}})</span>
+        {{/if}}
+    </header>
+
+    <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.LinkedAttribute"}}</label>
+        <select name="attribute">
+            {{#each attributes as |a|}}
+                <option value="{{a.key}}" {{#if a.selected}}selected{{/if}}>
+                    {{a.label}} ({{numberFormat a.total decimals=0 sign=true}}){{#unless a.isDefault}} — {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Override"}}{{/unless}}
+                </option>
+            {{/each}}
+        </select>
+        {{#if attributeChanged}}
+        <p class="hint override-hint">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.OverrideHint"}}</p>
+        {{/if}}
+    </div>
+
+    <hr />
+
+    <ol class="modifiers">
+        {{#each modifiers as |m|}}
+            <li>
+                <span class="mod-label">{{m.label}}</span>
+                <span class="mod-value">{{numberFormat m.value decimals=0 sign=true}}</span>
+                <a data-action="removeModifier" data-modifier-id="{{m.id}}" title="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RemoveModifier'}}">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            </li>
+        {{/each}}
+    </ol>
+
+    <div class="add-modifier-row">
+        <input type="text" class="mod-name" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.ModifierLabel'}}" />
+        <input type="number" class="mod-value" placeholder="+/-" />
+        <button type="button" data-action="addModifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.AddModifier"}}</button>
+    </div>
+
+    <hr />
+
+    <footer>
+        <button type="submit">
+            {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Roll"}} ({{numberFormat total decimals=0 sign=true}})
+        </button>
+    </footer>
+</div>
