@@ -1,2 +1,8 @@
 <section class="tab spells-tab {{tab.cssClass}}" data-group="sheet" data-tab="spells">
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+      zone="spells"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.spells"
+      entries=sections.spells
+      remove="deleteSpell"
+      add="addSpell"}}
 </section>

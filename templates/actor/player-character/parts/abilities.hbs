@@ -1,2 +1,8 @@
 <section class="tab abilities-tab {{tab.cssClass}}" data-group="sheet" data-tab="abilities">
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+      zone="abilities"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.abilities"
+      entries=sections.abilities
+      remove="deleteAbility"
+      add="addAbility"}}
 </section>

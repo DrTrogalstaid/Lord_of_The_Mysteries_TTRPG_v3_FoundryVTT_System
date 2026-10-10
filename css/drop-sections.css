@@ -1,0 +1,160 @@
+/* Drop sections on the player character sheet.
+   Register in system.json -> "styles", or @import from your existing sheet stylesheet. */
+
+.lotm.sheet.player-character .drop-section {
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin-bottom: 0.75rem;
+  min-height: 4.5rem;
+  transition: border-color 0.12s, background-color 0.12s, box-shadow 0.12s;
+}
+
+/* The section under the cursor while an Item is being dragged over it. */
+.lotm.sheet.player-character .drop-section.drag-over {
+  border-color: var(--color-border-highlight, #ff6400);
+  background: color-mix(in srgb, var(--color-border-highlight, #ff6400) 10%, transparent);
+  box-shadow: 0 0 0 1px var(--color-border-highlight, #ff6400);
+}
+
+.lotm.sheet.player-character .drop-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.lotm.sheet.player-character .drop-section-title {
+  flex: 0 0 auto;
+  margin: 0;
+  border: none;
+  font-size: var(--font-size-16, 1rem);
+}
+
+.lotm.sheet.player-character .drop-section-hint {
+  flex: 1;
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .drop-section-add {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: auto;
+  padding: 0;
+  line-height: 1;
+}
+
+.lotm.sheet.player-character .drop-section-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lotm.sheet.player-character .drop-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+/* Entries that come from another Item rather than being owned directly. */
+.lotm.sheet.player-character .drop-entry.granted {
+  border-left: 3px solid var(--color-border-highlight, #ff6400);
+  background: color-mix(in srgb, currentColor 2%, transparent);
+}
+
+.lotm.sheet.player-character .drop-entry.broken {
+  border-left-color: var(--color-level-error, #c33);
+  opacity: 0.7;
+}
+
+.lotm.sheet.player-character .drop-entry-img {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.lotm.sheet.player-character .drop-entry-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lotm.sheet.player-character .drop-entry-name {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lotm.sheet.player-character .drop-entry.broken .drop-entry-name {
+  cursor: default;
+}
+
+.lotm.sheet.player-character .drop-entry-detail {
+  font-size: var(--font-size-12, 0.75rem);
+  opacity: 0.8;
+}
+
+.lotm.sheet.player-character .drop-entry-source {
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Labeled stats (Action Type, Spirituality Cost) on the right of a row: small label over the value. */
+.lotm.sheet.player-character .drop-entry-stats {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.lotm.sheet.player-character .drop-entry-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.lotm.sheet.player-character .drop-entry-stat-label {
+  font-size: var(--font-size-10, 0.625rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.lotm.sheet.player-character .drop-entry-stat-value {
+  font-size: var(--font-size-13, 0.8rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lotm.sheet.player-character .drop-entry-remove {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .drop-entry-remove:hover {
+  opacity: 1;
+}
+
+.lotm.sheet.player-character .drop-section-empty {
+  margin: 0.25rem 0 0;
+  font-style: italic;
+  opacity: 0.55;
+}

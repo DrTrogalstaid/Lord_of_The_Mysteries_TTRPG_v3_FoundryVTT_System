@@ -23,12 +23,14 @@
   height: 50%;
   display: flex;
   flex-direction: column;
+  overflow: scroll;
 }
 
 .lotm.sheet.item .description-box prose-mirror,
 .lotm.sheet.item .description-box .editor {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-y: scroll;
 }
 
 .lotm.sheet.item .box-title {

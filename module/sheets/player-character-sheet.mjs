@@ -5,6 +5,117 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
+/** Shared partial that renders one drop section (header, entry list, drop target). */
+const DROP_SECTION_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-section.hbs";
+
+/* -------------------------------------------- */
+/*  Drop section configuration                   */
+/* -------------------------------------------- */
+
+/**
+ * Every section of the sheet that accepts dropped Items.
+ * `types` are Item type keys and must match the keys under "Item" in system.json's documentTypes.
+ * `types: null` is the catch-all (inventory): any supported Item type not claimed by another section.
+ */
+const DROP_SECTIONS = {
+  skills:    { types: ["skill"] },
+  sequences: { types: ["sequence"] },
+  abilities: { types: ["ability"] },
+  actions:   { types: ["action"] },
+  spells:    { types: ["spell"] },
+  inventory: { types: null },
+};
+
+/** Item types that cannot be dropped on a character sheet at all. */
+const UNSUPPORTED_TYPES = ["pathway"];
+
+/**
+ * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
+ * resolved and shown in the tab matching the *resolved* Item's type (the `section` is only a
+ * fallback for references that no longer resolve).
+ */
+const NESTED_FIELDS = [
+  { path: "abilities_gained", section: "abilities" }, // Sequence -> Abilities
+  { path: "trainingBonus",    section: "skills" },    // Sequence -> Knowledge / Training
+  { path: "spellList.spells", section: "spells" },    // Ability  -> Spells
+  { path: "actionList",       section: "actions" },   // Ability  -> Actions
+];
+
+/**
+ * Which section an Item type belongs to, or null if it can't be placed on a sheet.
+ * @param {string} type
+ * @returns {string|null}
+ */
+function sectionForType(type) {
+  if (UNSUPPORTED_TYPES.includes(type)) return null;
+  for (const [key, def] of Object.entries(DROP_SECTIONS)) {
+    if (def.types?.includes(type)) return key;
+  }
+  return "inventory";
+}
+
+/** Localization key for a section's title. */
+const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section}`;
+
+/**
+ * Flatten an Item into the plain object the drop-section partial renders.
+ * @param {Item} item
+ * @param {{section: string, owned: boolean, grantedBy?: string[]}} options
+ */
+function buildEntry(item, { section, owned, grantedBy = [] }) {
+  const system = item.system ?? {};
+  // Abilities and spells use camelCase fields; Actions use snake_case.
+  const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
+  const actionType = system.actionType || system.action_type || "";
+  const actionTypeText = actionTypeLabel(actionType);
+  return {
+    uuid: item.uuid,
+    id: owned ? item.id : null,
+    name: item.name,
+    img: item.img,
+    type: item.type,
+    section,
+    owned,
+    nested: !owned,
+    broken: false,
+    // Shown as labeled stats on the row. A cost of 0 is still shown; only an unset cost is hidden.
+    cost,
+    hasCost: cost !== null,
+    actionType,
+    actionTypeLabel: actionTypeText,
+    hasStats: cost !== null || !!actionTypeText,
+    // Sequences show "Sequence 9 · <pathway>" and sort by rank.
+    rank: item.type === "sequence" ? (system.sequence_number ?? null) : null,
+    detail: item.type === "sequence" ? sequenceDetail(system) : "",
+    grantedBy: [...grantedBy],
+    grantedByLabel: "",
+  };
+}
+
+/** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
+function actionTypeLabel(key) {
+  if (!key) return "";
+  const langKey = `LORD_OF_THE_MYSTERIES.Action_Type.${key}`;
+  return game.i18n.has(langKey) ? game.i18n.localize(langKey) : key;
+}
+
+/** "Sequence 9 · Pathway" line for a Sequence item's system data. */
+function sequenceDetail(system) {
+  const number = game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.SequenceNumber", { number: system.sequence_number ?? "?" });
+  return system.pathway ? `${number} · ${system.pathway}` : number;
+}
+
+/**
+ * Create a blank embedded Item of the given type and open its sheet.
+ * @param {PlayerCharacterSheet} sheet
+ * @param {string} type
+ */
+async function createBlankItem(sheet, type) {
+  const name = Item.implementation.defaultName({ type, parent: sheet.actor });
+  const [created] = await sheet.actor.createEmbeddedDocuments("Item", [{ name, type }]);
+  created?.sheet?.render({ force: true });
+}
+
 
 export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
@@ -14,13 +125,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
     tag: "form",
     classes: ["lotm", "sheet", "actor", "player-character"],
-    actions: {
-      shortRest: PlayerCharacterSheet._onShortRest,
-      longRest: PlayerCharacterSheet._onLongRest,
-      spendLuck: PlayerCharacterSheet._onSpendLuck,
-      spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
-      editImage: PlayerCharacterSheet._onEditImage
-    },
     form: {
       submitOnChange: true,
       closeOnSubmit: false
@@ -33,18 +137,31 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
     },
-    dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
+    // No selector: the whole sheet is a drop target. _onDropDocument decides what happens
+    // based on the [data-drop-zone] section the Item actually landed on.
+    dragDrop: [{ dragSelector: null, dropSelector: null }],
+
+    // NOTE: this used to be two separate `actions` keys, so the second silently replaced the first and
+    // shortRest / longRest / spendLuck / spendSpirituality / editImage never got registered.
     actions: {
+      shortRest: PlayerCharacterSheet._onShortRest,
+      longRest: PlayerCharacterSheet._onLongRest,
+      spendLuck: PlayerCharacterSheet._onSpendLuck,
+      spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
+      editImage: PlayerCharacterSheet._onEditImage,
+
+      openItem: PlayerCharacterSheet.#onOpenItem,
+
       addSkill: PlayerCharacterSheet.#onAddSkill,
       deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
       addSequence: PlayerCharacterSheet.#onAddSequence,
-      deleteSequence: PlayerCharacterSheet.#onDeleteSequence,
+      deleteSequence: PlayerCharacterSheet.#onDeleteItem,
       addAbility: PlayerCharacterSheet.#onAddAbility,
-      deleteAbility: PlayerCharacterSheet.#onDeleteAbility,
+      deleteAbility: PlayerCharacterSheet.#onDeleteItem,
       addAction: PlayerCharacterSheet.#onAddAction,
-      deleteAction: PlayerCharacterSheet.#onDeleteAction,
+      deleteAction: PlayerCharacterSheet.#onDeleteItem,
       addSpell: PlayerCharacterSheet.#onAddSpell,
-      deleteSpell: PlayerCharacterSheet.#onDeleteSpell,
+      deleteSpell: PlayerCharacterSheet.#onDeleteItem,
       addItem: PlayerCharacterSheet.#onAddItem,
       deleteItem: PlayerCharacterSheet.#onDeleteItem,
     },
@@ -56,11 +173,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
-    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", scrollable: [""] },
-    actions:   { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", scrollable: [""] },
-    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", scrollable: [""] },
-    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", scrollable: [""] },
-    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", scrollable: [""] },
+    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
     backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
@@ -69,11 +187,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /** @override */
   static TABS = {
-    
+
     // The "Character Info" box's page selector (Character Info,Biography, etc.).
     sheet: {
       tabs: [
         { id: "character", label: "LORD_OF_THE_MYSTERIES.Tabs.Character" },
+        { id: "sequences", label: "LORD_OF_THE_MYSTERIES.Tabs.Sequences" },
         { id: "actions", label: "LORD_OF_THE_MYSTERIES.Tabs.Actions" },
         { id: "inventory", label: "LORD_OF_THE_MYSTERIES.Tabs.Inventory" },
         { id: "spells", label: "LORD_OF_THE_MYSTERIES.Tabs.Spells" },
@@ -104,17 +223,21 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** @override */
   /** Creates Basic Datamodel, which is used to fill the HTML together with Handlbars with Data */
   async _prepareContext(options) {
-    
+
     const context = await super._prepareContext(options);
-    
+
     context.actor = this.actor;
     context.system = this.actor.system;
     context.source = this.actor.toObject().system;
+    context.editable = this.isEditable;
 
     // Two independent tab groups: the "Character Info","Biography", etc. page selector,
     // and the nested skills sub-tabs.
     context.tabs = this._prepareTabs("sheet");
     context.skillTabs = this._prepareTabs("skills");
+
+    // Entries for every drop section: the Items the actor owns plus everything nested inside them.
+    context.sections = await this.#prepareSections();
 
     return context;
   }
@@ -123,6 +246,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** @override */
   async _preparePartContext(partId, context) {
     context.partId = `${this.id}-${partId}`;
+
+    // Every tab part needs its own tab state ({{tab.cssClass}}); only some did before.
+    if (context.tabs?.[partId]) context.tab = context.tabs[partId];
 
     switch (partId) {
       case "character":
@@ -167,7 +293,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /**
    * Flatten system.attributes into an array of {key, label, base, beyonder_bonus, corruption, total}
-   * for easy iteration in the template. 
+   * for easy iteration in the template.
    * @returns {object[]}
    */
   _prepareAttributes() {
@@ -196,7 +322,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   async _prepareSkillList() {
     const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
     const skillsByCategory = {};
-    
+
 
     if (!pack) {
       console.warn(`Lord of the Mysteries | Skills compendium "${CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId}" not found.`);
@@ -235,7 +361,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return skillsByCategory;
   }
 
-  
+
   static _calculateSkillModifier(skillLevel, attributeTotal)
   {
 
@@ -268,82 +394,210 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return skillModifier;
   }
 
+
+  /**
+   * Build the entry list for every drop section.
+   *
+   * 1. Items embedded on the actor go in the section for their type. These are removable.
+   * 2. Every UUID stored inside those Items (NESTED_FIELDS) is resolved and shown in the section for
+   *    the *resolved* Item's type, marked as granted by whichever Item(s) reference it. This repeats
+   *    through the nested Items themselves (Sequence -> Ability -> Spell/Action), so anything at any
+   *    depth shows up in its tab. Nested entries are read-only; remove them from the Item that grants them.
+   *
+   * Each source UUID appears once: an Item the actor owns *and* is granted by something else is shown
+   * once (as owned) with the granting Items listed, and reference loops (A -> B -> A) terminate.
+   * @returns {Promise<Record<string, object[]>>}
+   */
+  async #prepareSections() {
+    const sections = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
+    const bySource = new Map();     // source uuid -> entry already shown
+    const ignored = new Set();      // source uuids of unsupported types
+    const queue = [];
+
+    // 1. Owned Items
+    for (const item of this.actor.items) {
+      const section = sectionForType(item.type);
+      if (!section) continue;
+      const entry = buildEntry(item, { section, owned: true });
+      sections[section].push(entry);
+      bySource.set(item._stats?.compendiumSource ?? item.uuid, entry);
+      queue.push(item);
+    }
+
+    // 2. Nested Items, breadth first
+    while (queue.length) {
+      const parent = queue.shift();
+
+      for (const { path, section: fallbackSection } of NESTED_FIELDS) {
+        const uuids = foundry.utils.getProperty(parent.system ?? {}, path);
+        if (!Array.isArray(uuids)) continue;
+
+        for (const uuid of uuids) {
+          if (!uuid || ignored.has(uuid)) continue;
+
+          const existing = bySource.get(uuid);
+          if (existing) {
+            if (existing.name !== parent.name && !existing.grantedBy.includes(parent.name)) {
+              existing.grantedBy.push(parent.name);
+            }
+            continue;
+          }
+
+          const doc = await fromUuid(uuid).catch(() => null);
+
+          if (!doc || doc.documentName !== "Item") {
+            const broken = {
+              uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
+              img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
+              owned: false, nested: true, broken: true, cost: null, hasCost: false,
+              actionType: "", actionTypeLabel: "", hasStats: false, rank: null, detail: "",
+              grantedBy: [parent.name], grantedByLabel: "",
+            };
+            bySource.set(uuid, broken);
+            sections[fallbackSection].push(broken);
+            continue;
+          }
+
+          const section = sectionForType(doc.type);
+          if (!section) {
+            ignored.add(uuid);
+            continue;
+          }
+
+          const entry = buildEntry(doc, { section, owned: false, grantedBy: [parent.name] });
+          bySource.set(uuid, entry);
+          sections[section].push(entry);
+          queue.push(doc);
+        }
+      }
+    }
+
+    // Owned first, then granted. Within a group: by Sequence number (lowest = strongest, so the current
+    // Sequence leads) where there is one, then alphabetical.
+    for (const entries of Object.values(sections)) {
+      entries.sort((a, b) => {
+        if (a.owned !== b.owned) return a.owned ? -1 : 1;
+        if (a.rank != null && b.rank != null && a.rank !== b.rank) return a.rank - b.rank;
+        return a.name.localeCompare(b.name);
+      });
+      for (const entry of entries) entry.grantedByLabel = entry.grantedBy.join(", ");
+    }
+
+    return sections;
+  }
+
+  /* -------------------------------------------- */
+  /*  Rendering                                    */
+  /* -------------------------------------------- */
+
+  /** @override */
+  _onRender(context, options) {
+    super._onRender(context, options);
+
+    // Highlight the section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
+    for (const zone of this.element.querySelectorAll(".drop-section")) {
+      if (zone.dataset.dropBound) continue;
+      zone.dataset.dropBound = "1";
+      zone.addEventListener("dragover", () => zone.classList.add("drag-over"));
+      zone.addEventListener("dragleave", (event) => {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
+      });
+      zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
+    }
+  }
+
   /* -------------------------------------------- */
   /*  Drag & Drop                                  */
   /* -------------------------------------------- */
 
   /**
-   * Handle a Document being dropped onto the sheet. ActorSheetV2 already parses
-   * the drop event and resolves it to a Document before calling this; we only
-   * need to decide what to do with it.
+   * Handle a Document being dropped onto the sheet. ActorSheetV2 has already parsed the drop
+   * event and resolved it to a Document; this decides which section takes it.
+   *
+   * - Dropped on a section: the Item must belong in that section, otherwise it is rejected.
+   * - Dropped anywhere else on the sheet: it is placed in the section for its type.
    * @override
    */
   async _onDropDocument(event, document) {
-      if (document.documentName !== "Item") return super._onDropDocument(event, document);
+    if (document.documentName !== "Item") return super._onDropDocument(event, document);
+    if (!this.isEditable) return null;
 
-      const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
+    // Already on this actor: leave it to Foundry (re-sorting).
+    if (document.parent === this.actor) return super._onDropDocument(event, document);
 
-      if (dropZone === "skillList") {
-        const current = this.item.system.skillList.spells ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${document.name} is already in the Skill List.`);
-          return null;
-        }
-        await this.item.update({ "system.skillList.spells": [...current, document.uuid] });
-        return document;
-      }
+    const section = sectionForType(document.type);
+    if (!section) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Unsupported", { name: document.name }));
+      return null;
+    }
 
-      if (dropZone === "sequenceList") {
-        const current = this.item.system.sequenceList.spells ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${document.name} is already in the Sequence List.`);
-          return null;
-        }
-        await this.item.update({ "system.sequenceList.spells": [...current, document.uuid] });
-        return document;
-      }
+    const zone = event.target?.closest?.("[data-drop-zone]")?.dataset.dropZone ?? null;
+    if (zone && zone !== section) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.WrongSection", {
+        name: document.name,
+        section: game.i18n.localize(sectionLabel(zone)),
+      }));
+      return null;
+    }
 
-      if (dropZone === "abilityList") {
-        const current = this.item.system.abilityList.spells ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${document.name} is already in the Ability List.`);
-          return null;
-        }
-        await this.item.update({ "system.abilityList.spells": [...current, document.uuid] });
-        return document;
-      }
+    if (section === "skills") return this.#dropSkill(document);
+    return this.#dropEmbedded(document);
+  }
 
-      if (dropZone === "actionList") {
-        const current = this.item.system.actionList ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${document.name} is already in the Action List.`);
-          return null;
-        }
-        await this.item.update({ "system.actionList": [...current, document.uuid] });
-        return document;
-      }
+  /**
+   * Copy an Item onto the actor as an embedded Item. The source UUID is kept in
+   * _stats.compendiumSource so duplicates are caught and nested references to the same
+   * Item are recognised as the one the actor already owns.
+   * @param {Item} item
+   * @returns {Promise<Item|null>}
+   */
+  async #dropEmbedded(item) {
+    const alreadyOwned = this.actor.items.some((owned) => owned._stats?.compendiumSource === item.uuid);
+    if (alreadyOwned) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
+      return null;
+    }
 
-      if (dropZone === "spellList") {
-        const current = this.item.system.spellList.spells ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${document.name} is already in the Spell List.`);
-          return null;
-        }
-        await this.item.update({ "system.spellList.spells": [...current, document.uuid] });
-        return document;
-      }
+    const data = item.toObject();
+    delete data._id;
+    delete data.folder;
+    delete data.sort;
+    delete data.ownership;
+    foundry.utils.setProperty(data, "_stats.compendiumSource", item.uuid);
 
-      if (dropZone === "itemList") {
-        const current = this.item.system.itemList.spells ?? [];
-        if (current.includes(document.uuid)) {
-          ui.notifications.warn(`${documenonAddActiont.name} is already in the Item List.`);
-          return null;
-        }
-        await this.item.update({ "system.itemList.spells": [...current, document.uuid] });
-        return document;
-      }
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
+    return created ?? null;
+  }
 
-      return document;
+  /**
+   * Skills are not embedded: the Character tab lists the Skills compendium and the actor only stores
+   * a level per skill UUID (system.skills[category] = [{ skill, level }]). Dropping a skill records it at "trained".
+   * @param {Item} item
+   * @returns {Promise<Item|null>}
+   */
+  async #dropSkill(item) {
+    const config = CONFIG.LORD_OF_THE_MYSTERIES;
+
+    if (item.pack !== config.skillsCompendiumId) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.SkillCompendiumOnly", { name: item.name }));
+      return null;
+    }
+
+    const folders = config.skillCompendiumFolders ?? {};
+    const category = [item.system.category, item.system.skill_attribute].find((key) => key && key in folders);
+    if (!category) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.NoSkillCategory", { name: item.name }));
+      return null;
+    }
+
+    const current = this.actor.toObject().system.skills?.[category] ?? [];
+    if (current.some((entry) => entry.skill === item.uuid)) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
+      return null;
+    }
+
+    await this.actor.update({ [`system.skills.${category}`]: [...current, { skill: item.uuid, level: "trained" }] });
+    return item;
   }
 
   /* -------------------------------------------- */
@@ -394,62 +648,71 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
 
-  // Drag Drop Add Item
-  static async #onAddSkill(event, target){
-
-  }
-
-  static async #onAddSequence(event, target){
-    
-  }
-
-  static async #onAddAbility(event, target){
-    
-  }
-
-  static async #onAddAction(event, target){
-    
-  }
-
-  static async #onAddSpell(event, target){
-    
-  }
-
-  static async #onAddItem(event, target){
-    
-  }
-
-  // Delete Item
-  static async #onDeleteSkill(event, target){
-    
+  /** Open the sheet of an entry's Item, whether the actor owns it or it is only referenced. */
+  static async #onOpenItem(event, target) {
+    const doc = await fromUuid(target.dataset.uuid);
+    doc?.sheet?.render({ force: true });
   }
 
 
-  static async #onDeleteSequence(event, target){
-    
+  // Add: create a blank embedded Item of that type and open it.
+  // Skills and inventory Items come from compendiums / the sidebar, so those buttons just point at drag and drop.
+  static async #onAddSkill(event, target) {
+    ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintSkills"));
+  }
+
+  static async #onAddSequence(event, target) {
+    return createBlankItem(this, "sequence");
+  }
+
+  static async #onAddAbility(event, target) {
+    return createBlankItem(this, "ability");
+  }
+
+  static async #onAddAction(event, target) {
+    return createBlankItem(this, "action");
+  }
+
+  static async #onAddSpell(event, target) {
+    return createBlankItem(this, "spell");
+  }
+
+  static async #onAddItem(event, target) {
+    ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintInventory"));
   }
 
 
-
-  static async #onDeleteAbility(event, target){
-    
+  /**
+   * Remove a skill the actor has recorded. Expects data-uuid (skill) and data-category on the button.
+   */
+  static async #onDeleteSkill(event, target) {
+    const { uuid, category } = target.dataset;
+    if (!uuid || !category) return;
+    const current = this.actor.toObject().system.skills?.[category] ?? [];
+    await this.actor.update({ [`system.skills.${category}`]: current.filter((entry) => entry.skill !== uuid) });
   }
 
 
+  /**
+   * Remove an embedded Item (shared by deleteSequence / deleteAbility / deleteAction / deleteSpell /
+   * deleteItem). Hold Shift to skip the confirmation. Only owned entries get a delete button;
+   * granted ones are removed from the Item that grants them.
+   */
+  static async #onDeleteItem(event, target) {
+    const item = this.actor.items.get(target.dataset.itemId);
+    if (!item) return;
 
-  static async #onDeleteAction(event, target){
-    
-  }
+    if (!event.shiftKey) {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
+        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(item.name) })}</p>`,
+        rejectClose: false,
+        modal: true,
+      });
+      if (!confirmed) return;
+    }
 
-
-
-  static async #onDeleteSpell(event, target){
-    
-  }
-
-
-  static async #onDeleteItem(event, target){
-    
+    await item.delete();
   }
 
 }

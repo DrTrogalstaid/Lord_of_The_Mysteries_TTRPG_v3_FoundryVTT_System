@@ -84,4 +84,11 @@
 
   </div>
 
+  {{!-- Skills granted by Sequences (via their training bonus). The list above only covers the Skills compendium. --}}
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+      zone="skills"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"
+      entries=sections.skills
+      remove="deleteSkill"}}
+
 </section>

@@ -1,2 +1,8 @@
 <section class="tab inventory-tab {{tab.cssClass}}" data-group="sheet" data-tab="inventory">
+  {{!-- No "+" button here: inventory Items come from the sidebar or a compendium, so the section's drop hint covers it. --}}
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+      zone="inventory"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"
+      entries=sections.inventory
+      remove="deleteItem"}}
 </section>
