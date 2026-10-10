@@ -32,7 +32,22 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     window: {
       resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
-    }
+    },
+    dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
+    actions: {
+      addSkill: PlayerCharacterSheet.#onAddSkill,
+      deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
+      addSequence: PlayerCharacterSheet.#onAddSequence,
+      deleteSequence: PlayerCharacterSheet.#onDeleteSequence,
+      addAbility: PlayerCharacterSheet.#onAddAbility,
+      deleteAbility: PlayerCharacterSheet.#onDeleteAbility,
+      addAction: PlayerCharacterSheet.#onAddAction,
+      deleteAction: PlayerCharacterSheet.#onDeleteAction,
+      addSpell: PlayerCharacterSheet.#onAddSpell,
+      deleteSpell: PlayerCharacterSheet.#onDeleteSpell,
+      addItem: PlayerCharacterSheet.#onAddItem,
+      deleteItem: PlayerCharacterSheet.#onDeleteItem,
+    },
   };
 
   /** @override */
@@ -253,6 +268,83 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return skillModifier;
   }
 
+  /* -------------------------------------------- */
+  /*  Drag & Drop                                  */
+  /* -------------------------------------------- */
+
+  /**
+   * Handle a Document being dropped onto the sheet. ActorSheetV2 already parses
+   * the drop event and resolves it to a Document before calling this; we only
+   * need to decide what to do with it.
+   * @override
+   */
+  async _onDropDocument(event, document) {
+      if (document.documentName !== "Item") return super._onDropDocument(event, document);
+
+      const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
+
+      if (dropZone === "skillList") {
+        const current = this.item.system.skillList.spells ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${document.name} is already in the Skill List.`);
+          return null;
+        }
+        await this.item.update({ "system.skillList.spells": [...current, document.uuid] });
+        return document;
+      }
+
+      if (dropZone === "sequenceList") {
+        const current = this.item.system.sequenceList.spells ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${document.name} is already in the Sequence List.`);
+          return null;
+        }
+        await this.item.update({ "system.sequenceList.spells": [...current, document.uuid] });
+        return document;
+      }
+
+      if (dropZone === "abilityList") {
+        const current = this.item.system.abilityList.spells ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${document.name} is already in the Ability List.`);
+          return null;
+        }
+        await this.item.update({ "system.abilityList.spells": [...current, document.uuid] });
+        return document;
+      }
+
+      if (dropZone === "actionList") {
+        const current = this.item.system.actionList ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${document.name} is already in the Action List.`);
+          return null;
+        }
+        await this.item.update({ "system.actionList": [...current, document.uuid] });
+        return document;
+      }
+
+      if (dropZone === "spellList") {
+        const current = this.item.system.spellList.spells ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${document.name} is already in the Spell List.`);
+          return null;
+        }
+        await this.item.update({ "system.spellList.spells": [...current, document.uuid] });
+        return document;
+      }
+
+      if (dropZone === "itemList") {
+        const current = this.item.system.itemList.spells ?? [];
+        if (current.includes(document.uuid)) {
+          ui.notifications.warn(`${documenonAddActiont.name} is already in the Item List.`);
+          return null;
+        }
+        await this.item.update({ "system.itemList.spells": [...current, document.uuid] });
+        return document;
+      }
+
+      return document;
+  }
 
   /* -------------------------------------------- */
   /*  Actions                                      */
@@ -299,6 +391,65 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       callback: path => this.actor.update({ [attr]: path })
     });
     return fp.browse();
+  }
+
+
+  // Drag Drop Add Item
+  static async #onAddSkill(event, target){
+
+  }
+
+  static async #onAddSequence(event, target){
+    
+  }
+
+  static async #onAddAbility(event, target){
+    
+  }
+
+  static async #onAddAction(event, target){
+    
+  }
+
+  static async #onAddSpell(event, target){
+    
+  }
+
+  static async #onAddItem(event, target){
+    
+  }
+
+  // Delete Item
+  static async #onDeleteSkill(event, target){
+    
+  }
+
+
+  static async #onDeleteSequence(event, target){
+    
+  }
+
+
+
+  static async #onDeleteAbility(event, target){
+    
+  }
+
+
+
+  static async #onDeleteAction(event, target){
+    
+  }
+
+
+
+  static async #onDeleteSpell(event, target){
+    
+  }
+
+
+  static async #onDeleteItem(event, target){
+    
   }
 
 }
