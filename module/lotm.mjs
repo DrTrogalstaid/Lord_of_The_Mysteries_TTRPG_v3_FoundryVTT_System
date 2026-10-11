@@ -17,6 +17,9 @@ import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/s
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
 
+// Import custom Roll class.
+import LOTM_VTTRoll from './dice/lotm-roll.mjs';
+
 // Import DataModel classes
 import * as models from './data/_module.mjs';
 
@@ -44,6 +47,25 @@ Hooks.once('init', function () {
     formula: '1d20 + @abilities.dex.mod',
     decimals: 2,
   };
+
+  // Register the system's custom Roll class as the default, so every roll
+  // (skill checks from the new dialog, but also any inline [[/r ...]] roll
+  // or /roll chat command) gets its tooltip/cleanFormula behavior -- see
+  // module/dice/lotm-roll.mjs for what that adds over the base Roll class.
+  // Put at the front rather than replacing the list, so the core Roll class
+  // stays registered for older chat messages and other modules' rolls.
+  CONFIG.Dice.rolls.unshift(LOTM_VTTRoll);
+
+  // World setting read by SkillCheckDialog.prompt(): when off, untrained
+  // skills can't be rolled at all.
+  game.settings.register('lotm', 'allowUntrainedSkillChecks', {
+    name: 'LORD_OF_THE_MYSTERIES.Settings.AllowUntrainedSkillChecks.Name',
+    hint: 'LORD_OF_THE_MYSTERIES.Settings.AllowUntrainedSkillChecks.Hint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+  });
 
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;

@@ -50,6 +50,56 @@
         "Action": "Action"
     },
 
+    "SkillCheck": {
+        "Title": "Skill Check",
+        "RollTooltip": "Roll this skill",
+        "LinkedAttribute": "Linked Attribute",
+        "Override": "override",
+        "OverrideHint": "Rolling with a different attribute than this skill's default. This applies to this roll only.",
+        "ItemModifier": "Item Modifier",
+        "ModifierLabel": "Modifier label",
+        "AddModifier": "Add",
+        "RemoveModifier": "Remove modifier",
+        "InvalidModifier": "Enter a non-zero modifier value.",
+        "Roll": "Roll",
+        "Flavor": "{skill} Check ({attribute})",
+        "FlavorOverride": "{skill} Check ({attribute} instead of {defaultAttribute})",
+        "UntrainedBlocked": "{skill} is untrained, and the GM has disabled untrained skill checks."
+    },
+
+    "GrantedSkills": {
+        "GrantsSkills": "Grants Skills",
+        "GrantsSkillsHint": "Characters with this ability get a skill tab for it, where they can add skills from the options below or custom ones.",
+        "AnalyzeSkillsHint": "Characters can analyze their other non-Education skills; each analyzed skill is added to this ability's tab as an Education skill.",
+        "Analyze": "Analyze into {ability}",
+        "Attribute": "Attribute",
+        "Options": "Skill Options",
+        "DropHint": "Drag a Skill",
+        "Analysis": "Analyses",
+        "AnalysisHint": "Beyonder abilities analyzed toward this skill. The GM decides when they earn a level.",
+        "AddAnalysis": "Record an analysis",
+        "AddOption": "Add the selected skill",
+        "CustomPlaceholder": "Custom skill name",
+        "AddCustom": "Add a custom skill",
+        "Remove": "Remove this skill",
+        "Empty": "No skills yet. Add one below.",
+        "Duplicate": "{ability} already has {skill}.",
+        "RemoveConfirm": "Remove {skill} from {ability}? Its level and analysis count will be lost."
+    },
+
+    "Settings": {
+        "AllowUntrainedSkillChecks": {
+            "Name": "Allow Untrained Skill Checks",
+            "Hint": "When disabled, players can't roll a skill they're untrained in."
+        }
+    },
+
+    "Abilities": {
+        "Empty": "No abilities yet. Drag an ability from the Abilities compendium onto this sheet.",
+        "Edit": "Edit ability",
+        "Delete": "Remove ability"
+    },
+
     "Tabs": {
         "Character": "Character Info",
         "Biography": "Biography",
@@ -191,9 +241,10 @@
       "Natural": "Natural",
       "Music": "Music",
       "Performance": "Performance",
-      "Writing": "Writing"
+      "Writing": "Writing",
+      "ExtraordinaryKnowledge": "Extraordinary Knowledge"
     }
-    
+
   },
 
   "TYPES": {

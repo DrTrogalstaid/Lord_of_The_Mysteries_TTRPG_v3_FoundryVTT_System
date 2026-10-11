@@ -57,7 +57,10 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                         required: true,
                         initial: "untrained",
                         choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels)
-                    })
+                    }),
+                    // Abilities analyzed toward this skill (Extraordinary Knowledge). Only Education
+                    // skills count here -- other skills' analyses go to a copy on the ability.
+                    analysis: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 })
                 })
             );
             return obj;
