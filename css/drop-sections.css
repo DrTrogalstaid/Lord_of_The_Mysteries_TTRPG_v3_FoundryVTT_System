@@ -184,6 +184,36 @@
   white-space: nowrap;
 }
 
+/* Move up / down: two small stacked buttons to the left of the remove button. */
+.lotm.sheet.player-character .drop-entry-move {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lotm.sheet.player-character .drop-entry-move-btn {
+  flex: none;
+  width: 1.4rem;
+  height: 0.95rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.55rem;
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .drop-entry-move-btn:hover:not(:disabled),
+.lotm.sheet.player-character .drop-entry-move-btn:focus-visible {
+  opacity: 1;
+}
+
+.lotm.sheet.player-character .drop-entry-move-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
 .lotm.sheet.player-character .drop-entry-remove {
   flex: 0 0 auto;
   width: 1.5rem;
@@ -191,6 +221,11 @@
   padding: 0;
   line-height: 1;
   opacity: 0.6;
+}
+
+/* Same width as .drop-entry-remove, so rows without a remove button keep their columns aligned. */
+.lotm.sheet.player-character .drop-entry-spacer {
+  flex: 0 0 1.5rem;
 }
 
 .lotm.sheet.player-character .drop-entry-remove:hover {

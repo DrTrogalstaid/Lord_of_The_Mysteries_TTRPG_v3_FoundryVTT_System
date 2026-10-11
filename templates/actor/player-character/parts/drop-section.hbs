@@ -29,7 +29,7 @@
   {{#if entries.length}}
     <ol class="drop-section-list">
       {{#each entries as |entry|}}
-        <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
+        <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}" data-key="{{entry.key}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
           {{#if entry.broken}}
             <span class="drop-entry-icon">
               <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
@@ -70,10 +70,23 @@
             </div>
           {{/if}}
           {{#if ../editable}}
+            {{#if entry.canMove}}
+              <div class="drop-entry-move">
+                <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{entry.key}}"{{#unless entry.canMoveUp}} disabled{{/unless}}>
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{entry.key}}"{{#unless entry.canMoveDown}} disabled{{/unless}}>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+              </div>
+            {{/if}}
             {{#if entry.owned}}
               <button type="button" class="drop-entry-remove" data-action="{{../remove}}" data-item-id="{{entry.id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
                 <i class="fa-solid fa-trash"></i>
               </button>
+            {{else}}
+              {{!-- Granted entries can't be removed here; keep the remove button's column so the move buttons line up across rows. --}}
+              <span class="drop-entry-spacer" aria-hidden="true"></span>
             {{/if}}
           {{/if}}
         </li>

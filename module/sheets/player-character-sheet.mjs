@@ -26,6 +26,13 @@ const DROP_SECTIONS = {
   inventory: { types: null },
 };
 
+/**
+ * Where the manual order of each section is saved on the actor: { [section]: [entry key, ...] }.
+ * Flags need no actor data-model change. Entries missing from a saved order (anything added since)
+ * are listed after the ordered ones, and keys whose entry no longer exists are ignored.
+ */
+const ORDER_FLAG = "flags.lotm.order";
+
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
 
@@ -60,15 +67,18 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
 /**
  * Flatten an Item into the plain object the drop-section partial renders.
  * @param {Item} item
- * @param {{section: string, owned: boolean, grantedBy?: string[]}} options
+ * @param {{section: string, owned: boolean, key: string, grantedBy?: string[]}} options
+ *   `key` identifies the entry in the saved order: the Item's source UUID, so an owned copy and a
+ *   reference to the same Item share one key and a position survives re-renders.
  */
-function buildEntry(item, { section, owned, grantedBy = [] }) {
+function buildEntry(item, { section, owned, key, grantedBy = [] }) {
   const system = item.system ?? {};
   // Abilities and spells use camelCase fields; Actions use snake_case.
   const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
   const actionType = system.actionType || system.action_type || "";
   const actionTypeText = actionTypeLabel(actionType);
   return {
+    key,
     uuid: item.uuid,
     id: owned ? item.id : null,
     name: item.name,
@@ -150,6 +160,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
       editImage: PlayerCharacterSheet._onEditImage,
 
+      openItem: PlayerCharacterSheet.#onOpenItem,
+      sendToChat: PlayerCharacterSheet.#onSendToChat,
+      moveEntry: PlayerCharacterSheet.#onMoveEntry,
+
       addSkill: PlayerCharacterSheet.#onAddSkill,
       deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
       addSequence: PlayerCharacterSheet.#onAddSequence,
@@ -162,10 +176,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       deleteSpell: PlayerCharacterSheet.#onDeleteItem,
       addItem: PlayerCharacterSheet.#onAddItem,
       deleteItem: PlayerCharacterSheet.#onDeleteItem,
-
-      // Item info clicks
-      openItem: PlayerCharacterSheet.#onOpenItem,
-      sendToChat: PlayerCharacterSheet.#onSendToChat,
     },
   };
 
@@ -420,9 +430,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     for (const item of this.actor.items) {
       const section = sectionForType(item.type);
       if (!section) continue;
-      const entry = buildEntry(item, { section, owned: true });
+      const key = item._stats?.compendiumSource ?? item.uuid;
+      const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
-      bySource.set(item._stats?.compendiumSource ?? item.uuid, entry);
+      bySource.set(key, entry);
       queue.push(item);
     }
 
@@ -449,7 +460,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
           if (!doc || doc.documentName !== "Item") {
             const broken = {
-              uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
+              key: uuid, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
               img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
               owned: false, nested: true, broken: true, cost: null, hasCost: false,
               actionType: "", actionTypeLabel: "", hasStats: false, rank: null, detail: "",
@@ -466,7 +477,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             continue;
           }
 
-          const entry = buildEntry(doc, { section, owned: false, grantedBy: [parent.name] });
+          const entry = buildEntry(doc, { section, owned: false, key: uuid, grantedBy: [parent.name] });
           bySource.set(uuid, entry);
           sections[section].push(entry);
           queue.push(doc);
@@ -474,15 +485,32 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       }
     }
 
-    // Owned first, then granted. Within a group: by Sequence number (lowest = strongest, so the current
-    // Sequence leads) where there is one, then alphabetical.
-    for (const entries of Object.values(sections)) {
+    // Order each section: the saved manual order first, then anything not in it (new entries land at the
+    // bottom) in the default order: owned before granted, then by Sequence number (lowest = strongest, so
+    // the current Sequence leads) where there is one, then alphabetical.
+    const savedOrder = foundry.utils.getProperty(this.actor, ORDER_FLAG) ?? {};
+    for (const [sectionKey, entries] of Object.entries(sections)) {
+      const saved = Array.isArray(savedOrder[sectionKey]) ? savedOrder[sectionKey] : [];
+      const position = new Map(saved.map((key, index) => [key, index]));
+
       entries.sort((a, b) => {
+        const pa = position.get(a.key);
+        const pb = position.get(b.key);
+        if (pa !== undefined && pb !== undefined) return pa - pb;
+        if (pa !== undefined) return -1;
+        if (pb !== undefined) return 1;
+
         if (a.owned !== b.owned) return a.owned ? -1 : 1;
         if (a.rank != null && b.rank != null && a.rank !== b.rank) return a.rank - b.rank;
         return a.name.localeCompare(b.name);
       });
-      for (const entry of entries) entry.grantedByLabel = entry.grantedBy.join(", ");
+
+      entries.forEach((entry, index) => {
+        entry.grantedByLabel = entry.grantedBy.join(", ");
+        entry.canMove = entries.length > 1;
+        entry.canMoveUp = index > 0;
+        entry.canMoveDown = index < entries.length - 1;
+      });
     }
 
     return sections;
@@ -656,8 +684,34 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     doc?.sheet?.render({ force: true });
   }
 
-  // Click on item's image
-  // TODO: Make an actual formatted HTML sheet for this in stead of having the html in the function
+
+  /**
+   * Move an entry one place up or down within its section (data-direction="up"|"down", data-key = entry key).
+   * Works for owned and granted entries alike. The order on screen is the source of truth: swap the entry with
+   * its neighbour in that list and save the whole section's order, which also drops keys of entries that no
+   * longer exist.
+   */
+  static async #onMoveEntry(event, target) {
+    if (!this.isEditable) return;
+
+    const zone = target.closest("[data-drop-zone]");
+    const section = zone?.dataset.dropZone;
+    if (!section) return;
+
+    const keys = [...zone.querySelectorAll(".drop-section-list > .drop-entry")].map((li) => li.dataset.key);
+    const from = keys.indexOf(target.dataset.key);
+    const to = from + (target.dataset.direction === "up" ? -1 : 1);
+    if (from < 0 || to < 0 || to >= keys.length) return;
+
+    [keys[from], keys[to]] = [keys[to], keys[from]];
+    await this.actor.update({ [`${ORDER_FLAG}.${section}`]: keys });
+  }
+
+
+  /**
+   * Post an entry's Item to chat: image, name and description, spoken as this actor.
+   * Works for owned Items and for ones that are only referenced (granted by another Item).
+   */
   static async #onSendToChat(event, target) {
     const doc = await fromUuid(target.dataset.uuid);
     if (!doc) return;
