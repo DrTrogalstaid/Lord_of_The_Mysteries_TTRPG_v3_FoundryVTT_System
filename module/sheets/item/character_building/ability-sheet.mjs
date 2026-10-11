@@ -30,6 +30,7 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       deleteSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onDeleteSequenceUpgrade,
       deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
       deleteAction: LordOfTheMysteriesAbilitySheet.#onDeleteAction,
+      deleteSkillOption: LordOfTheMysteriesAbilitySheet.#onDeleteSkillOption,
     },
   };
 
@@ -114,6 +115,20 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       })
     );
 
+    // Skill Options (the dropdown characters pick granted skills from) — resolve name/img.
+    context.skillOptionRows = await Promise.all(
+      (context.system.skillOptions ?? []).map(async (uuid, index) => {
+        const skillItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: skillItem?.name ?? "Unknown Item",
+          img: skillItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !skillItem,
+        };
+      })
+    );
+
     return context;
   }
 
@@ -168,6 +183,20 @@ async _onDropDocument(event, document) {
       return document;
     }
 
+    if (dropZone === "skillOptions") {
+      if (document.type !== "skill") {
+        ui.notifications.warn(`Only Skills can be added to Skill Options.`);
+        return null;
+      }
+      const current = this.item.system.skillOptions ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already in the Skill Options.`);
+        return null;
+      }
+      await this.item.update({ "system.skillOptions": [...current, document.uuid] });
+      return document;
+    }
+
     return document;
 }
 
@@ -204,6 +233,15 @@ async _onDropDocument(event, document) {
     const current = this.item.system.actionList ?? [];
     await this.item.update({
       "system.actionList": current.filter((_, i) => i !== index),
+    });
+  }
+
+  /** Remove a Skill Options entry by index. */
+  static async #onDeleteSkillOption(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.skillOptions ?? [];
+    await this.item.update({
+      "system.skillOptions": current.filter((_, i) => i !== index),
     });
   }
 

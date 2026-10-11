@@ -4,7 +4,8 @@
   "description": "CSS compiler for the LordOfTheMysteries system",
   "scripts": {
     "build": "sass src/scss/lotm.scss css/lotm.css --style=expanded --no-source-map",
-    "watch": "sass src/scss/lotm.scss css/lotm.css --style=expanded --source-map --watch"
+    "watch": "sass src/scss/lotm.scss css/lotm.css --style=expanded --source-map --watch",
+    "test": "node --test \"tests/*.test.mjs\""
   },
   "browserslist": [
     "last 3 versions"

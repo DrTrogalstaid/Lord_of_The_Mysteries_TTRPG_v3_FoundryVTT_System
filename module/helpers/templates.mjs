@@ -16,6 +16,9 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/sidebar.hbs',
     'systems/lotm/templates/actor/player-character/parts/tab-nav.hbs',
 
+    // App partials
+    'systems/lotm/templates/apps/skill-check-dialog.hbs',
+
     // Item partials
     'systems/lotm/templates/item/parts/item-effects.hbs',
     'systems/lotm/templates/item/parts/item-header.hbs',

@@ -569,3 +569,92 @@
 .lotm.sheet.actor .backstory-editor {
   height: 100%
 } 
+
+/* -------------------------------------------------------------------- */
+/* Abilities tab content                                                */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .abilities-tab {
+  grid-area: content;
+  overflow-y: auto;
+  border: 1px solid var(--psx-border);
+  border-radius: 0 0 var(--psx-radius) var(--psx-radius);
+  padding: 6px;
+}
+
+.lotm.sheet.actor .ability-control {
+  flex: 0 0 auto;
+  color: var(--psx-text-dim);
+}
+
+/* -------------------------------------------------------------------- */
+/* Skills granted by abilities (e.g. Extraordinary Knowledge)           */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .granted-skills-section {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--psx-border);
+}
+
+.lotm.sheet.actor .granted-skills-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.lotm.sheet.actor .granted-analysis-label,
+.lotm.sheet.actor .granted-analysis {
+  flex: 0 0 auto;
+  width: 70px;
+  text-align: center;
+}
+
+/* Keeps the header's Analyses label above the counters, past the remove icon's column. */
+.lotm.sheet.actor .granted-analysis-label {
+  margin-right: 18px;
+}
+
+.lotm.sheet.actor .granted-analysis {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.sheet.actor .granted-analysis input {
+  width: 44px;
+  text-align: center;
+}
+
+.lotm.sheet.actor .granted-control {
+  flex: 0 0 12px;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .granted-skill-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm.sheet.actor .granted-skill-add select,
+.lotm.sheet.actor .granted-skill-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.lotm.sheet.actor .granted-attribute {
+  flex: 0 0 auto;
+  width: 32px;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .analyze-control {
+  flex: 0 0 12px;
+  color: var(--psx-text-dim);
+}

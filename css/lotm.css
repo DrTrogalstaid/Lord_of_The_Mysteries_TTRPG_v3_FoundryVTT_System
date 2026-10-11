@@ -411,3 +411,54 @@
   padding: 6px 0;
   border-bottom: none;
 }
+.lotm .skill-check-dialog .skill-check-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+.lotm .skill-check-dialog .skill-check-header .skill-name {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+.lotm .skill-check-dialog .skill-check-header .skill-level,
+.lotm .skill-check-dialog .skill-check-header .skill-flat-modifier {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+.lotm .skill-check-dialog .override-hint {
+  font-size: 0.8em;
+  font-style: italic;
+  opacity: 0.8;
+  margin: 4px 0 0;
+}
+.lotm .skill-check-dialog .modifiers {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.lotm .skill-check-dialog .modifiers li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+.lotm .skill-check-dialog .modifiers li .mod-label {
+  flex: 1;
+}
+.lotm .skill-check-dialog .modifiers li .mod-value {
+  margin: 0 8px;
+}
+.lotm .skill-check-dialog .add-modifier-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.lotm .skill-check-dialog .add-modifier-row .mod-name {
+  flex: 2;
+}
+.lotm .skill-check-dialog .add-modifier-row .mod-value {
+  flex: 1;
+}
+.lotm .skill-check-dialog footer button[type=submit] {
+  width: 100%;
+}
