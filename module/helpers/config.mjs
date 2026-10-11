@@ -71,7 +71,8 @@ LORD_OF_THE_MYSTERIES.skillCategories = {
     performance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Performance',
     psychological: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Psychological',
     reconnaissance: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Reconnaissance',
-    writing: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Writing'
+    writing: 'LORD_OF_THE_MYSTERIES.Skill_Categories.Writing',
+    extraordinaryKnowledge: 'LORD_OF_THE_MYSTERIES.Skill_Categories.ExtraordinaryKnowledge'
 };
 
 LORD_OF_THE_MYSTERIES.skillAttributes = {

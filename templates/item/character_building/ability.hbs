@@ -143,6 +143,46 @@
         </ol>
       </fieldset>
 
+      <!--Granted Skills-->
+      <fieldset class="granted-skills">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.GrantsSkills"}}</legend>
+        <label class="flexrow">
+          <input type="checkbox" name="system.grantsSkills" {{checked system.grantsSkills}} {{#unless editable}}disabled{{/unless}} />
+          {{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.GrantsSkillsHint"}}
+        </label>
+        <label class="flexrow">
+          <input type="checkbox" name="system.analyzeSkills" {{checked system.analyzeSkills}} {{#unless editable}}disabled{{/unless}} />
+          {{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.AnalyzeSkillsHint"}}
+        </label>
+      </fieldset>
+
+      <!--Skill Options-->
+      <fieldset class="skill-options" data-drop-zone="skillOptions">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.Options"}}</legend>
+        <ol class="items-list">
+          <li class="items-header flexrow">
+            <div class="item-name">Skill</div>
+            <div class="item-controls"></div>
+          </li>
+          {{#each skillOptionRows as |row|}}
+          <li class="item flexrow" data-uuid="{{row.uuid}}">
+            <div class="item-name">
+              <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
+              <h4>{{row.name}}</h4>
+            </div>
+            <div class="item-controls">
+              <a class="item-control" data-action="deleteSkillOption" data-index="{{row.index}}" title="Delete">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </li>
+          {{/each}}
+          {{#unless skillOptionRows.length}}
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.DropHint"}}</li>
+          {{/unless}}
+        </ol>
+      </fieldset>
+
       <!--Can Be Stolen-->
       <fieldset>
         <legend>Can Be Stolen/Recorded</legend>

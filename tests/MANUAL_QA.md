@@ -96,3 +96,28 @@ can't: the click wiring, the rendered dialog, and the chat output.
       `[[/r ...]]` in biography/description text still evaluates and posts to
       chat correctly (this confirms registering `LOTM_VTTRoll` as the default
       `CONFIG.Dice.rolls[0]` didn't break anything else that rolls)
+
+## Skills granted by abilities (Extraordinary Knowledge)
+
+- [ ] Open "Extraordinary Knowledge" in the Abilities compendium, Details tab: "Grants Skills"
+      and the analyze checkbox are ticked, and Skill Options lists the 21 Knowledges.
+      Dropping a non-skill item onto Skill Options is refused with a warning
+- [ ] On a character without the ability: no extra skill tab, no Analyze buttons
+- [ ] Drag the ability onto the sheet: it appears on the Abilities tab, and a new
+      "Extraordinary Knowledge" skill tab appears after Education
+- [ ] In that tab, add a Knowledge from the dropdown: it appears with an Education-based
+      modifier and leaves the dropdown
+- [ ] Add a custom skill (e.g. "Reading Knowledge", attribute Education) with Enter or +:
+      it appears; adding the same name again warns
+- [ ] Granted skills: + next to Analyses adds 1; typing a number saves; changing the level
+      updates the modifier and keeps the count; the trash icon (after confirming) removes it
+- [ ] Agility tab: click Stealth's magnifying glass. Stealth appears in the Extraordinary
+      Knowledge tab as an EDU skill with 1 analysis; clicking again makes it 2 (no duplicate)
+- [ ] Education tab: each skill shows an analysis box. Clicking History's magnifying glass
+      raises History's own count and does NOT add it to the Extraordinary Knowledge tab
+- [ ] Change an Education skill's level or an attribute: the analysis counts are unchanged
+- [ ] Click a granted skill's modifier: the Skill Check dialog opens with its attribute/level
+- [ ] Remove the ability while its tab is open: the tab disappears, the sheet falls back to
+      Strength, and the Analyze buttons and Education analysis boxes are hidden
+- [ ] Drag the character's copy of the ability onto another character: the granted skills
+      (with levels and counts) come along

@@ -44,7 +44,7 @@ export default class LOTM_VTTRoll extends Roll {
             }
         }
 
-        return renderTemplate(this.constructor.TOOLTIP_TEMPLATE, { parts });
+        return foundry.applications.handlebars.renderTemplate(this.constructor.TOOLTIP_TEMPLATE, { parts });
     }
 
     /* -------------------------------------------- */
