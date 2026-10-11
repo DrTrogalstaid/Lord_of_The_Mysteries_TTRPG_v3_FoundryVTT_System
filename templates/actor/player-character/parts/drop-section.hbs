@@ -1,0 +1,98 @@
+{{!--
+  One drop section: a titled box that accepts Items of a single kind, listing the ones the actor owns
+  plus the ones granted by other Items.
+
+  Call it from the root scope of a part template:
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+        zone="abilities" label="LORD_OF_THE_MYSTERIES.Drop.Sections.abilities"
+        entries=sections.abilities remove="deleteAbility" add="addAbility"}}
+
+  zone     Key matching DROP_SECTIONS in player-character-sheet.mjs (read back from data-drop-zone on drop).
+  label    Localization key for the title.
+  entries  Array from context.sections.<zone>.
+  remove   data-action for the delete button (owned entries only).
+  add      Optional data-action for the "+" button.
+--}}
+<div class="drop-section" data-drop-zone="{{zone}}">
+  <header class="drop-section-header">
+    <h3 class="drop-section-title">{{localize label}}</h3>
+    {{#if editable}}
+      <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+      {{#if add}}
+        <button type="button" class="drop-section-add" data-action="{{add}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Add" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      {{/if}}
+    {{/if}}
+  </header>
+
+  {{#if entries.length}}
+    <ol class="drop-section-list">
+      {{#each entries as |entry|}}
+        <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}" data-key="{{entry.key}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
+          {{#if entry.broken}}
+            <span class="drop-entry-icon">
+              <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
+            </span>
+          {{else}}
+            <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{entry.uuid}}">
+              <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
+              <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+            </button>
+          {{/if}}
+          <div class="drop-entry-main">
+            {{#if entry.broken}}
+              <span class="drop-entry-name">{{entry.name}}</span>
+            {{else}}
+              <a class="drop-entry-name" data-action="openItem" data-uuid="{{entry.uuid}}">{{entry.name}}</a>
+            {{/if}}
+            {{#if entry.detail}}
+              <span class="drop-entry-detail">{{entry.detail}}</span>
+            {{/if}}
+            {{#if entry.grantedByLabel}}
+              <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{entry.grantedByLabel}}</span>
+            {{/if}}
+          </div>
+          {{#if entry.hasStats}}
+            <div class="drop-entry-stats">
+              {{#if entry.actionTypeLabel}}
+                <div class="drop-entry-stat drop-entry-action-type">
+                  <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+                  <span class="drop-entry-stat-value">{{entry.actionTypeLabel}}</span>
+                </div>
+              {{/if}}
+              {{#if entry.hasCost}}
+                <div class="drop-entry-stat drop-entry-cost">
+                  <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+                  <span class="drop-entry-stat-value">{{entry.cost}}</span>
+                </div>
+              {{/if}}
+            </div>
+          {{/if}}
+          {{#if ../editable}}
+            {{#if entry.canMove}}
+              <div class="drop-entry-move">
+                <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{entry.key}}"{{#unless entry.canMoveUp}} disabled{{/unless}}>
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{entry.key}}"{{#unless entry.canMoveDown}} disabled{{/unless}}>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </button>
+              </div>
+            {{/if}}
+            {{#if entry.owned}}
+              <button type="button" class="drop-entry-remove" data-action="{{../remove}}" data-item-id="{{entry.id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            {{else}}
+              {{!-- Granted entries can't be removed here; keep the remove button's column so the move buttons line up across rows. --}}
+              <span class="drop-entry-spacer" aria-hidden="true"></span>
+            {{/if}}
+          {{/if}}
+        </li>
+      {{/each}}
+    </ol>
+  {{else}}
+    <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+  {{/if}}
+</div>

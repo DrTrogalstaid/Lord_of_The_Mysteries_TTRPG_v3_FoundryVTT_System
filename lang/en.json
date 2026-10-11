@@ -111,6 +111,7 @@
         "Description": "Description",
         "Details": "Details",
         "Abilities": "Abilities",
+        "Sequences": "Sequences",
         "Spells": "Spells",
         "Actions": "Actions",
         "Inventory": "Inventory",
@@ -241,10 +242,37 @@
       "Natural": "Natural",
       "Music": "Music",
       "Performance": "Performance",
-      "Writing": "Writing",
-      "ExtraordinaryKnowledge": "Extraordinary Knowledge"
-    }
+      "Writing": "Writing"
+    },
 
+    "Drop": {
+      "Sections": {
+        "skills": "Granted Skills",
+        "sequences": "Sequences",
+        "abilities": "Abilities",
+        "actions": "Actions",
+        "spells": "Spells",
+        "inventory": "Inventory"
+      },
+      "Hint": "Drop an Item here",
+      "Empty": "Nothing here yet.",
+      "SequenceNumber": "Sequence {number}",
+      "Add": "Create a blank entry",
+      "Remove": "Remove",
+      "Cost": "Spirituality Cost",
+      "ActionType": "Action Type",
+      "GrantedBy": "Granted by",
+      "Missing": "Missing item",
+      "Duplicate": "{name} is already on this character.",
+      "WrongSection": "{name} can't be dropped in {section}.",
+      "Unsupported": "{name} can't be added to a character sheet.",
+      "SkillCompendiumOnly": "{name} isn't from the Skills compendium, so it can't be added as a skill.",
+      "NoSkillCategory": "{name} has no valid skill category.",
+      "DragHintSkills": "Skills are added by dragging them from the Skills compendium.",
+      "DragHintInventory": "Items are added by dragging them onto the Inventory section.",
+      "RemoveTitle": "Remove Item",
+      "RemoveConfirm": "Remove {name} from this character? (Hold Shift to skip this prompt.)"
+    }
   },
 
   "TYPES": {

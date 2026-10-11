@@ -1,19 +1,8 @@
 <section class="tab abilities-tab {{tab.cssClass}}" data-group="sheet" data-tab="abilities">
-  {{#if abilities.length}}
-  <ul class="skill-list ability-list">
-    {{#each abilities as |ability|}}
-    <li class="skill-row ability-row draggable" data-item-id="{{ability.id}}">
-      <img class="skill-icon" src="{{ability.img}}" alt="{{ability.name}}" />
-      <a class="skill-name" data-action="editItem" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Abilities.Edit'}}">{{ability.name}}</a>
-      {{#if @root.editable}}
-      <a class="ability-control" data-action="deleteItem" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Abilities.Delete'}}">
-        <i class="fa-solid fa-trash"></i>
-      </a>
-      {{/if}}
-    </li>
-    {{/each}}
-  </ul>
-  {{else}}
-  <p class="placeholder-note">{{localize "LORD_OF_THE_MYSTERIES.Abilities.Empty"}}</p>
-  {{/if}}
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
+      zone="abilities"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.abilities"
+      entries=sections.abilities
+      remove="deleteAbility"
+      add="addAbility"}}
 </section>
