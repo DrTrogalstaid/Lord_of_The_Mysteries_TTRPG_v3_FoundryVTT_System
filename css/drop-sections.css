@@ -72,11 +72,58 @@
   opacity: 0.7;
 }
 
-.lotm.sheet.player-character .drop-entry-img {
+/* Item image with a hidden chat bubble that fades in on hover (inspired by the pf2e system).
+   ::before / ::after never render on an <img> (a replaced element), so the image sits inside a wrapper
+   and the bubble is a real element laid over it. The wrapper is a button (data-action="sendToChat"), so it
+   is keyboard-focusable; broken entries get a plain <span> wrapper with no bubble. */
+.lotm.sheet.player-character .drop-entry-icon {
+  position: relative;
   flex: 0 0 auto;
+  display: block;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.lotm.sheet.player-character button.drop-entry-icon {
+  cursor: pointer;
+}
+
+.lotm.sheet.player-character .drop-entry-img {
+  display: block;
+  width: 100%;
+  height: 100%;
   border: none;
   border-radius: 3px;
   object-fit: cover;
+}
+
+.lotm.sheet.player-character .drop-entry-icon-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff8c;
+  font-size: 0.8rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.lotm.sheet.player-character .drop-entry-icon:hover .drop-entry-icon-overlay,
+.lotm.sheet.player-character .drop-entry-icon:focus-visible .drop-entry-icon-overlay {
+  opacity: 1;
 }
 
 .lotm.sheet.player-character .drop-entry-main {

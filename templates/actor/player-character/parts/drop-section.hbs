@@ -30,7 +30,16 @@
     <ol class="drop-section-list">
       {{#each entries as |entry|}}
         <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
-          <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
+          {{#if entry.broken}}
+            <span class="drop-entry-icon">
+              <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
+            </span>
+          {{else}}
+            <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{entry.uuid}}">
+              <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
+              <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+            </button>
+          {{/if}}
           <div class="drop-entry-main">
             {{#if entry.broken}}
               <span class="drop-entry-name">{{entry.name}}</span>

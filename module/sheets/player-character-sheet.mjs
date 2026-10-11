@@ -150,8 +150,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
       editImage: PlayerCharacterSheet._onEditImage,
 
-      openItem: PlayerCharacterSheet.#onOpenItem,
-
       addSkill: PlayerCharacterSheet.#onAddSkill,
       deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
       addSequence: PlayerCharacterSheet.#onAddSequence,
@@ -164,6 +162,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       deleteSpell: PlayerCharacterSheet.#onDeleteItem,
       addItem: PlayerCharacterSheet.#onAddItem,
       deleteItem: PlayerCharacterSheet.#onDeleteItem,
+
+      // Item info clicks
+      openItem: PlayerCharacterSheet.#onOpenItem,
+      sendToChat: PlayerCharacterSheet.#onSendToChat,
     },
   };
 
@@ -654,8 +656,28 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     doc?.sheet?.render({ force: true });
   }
 
+  // Click on item's image
+  // TODO: Make an actual formatted HTML sheet for this in stead of having the html in the function
+  static async #onSendToChat(event, target) {
+    const doc = await fromUuid(target.dataset.uuid);
+    if (!doc) return;
 
-  // Add: create a blank embedded Item of that type and open it.
+    const description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+      doc.system?.description ?? "",
+      { secrets: doc.isOwner, relativeTo: doc }
+    );
+    const name = Handlebars.escapeExpression(doc.name);
+    const img = Handlebars.escapeExpression(doc.img);
+
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="lotm chat-item">
+        <header class="chat-item-header"><img src="${img}" width="36" height="36" alt=""><h3>${name}</h3></header>
+        <div class="chat-item-description">${description}</div>
+      </div>`,
+    });
+  }
+
   // Skills and inventory Items come from compendiums / the sidebar, so those buttons just point at drag and drop.
   static async #onAddSkill(event, target) {
     ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintSkills"));
