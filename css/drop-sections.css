@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
-  color: #ffffff8c;
+  color: #fff;
   font-size: 0.8rem;
   line-height: 1;
   opacity: 0;
@@ -221,6 +221,22 @@
   padding: 0;
   line-height: 1;
   opacity: 0.6;
+}
+
+/* Remove button on a skill row in the Character tab's skill list (only skills that aren't from the compendium). */
+.lotm.sheet.player-character .skill-remove {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .skill-remove:hover {
+  opacity: 1;
 }
 
 /* Same width as .drop-entry-remove, so rows without a remove button keep their columns aligned. */

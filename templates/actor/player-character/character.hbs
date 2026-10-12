@@ -56,98 +56,13 @@
       <div class="skills-content">
         {{#each skillTabs as |tab|}}
         <div class="tab skill-tab-panel {{tab.cssClass}}" data-group="skills" data-tab="{{tab.id}}">
-          {{#if tab.abilityId}}
-          {{!-- A skill-granting ability's tab (e.g. Extraordinary Knowledge). Its skills are
-                stored on the ability item, so these inputs have no `name`; the sheet saves
-                them through data-granted-field change listeners instead. --}}
-          {{#with (lookup @root.grantedSkillTabs tab.id) as |section|}}
-          <div class="granted-skills-section" data-ability-id="{{section.abilityId}}">
-            <div class="granted-skills-header">
-              <span class="skill-name"></span>
-              <span class="granted-analysis-label" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AnalysisHint'}}">
-                {{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.Analysis"}}
-              </span>
-            </div>
-            {{#if section.skills.length}}
-            <ul class="skill-list">
-              {{#each section.skills as |entry|}}
-              <li class="skill-row granted-skill-row"
-                  data-granted-id="{{entry.id}}"
-                  data-skill-uuid="{{entry.uuid}}"
-                  data-skill-name="{{entry.name}}"
-                  data-category="{{entry.attribute}}"
-                  data-attribute="{{entry.attribute}}"
-                  data-level="{{entry.level}}"
-                  data-flat-modifier="0">
-                <img class="skill-icon" src="icons/svg/book.svg" alt="{{entry.name}}" />
-                <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
-                  {{numberFormat entry.modifier decimals=0 sign=true}}
-                </a>
-                <span class="skill-name">{{entry.name}}</span>
-                <span class="granted-attribute">{{localize (lookup @root.attributeAbbreviations entry.attribute)}}</span>
-                <select class="skill-level-select" data-granted-field="level" {{#unless @root.editable}}disabled{{/unless}}>
-                  {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
-                </select>
-                <span class="granted-analysis">
-                  <input type="number" min="0" step="1" data-granted-field="analysis" value="{{entry.analysis}}" {{#unless @root.editable}}disabled{{/unless}} />
-                  {{#if @root.editable}}
-                  <a data-action="addGrantedAnalysis" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AddAnalysis'}}"><i class="fa-solid fa-plus"></i></a>
-                  {{/if}}
-                </span>
-                {{#if @root.editable}}
-                <a class="granted-control" data-action="removeGrantedSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.Remove'}}"><i class="fa-solid fa-trash"></i></a>
-                {{/if}}
-              </li>
-              {{/each}}
-            </ul>
-            {{else}}
-            <p class="placeholder-note">{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.Empty"}}</p>
-            {{/if}}
-            {{#if @root.editable}}
-            {{#if section.options.length}}
-            <div class="granted-skill-add">
-              <select class="granted-skill-option">
-                {{#each section.options as |option|}}
-                <option value="{{option.uuid}}" data-name="{{option.name}}" data-attribute="{{option.attribute}}">{{option.name}}</option>
-                {{/each}}
-              </select>
-              <a data-action="addGrantedOption" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AddOption'}}"><i class="fa-solid fa-plus"></i></a>
-            </div>
-            {{/if}}
-            <div class="granted-skill-add">
-              <input type="text" class="granted-skill-custom" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.CustomPlaceholder'}}" />
-              <select class="granted-skill-attribute" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.Attribute'}}">
-                {{selectOptions @root.attributeOptions selected="edu" localize=true}}
-              </select>
-              <a data-action="addGrantedCustom" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AddCustom'}}"><i class="fa-solid fa-plus"></i></a>
-            </div>
-            {{/if}}
-          </div>
-          {{/with}}
-
-          {{else}}
           {{#with (lookup @root.skillsByCategory tab.id) as |categorySkills|}}
             {{#if categorySkills.length}}
-            {{#if (and (eq tab.id "edu") @root.analyzeAbility)}}
-            {{!-- Labels the Education rows' analysis boxes; same layout as the ability tabs' header. --}}
-            <div class="granted-skills-header">
-              <span class="skill-name"></span>
-              <span class="granted-analysis-label" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AnalysisHint'}}">
-                {{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.Analysis"}}
-              </span>
-            </div>
-            {{/if}}
             <ul class="skill-list">
               {{#each categorySkills as |entry index|}}
-              <li class="skill-row"
-                  data-skill-uuid="{{entry.uuid}}"
-                  data-skill-name="{{entry.name}}"
-                  data-category="{{tab.id}}"
-                  data-attribute="{{entry.attribute}}"
-                  data-level="{{entry.level}}"
-                  data-flat-modifier="{{entry.flatModifier}}">
+              <li class="skill-row">
                 <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
-                <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+                <a class="modifier rollable-number">
                   {{numberFormat entry.modifier decimals=0 sign=true}}
                 </a>
                 <span class="skill-name">{{entry.name}}</span>
@@ -155,22 +70,10 @@
                 <select class="skill-level-select" name="system.skills.{{tab.id}}.{{index}}.level">
                   {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
                 </select>
-                {{!-- Analyze (Extraordinary Knowledge). Education skills keep their count here,
-                      on the skill; other skills' analyses go to a copy in the ability's tab.
-                      The analysis input stays in the form either way so a submit can't reset it. --}}
-                {{#if (and (eq tab.id "edu") @root.analyzeAbility)}}
-                <span class="granted-analysis">
-                  <input type="number" min="0" step="1" name="system.skills.{{tab.id}}.{{index}}.analysis" value="{{entry.analysis}}"
-                         data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AnalysisHint'}}" />
-                </span>
-                {{else}}
-                <input type="hidden" name="system.skills.{{tab.id}}.{{index}}.analysis" value="{{entry.analysis}}" />
-                {{/if}}
-                {{#if (and @root.editable @root.analyzeAbility)}}
-                <a class="analyze-control" data-action="analyzeSkill" data-ability-id="{{@root.analyzeAbility.id}}"
-                   data-tooltip="{{#if (eq tab.id "edu")}}{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AddAnalysis'}}{{else}}{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.Analyze' ability=@root.analyzeAbility.name}}{{/if}}">
-                  <i class="fa-solid fa-magnifying-glass"></i>
-                </a>
+                {{#if entry.removable}}
+                <button type="button" class="skill-remove" data-action="deleteSkill" data-uuid="{{entry.uuid}}" data-category="{{tab.id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
                 {{/if}}
               </li>
               {{/each}}
@@ -179,7 +82,6 @@
             <p class="placeholder-note">No {{localize tab.label}} skills found in the compendium.</p>
             {{/if}}
           {{/with}}
-          {{/if}}
         </div>
         {{/each}}
       </div>
@@ -187,11 +89,11 @@
 
   </div>
 
-  {{!-- Skills granted by Sequences (via their training bonus). The list above only covers the Skills compendium. --}}
+  {{!-- Skills granted by Sequences (their skill increases and training bonus). Read-only references. --}}
   {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
       zone="skills"
       label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"
       entries=sections.skills
-      remove="deleteSkill"}}
+      remove="deleteItem"}}
 
 </section>

@@ -44,12 +44,14 @@ const UNSUPPORTED_TYPES = ["pathway"];
  * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
  * resolved and shown in the tab matching the *resolved* Item's type (the `section` is only a
  * fallback for references that no longer resolve).
+ * `pick` is for arrays of objects rather than plain UUID strings: the UUID is read from that property.
  */
 const NESTED_FIELDS = [
-  { path: "abilities_gained", section: "abilities" }, // Sequence -> Abilities
-  { path: "trainingBonus",    section: "skills" },    // Sequence -> Knowledge / Training
-  { path: "spellList.spells", section: "spells" },    // Ability  -> Spells
-  { path: "actionList",       section: "actions" },   // Ability  -> Actions
+  { path: "abilities_gained", section: "abilities" },                       // Sequence -> Abilities
+  { path: "skill_increase",   section: "skills", pick: "skill_uuid" },      // Sequence -> Skills it raises
+  { path: "trainingBonus",    section: "skills" },                          // Sequence -> Knowledge / Training
+  { path: "spellList.spells", section: "spells" },                          // Ability  -> Spells
+  { path: "actionList",       section: "actions" },                         // Ability  -> Actions
 ];
 
 /**
@@ -387,35 +389,52 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const stored = this.actor.system.skills[category] ?? [];
       const storedByUuid = new Map(stored.map(entry => [entry.skill, entry]));
 
-      skillsByCategory[category] = indexEntries
-        .map(entry => {
-          const level = storedByUuid.get(entry.uuid)?.level ?? "untrained";
-          // NOTE: the sheet's displayed number still uses the tab/category attribute,
-          // same as before this change -- unchanged to avoid shifting every skill's
-          // displayed modifier as a side effect of this PR. The roll dialog instead
-          // defaults to the skill item's own `skill_attribute` field below, which is
-          // the actual rules-relevant "linked attribute" and may differ from the
-          // compendium folder/tab a skill happens to be filed under. Worth reconciling
-          // in a follow-up once you've decided which should really drive the display.
-          // Buckets that aren't attributes themselves (e.g. "knowledge") fall back to
-          // the skill item's own linked attribute -- Education, for every Knowledge.
-          const attributeKey = category in CONFIG.LORD_OF_THE_MYSTERIES.attributes
-            ? category
-            : (entry.system?.skill_attribute ?? category);
-          const attributeTotal = this.actor.system.attributes[attributeKey]?.total ?? 0;
-          return {
-            uuid: entry.uuid,
-            name: entry.name,
-            img: entry.img,
-            level,
-            analysis: storedByUuid.get(entry.uuid)?.analysis ?? 0,
-            category,
-            attribute: entry.system?.skill_attribute ?? category,
-            flatModifier: entry.system?.modifier ?? 0,
-            modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal)
-          };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
+      // One row per skill. `entry` is a compendium index entry or, for skills outside the compendium, the
+      // resolved Item: both carry uuid / name / img / system.{skill_attribute, modifier}.
+      const toRow = (entry, removable) => {
+        const level = storedByUuid.get(entry.uuid)?.level ?? "untrained";
+        // NOTE: the sheet's displayed number still uses the tab/category attribute,
+        // same as before this change -- unchanged to avoid shifting every skill's
+        // displayed modifier as a side effect of this PR. The roll dialog instead
+        // defaults to the skill item's own `skill_attribute` field below, which is
+        // the actual rules-relevant "linked attribute" and may differ from the
+        // compendium folder/tab a skill happens to be filed under. Worth reconciling
+        // in a follow-up once you've decided which should really drive the display.
+        // Buckets that aren't attributes themselves (e.g. "knowledge") fall back to
+        // the skill item's own linked attribute -- Education, for every Knowledge.
+        const attributeKey = category in CONFIG.LORD_OF_THE_MYSTERIES.attributes
+          ? category
+          : (entry.system?.skill_attribute ?? category);
+        const attributeTotal = this.actor.system.attributes[attributeKey]?.total ?? 0;
+        return {
+          uuid: entry.uuid,
+          name: entry.name,
+          img: entry.img,
+          level,
+          analysis: storedByUuid.get(entry.uuid)?.analysis ?? 0,
+          category,
+          attribute: entry.system?.skill_attribute ?? category,
+          flatModifier: entry.system?.modifier ?? 0,
+          modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal),
+          removable
+        };
+      };
+
+      const rows = indexEntries.map(entry => toRow(entry, false));
+
+      // Skills the actor has recorded that aren't in the compendium folder (dropped from the world, another
+      // compendium, ...). They must be listed: the Character tab submits this whole list back as
+      // system.skills[category], so anything left out here would be deleted on the next field change.
+      // Entries that no longer resolve (deleted skills) are left out and so drop away on that same submit.
+      const listed = new Set(indexEntries.map(entry => entry.uuid));
+      for (const { skill: uuid } of stored) {
+        if (!uuid || listed.has(uuid)) continue;
+        listed.add(uuid);
+        const doc = await fromUuid(uuid).catch(() => null);
+        if (doc) rows.push(toRow({ uuid, name: doc.name, img: doc.img, system: doc.system }, true));
+      }
+
+      skillsByCategory[category] = rows.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return skillsByCategory;
@@ -431,10 +450,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       .filter(item => item.type === "ability" && item.system.grantsSkills)
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name));
   }
-
-  static _calculateSkillModifier(skillLevel, attributeTotal)
-  {
-
 
   /**
    * Adds a skill tab per skill-granting ability (e.g. Extraordinary Knowledge) after the
@@ -514,6 +529,17 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         PlayerCharacterSheet._onAddGrantedCustom.call(this, ev, ev.currentTarget);
       });
     });
+
+    // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
+    for (const zone of this.element.querySelectorAll(".drop-section")) {
+      if (zone.dataset.dropBound) continue;
+      zone.dataset.dropBound = "1";
+      zone.addEventListener("dragover", () => zone.classList.add("drag-over"));
+      zone.addEventListener("dragleave", (event) => {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
+      });
+      zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
+    }
   }
 
 
@@ -551,9 +577,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     while (queue.length) {
       const parent = queue.shift();
 
-      for (const { path, section: fallbackSection } of NESTED_FIELDS) {
-        const uuids = foundry.utils.getProperty(parent.system ?? {}, path);
-        if (!Array.isArray(uuids)) continue;
+      for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
+        const raw = foundry.utils.getProperty(parent.system ?? {}, path);
+        if (!Array.isArray(raw)) continue;
+        const uuids = pick ? raw.map((row) => row?.[pick]) : raw;
 
         for (const uuid of uuids) {
           if (!uuid || ignored.has(uuid)) continue;
@@ -627,26 +654,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
   /* -------------------------------------------- */
-  /*  Rendering                                    */
-  /* -------------------------------------------- */
-
-  /** @override */
-  _onRender(context, options) {
-    super._onRender(context, options);
-
-    // Highlight the section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
-    for (const zone of this.element.querySelectorAll(".drop-section")) {
-      if (zone.dataset.dropBound) continue;
-      zone.dataset.dropBound = "1";
-      zone.addEventListener("dragover", () => zone.classList.add("drag-over"));
-      zone.addEventListener("dragleave", (event) => {
-        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-      });
-      zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
-    }
-  }
-
-  /* -------------------------------------------- */
   /*  Drag & Drop                                  */
   /* -------------------------------------------- */
 
@@ -692,7 +699,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @returns {Promise<Item|null>}
    */
   async #dropEmbedded(item) {
-    const alreadyOwned = this.actor.items.some((owned) => owned._stats?.compendiumSource === item.uuid);
+    // Same Item already owned (by source), or, for abilities, one with the same name: _onDropItem below holds the
+    // same rule, but drops from outside the actor are handled here and never reach it.
+    const alreadyOwned = this.actor.items.some((owned) =>
+      owned._stats?.compendiumSource === item.uuid
+      || (item.type === "ability" && owned.type === "ability" && owned.name === item.name)
+    );
     if (alreadyOwned) {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
       return null;
@@ -710,20 +722,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
   /**
-   * Skills are not embedded: the Character tab lists the Skills compendium and the actor only stores
-   * a level per skill UUID (system.skills[category] = [{ skill, level }]). Dropping a skill records it at "trained".
+   * Skills are not embedded: the actor only stores a level per skill UUID
+   * (system.skills[category] = [{ skill, level }]) and the Character tab lists them under their attribute.
+   * Any skill Item can be dropped, from a compendium or the world. Dropping records it at "trained"; a skill
+   * the actor already lists as "untrained" (every compendium skill is, once a field has been edited) is raised
+   * to "trained" instead of being rejected as a duplicate.
    * @param {Item} item
    * @returns {Promise<Item|null>}
    */
   async #dropSkill(item) {
-    const config = CONFIG.LORD_OF_THE_MYSTERIES;
-
-    if (item.pack !== config.skillsCompendiumId) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.SkillCompendiumOnly", { name: item.name }));
-      return null;
-    }
-
-    const folders = config.skillCompendiumFolders ?? {};
+    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
     const category = [item.system.category, item.system.skill_attribute].find((key) => key && key in folders);
     if (!category) {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.NoSkillCategory", { name: item.name }));
@@ -731,12 +739,19 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
 
     const current = this.actor.toObject().system.skills?.[category] ?? [];
-    if (current.some((entry) => entry.skill === item.uuid)) {
+    const index = current.findIndex((entry) => entry.skill === item.uuid);
+
+    let updated;
+    if (index < 0) {
+      updated = [...current, { skill: item.uuid, level: "trained" }];
+    } else if (current[index].level === "untrained") {
+      updated = current.map((entry, i) => (i === index ? { ...entry, level: "trained" } : entry));
+    } else {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
       return null;
     }
 
-    await this.actor.update({ [`system.skills.${category}`]: [...current, { skill: item.uuid, level: "trained" }] });
+    await this.actor.update({ [`system.skills.${category}`]: updated });
     return item;
   }
 
@@ -945,7 +960,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       return null;
     }
     return super._onDropItem(event, item);
-
+  }
+  
   /** Open the sheet of an entry's Item, whether the actor owns it or it is only referenced. */
   static async #onOpenItem(event, target) {
     const doc = await fromUuid(target.dataset.uuid);
@@ -1043,7 +1059,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * granted ones are removed from the Item that grants them.
    */
   static async #onDeleteItem(event, target) {
-    const item = this.actor.items.get(target.dataset.itemId);
+    // The id sits on the button in the drop sections, and on the row around it in the Abilities tab's own list.
+    const item = this.actor.items.get(target.dataset.itemId ?? target.closest("[data-item-id]")?.dataset.itemId);
     if (!item) return;
 
     if (!event.shiftKey) {
