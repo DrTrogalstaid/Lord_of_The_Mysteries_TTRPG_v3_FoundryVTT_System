@@ -335,25 +335,46 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
 
   /**
+   * Total attribute bonus granted by the actor's owned Sequence items, keyed by attribute key
+   * ({ str: 2, agi: 1, ... }). Only owned Sequences count, not ones merely referenced by other Items.
+   * @returns {Record<string, number>}
+   */
+  _sequenceAttributeBonuses() {
+    const bonuses = {};
+    for (const item of this.actor.items) {
+      if (item.type !== "sequence") continue;
+      for (const { attribute_name, value } of item.system.attribute_gain ?? []) {
+        if (!attribute_name) continue;
+        bonuses[attribute_name] = (bonuses[attribute_name] ?? 0) + (value ?? 0);
+      }
+    }
+    return bonuses;
+  }
+
+  /**
    * Flatten system.attributes into an array of {key, label, base, beyonder_bonus, corruption, total}
    * for easy iteration in the template.
    * @returns {object[]}
    */
   _prepareAttributes() {
+    const sequenceBonuses = this._sequenceAttributeBonuses();
+
     return Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, label]) => {
       const attr = this.actor.system.attributes[key] ?? {};
       const base = attr.base ?? 0;
       const beyonder_bonus = attr.beyonder_bonus ?? 0;
       const corruption = attr.corruption ?? 0;
-      const total = attr.total ?? 0;
-      return {
-        key,
-        label,
-        base,
-        beyonder_bonus,
-        corruption,
-        total: total
-      };
+      const sequence_bonus = sequenceBonuses[key] ?? 0;
+      const total = (attr.total ?? 0) + sequence_bonus;
+    return {
+      key,
+      label,
+      base,
+      beyonder_bonus,
+      sequence_bonus,
+      corruption,
+      total: total
+    };
     });
   }
 
