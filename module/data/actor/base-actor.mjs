@@ -120,7 +120,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         /**
          * Movement
          */
-        this.movement = (this.attributes.str.total + this.attributes.agi.total);
+        this.movement = (this.attributes.str.total + this.attributes.agi.total) * 3;
 
         /**
          * Defense Calculations

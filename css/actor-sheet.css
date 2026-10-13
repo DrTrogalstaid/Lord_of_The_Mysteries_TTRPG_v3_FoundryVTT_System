@@ -178,7 +178,8 @@
 }
 
 .lotm.sheet.actor .pool-container,
-.lotm.sheet.actor .defense-box {
+.lotm.sheet.actor .defense-box,
+.lotm.sheet.actor .speed-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -232,7 +233,8 @@
 }
 
 .lotm.sheet.actor .pool-box,
-.lotm.sheet.actor .stat-box {
+.lotm.sheet.actor .stat-box,
+.lotm.sheet.actor .speed-box {
   flex: 1;
   border: 1px solid var(--psx-border);
   border-radius: 0px;
@@ -267,7 +269,8 @@
   color: var(--psx-text-dim);
 }
 
-.lotm.sheet.actor .stat-box input {
+.lotm.sheet.actor .stat-box input, 
+.lotm.sheet.actor .speed-box input {
   width: 90%;
   text-align: center;
 }
