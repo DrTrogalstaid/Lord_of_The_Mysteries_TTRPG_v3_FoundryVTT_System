@@ -407,6 +407,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
+  opacity: 0.8;
+  cursor: default;
 }
 
 .lotm.sheet.actor .attribute-breakdown input {

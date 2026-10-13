@@ -10,7 +10,7 @@
         <div class="attribute-breakdown">
           <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
           <span>+</span>
-          <input type="number" name="system.attributes.{{this.key}}.beyonder_bonus" value="{{this.beyonder_bonus}}" title="Beyonder Bonus" />
+          <input type="number" value="{{this.sequence_bonus}}" title="Sequence Bonus" readonly tabindex="-1" />
           <span>+</span>
           <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
         </div>
@@ -187,11 +187,11 @@
 
   </div>
 
-  {{!-- Skills granted by Sequences (via their training bonus). The list above only covers the Skills compendium. --}}
+  {{!-- Skills granted by Sequences (their skill increases and training bonus). Read-only references. --}}
   {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
       zone="skills"
       label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"
       entries=sections.skills
-      remove="deleteSkill"}}
+      remove="deleteItem"}}
 
 </section>
