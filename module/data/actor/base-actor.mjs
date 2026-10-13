@@ -44,8 +44,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         schema.damage_resistance = new fields.ArrayField(
             new fields.SchemaField({
-                damage_type: new fields.StringField({ required: true}),
-                value : new fields.NumberField({required: true, integer: true, min: 0})
+                damage_type: new fields.StringField({ required: true, initial: CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.Physical }),
+                value : new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 })
             })
         );
         
@@ -112,15 +112,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Luck
         this.resources.lp.max = this.attributes.luc.total;
 
-        // Loop through beyonderData.sequenceList for full calculation
-        // for (const sequence of Object.values(this.beyonderData.sequenceList)) {
-        //     sequence.
-        // }
-
         /**
          * Movement
          */
-        this.movement = (this.attributes.str.total + this.attributes.agi.total) * 3;
+        //TODO: Change the multiplication here to depend on the system's distance unit.
+        this.movement = (this.attributes.str.total + this.attributes.agi.total) * 3;  // Multiply by 3 to get feet in stead of Meters
 
         /**
          * Defense Calculations
@@ -169,10 +165,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique
         this.defenses.physique = (this.attributes.phy.total + 10);
-        
-        /**
-         * Damage Resistances
-         */
 
     }
 

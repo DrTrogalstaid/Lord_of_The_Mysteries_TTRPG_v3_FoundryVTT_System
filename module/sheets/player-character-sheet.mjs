@@ -37,6 +37,10 @@ const DROP_SECTIONS = {
  */
 const ORDER_FLAG = "flags.lotm.order";
 
+/** What a newly added Damage Resistance entry starts as: a key of Damage_Types in en.json, and a value. */
+const DEFAULT_DAMAGE_TYPE = "Physical";
+const DEFAULT_DAMAGE_RESISTANCE = 1;
+
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
 
@@ -165,6 +169,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       spendLuck: PlayerCharacterSheet._onSpendLuck,
       spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
       editImage: PlayerCharacterSheet._onEditImage,
+      addDamageResistance: PlayerCharacterSheet._onAddDamageResistance,
+      removeDamageResistance: PlayerCharacterSheet._onRemoveDamageResistance,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
@@ -284,6 +290,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (context.tabs?.[partId]) context.tab = context.tabs[partId];
 
     switch (partId) {
+      case "sidebar":
+        context.damageTypeChoices = this._prepareDamageTypes();
+        break;
+
       case "character":
         context.tab = context.tabs.character;
         context.attributesList = this._prepareAttributes();
@@ -712,6 +722,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return this.#dropEmbedded(document);
   }
 
+  
   /**
    * Copy an Item onto the actor as an embedded Item. The source UUID is kept in
    * _stats.compendiumSource so duplicates are caught and nested references to the same
@@ -824,6 +835,48 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
   /**
+   * Damage types for Damage Resistance dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareDamageTypes() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Damage_Types") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Damage_Types.${key}`)])
+    );
+  }
+
+
+  /**
+   * Add Damage Resistance
+   */
+  static async _onAddDamageResistance(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.damage_resistance ?? [];
+    
+    await this.actor.update({
+      "system.damage_resistance": [...current, { damage_type: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
+    });
+  }
+
+
+  /**
+   * Remove Damage Resistance
+   */
+  static async _onRemoveDamageResistance(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.damage_resistance ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.damage_resistance": current.filter((_, i) => i !== index) });
+  }
+
+
+  /**
    * Open SkillCheckDialog for the clicked skill. All the data the dialog
    * needs (uuid/name/level/category/attribute) travels in via data-*
    * attributes on the skill row, set from _prepareSkillList()'s entry -
@@ -843,6 +896,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
   /**
    * The ability item and granted-skill id behind a clicked granted-skill control.
    * @returns {{ability: Item|undefined, grantedId: string|undefined}}
@@ -853,6 +907,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       grantedId: target.closest("[data-granted-id]")?.dataset.grantedId
     };
   }
+
 
   /** Save a new granted-skills list on the ability, warning on duplicates. */
   async _saveGrantedSkill(ability, skill) {
@@ -867,6 +922,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await ability.update({ "system.grantedSkills": list });
   }
 
+
   /** Add the skill picked in a granted-skills section's dropdown. */
   static async _onAddGrantedOption(event, target) {
     const { ability } = this._grantedSkillTarget(target);
@@ -880,6 +936,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
   /** Add a custom-named skill, linked to the attribute picked next to the name box. */
   static async _onAddGrantedCustom(event, target) {
     const { ability } = this._grantedSkillTarget(target);
@@ -889,6 +946,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (!ability || !input) return;
     await this._saveGrantedSkill(ability, { name: input.value, attribute });
   }
+
 
   /**
    * Analyze a regular skill (Extraordinary Knowledge). Education skills count it on
@@ -919,6 +977,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
   /**
    * Add one analysis to a granted skill's counter. The GM decides when the
    * count earns a new level.
@@ -931,6 +990,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       "system.grantedSkills": updateGrantedSkill(ability.system.grantedSkills, grantedId, { analysis: entry.analysis + 1 })
     });
   }
+
 
   /** Remove a granted skill (and its progress) from the ability, after confirming. */
   static async _onRemoveGrantedSkill(event, target) {
@@ -946,6 +1006,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await ability.update({ "system.grantedSkills": ability.system.grantedSkills.filter(s => s.id !== grantedId) });
   }
 
+
   /**
    * Open an owned item's sheet (the Abilities tab's edit control).
    */
@@ -954,6 +1015,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     item?.sheet.render(true);
   }
 
+
   /**
    * Remove an owned item from the actor (the Abilities tab's delete control).
    */
@@ -961,6 +1023,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const item = this.actor.items.get(target.closest("[data-item-id]")?.dataset.itemId);
     await item?.deleteDialog();
   }
+
 
   /* -------------------------------------------- */
   /*  Drag & Drop                                  */

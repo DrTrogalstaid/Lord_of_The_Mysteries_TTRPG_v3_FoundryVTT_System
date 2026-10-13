@@ -319,14 +319,46 @@
   gap: 4px;
 }
 
-.lotm.sheet.actor .dr-type {
-  flex: 1;
-  min-width: 0;
+.lotm.sheet.actor .damage-resistance-row {
+  align-items: center;
 }
 
-.lotm.sheet.actor .dr-value {
-  width: 32px;
+.lotm.sheet.actor .damage-resistance-row .damage-resistance-type {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: 22px;
+  text-align: left;
+}
+
+.lotm.sheet.actor .damage-resistance-row .damage-resistance-value {
+  flex: 0 0 34px;
+  width: 34px;
   text-align: center;
+}
+
+.lotm.sheet.actor .damage-resistance-remove {
+  flex: 0 0 14px;
+  text-align: center;
+  color: var(--psx-text-dim);
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .damage-resistance-remove:hover {
+  color: #d9534f;
+}
+
+.lotm.sheet.actor .damage-resistance-add-button {
+  width: 100%;
+  margin-top: 4px;
+  background: var(--psx-title-bg);
+  color: var(--psx-text);
+  border: 1px solid var(--psx-border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .lotm.sheet.actor .empty-note {

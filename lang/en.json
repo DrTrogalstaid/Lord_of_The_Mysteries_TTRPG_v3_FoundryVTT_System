@@ -273,7 +273,24 @@
       "DragHintInventory": "Items are added by dragging them onto the Inventory section.",
       "RemoveTitle": "Remove Item",
       "RemoveConfirm": "Remove {name} from this character? (Hold Shift to skip this prompt.)"
+    },
+
+    "Damage_Types": {
+      "Physical": "Physical",
+      "Curse": "Curse",
+      "Fire": "Fire",
+      "Cold": "Cold",
+      "Holy": "Holy",
+      "Lightning": "Lightning",
+      "Mental": "Mental",
+      "Poison": "Poison"
+    },
+
+    "DamageResistance": {
+      "Add": "Add",
+      "Remove": "Remove resistance"
     }
+    
   },
 
   "TYPES": {

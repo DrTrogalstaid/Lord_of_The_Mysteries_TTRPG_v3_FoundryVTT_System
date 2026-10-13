@@ -126,3 +126,14 @@ LORD_OF_THE_MYSTERIES.actionCategories = {
     combat: 'LORD_OF_THE_MYSTERIES.Action_Category.combat',
     downTime: 'LORD_OF_THE_MYSTERIES.Action_Category.downtime',
 };
+
+LORD_OF_THE_MYSTERIES.damageTypes = {
+    physical: 'LORD_OF_THE_MYSTERIES.DamageTypes.Physical',
+    curse: 'LORD_OF_THE_MYSTERIES.DamageTypes.Curse',
+    fire: 'LORD_OF_THE_MYSTERIES.DamageTypes.Fire',
+    cold: 'LORD_OF_THE_MYSTERIES.DamageTypes.Cold',
+    holy: 'LORD_OF_THE_MYSTERIES.DamageTypes.Holy',
+    lightning: 'LORD_OF_THE_MYSTERIES.DamageTypes.Lightning',
+    mental: 'LORD_OF_THE_MYSTERIES.DamageTypes.Mental',
+    poison: 'LORD_OF_THE_MYSTERIES.DamageTypes.Poison',
+};
