@@ -71,13 +71,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         return schema;
     }
 
-    /** @override */
-    prepareDerivedData() {
-        
-        /**
-         * Sequence Calculations
-         */
 
+    /** 
+     * Prepare the derived data on the actor sheet 
+     * @override 
+    */
+    prepareDerivedData() {
         /**
          * Attribute Bonus Calculation
          */
@@ -90,14 +89,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
          * NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
          *       calculating as we go. 
          */
-        // Health
-        this.resources.hp.max = (this.attributes.phy.total + 10);
-        // Rationality
-        this.resources.rp.max = (this.attributes.wil.total + 10);
-        // Spirituality
-        this.resources.spp.max = (this.attributes.wil.total + this.attributes.ins.total);
-        // Luck
-        this.resources.lp.max = this.attributes.luc.total;
+        this._prepareResources();
 
         /**
          * Movement
@@ -108,6 +100,39 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         /**
          * Defense Calculations
          */
+        this._prepareDefenseValues();
+
+        /**
+         * NOTE: SEQUENCE DATA CALCULATIONS ARE DONE IN THE ACTOR'S SHEET
+         * IF THE ABOVE VALUES ARE LARGER THAN EXPECTED, IT IS LIKELY DUE 
+         * TO A CALCULATION HAPPENING THERE!
+         */
+
+    }
+
+
+    /**
+     * Initial resource calculations. 
+     * This is the base that is added to when calculation sequence data improvements.
+     */
+    _prepareResources() {
+        // Health
+        this.resources.hp.max = (this.attributes.phy.total + 10);
+        // Rationality
+        this.resources.rp.max = (this.attributes.wil.total + 10);
+        // Spirituality
+        this.resources.spp.max = (this.attributes.wil.total + this.attributes.ins.total);
+        // Luck
+        this.resources.lp.max = this.attributes.luc.total;
+        // Sequence Resource Increase
+    }
+
+
+    /**
+     * Defense value calculations
+     * Armor, Dodge, Physical, Will, and Physique
+     */
+    _prepareDefenseValues() {
         // Armor
         this.defenses.armor = 0;
         //Dodge
@@ -152,7 +177,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique
         this.defenses.physique = (this.attributes.phy.total + 10);
-
     }
 
 }
