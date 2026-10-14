@@ -77,36 +77,30 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      * @override 
     */
     prepareDerivedData() {
-        /**
-         * Attribute Bonus Calculation
-         */
-        for (const attr of Object.values(this.attributes)) {
-            attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0) + (attr.corruption ?? 0);
+        const sequences = this.parent?.items.filter(i => i.type === "sequence") ?? [];
+
+
+        // Attribute Bonus Calculation
+        // Including sequence gains so resource calculations are correct.
+        for (const [key, attr] of Object.entries(this.attributes)) {
+            attr.sequence_bonus = sequences.reduce((sum, seq) =>
+                sum + (seq.system.attribute_gain ?? [])
+                    .filter(g => g.attribute_name === key)
+                    .reduce((s, g) => s + (g.value ?? 0), 0), 0);   // display only, not in the schema
+            attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0)
+                    + (attr.corruption ?? 0) + attr.sequence_bonus;
         }
 
-        /**
-         * Resource Calculations
-         * NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
-         *       calculating as we go. 
-         */
+        // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
 
-        /**
-         * Movement
-         */
         //TODO: Change the multiplication here to depend on the system's distance unit.
         this.movement = (this.attributes.str.total + this.attributes.agi.total) * 3;  // Multiply by 3 to get feet in stead of Meters
 
-        /**
-         * Defense Calculations
-         */
         this._prepareDefenseValues();
 
-        /**
-         * NOTE: SEQUENCE DATA CALCULATIONS ARE DONE IN THE ACTOR'S SHEET
-         * IF THE ABOVE VALUES ARE LARGER THAN EXPECTED, IT IS LIKELY DUE 
-         * TO A CALCULATION HAPPENING THERE!
-         */
+        // NOTE: THIS NEEDS TO BE CALLED LAST
+        this._prepareSequenceCalculations(sequences);
 
     }
 
@@ -177,6 +171,18 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique
         this.defenses.physique = (this.attributes.phy.total + 10);
+    }
+
+
+    /**
+     * Sequence data calculations
+     * This function adds to base data that has already been calculated, therefore
+     * it needs to be called last.
+     */
+    _prepareSequenceCalculations(sequences) {
+        
+        
+
     }
 
 }

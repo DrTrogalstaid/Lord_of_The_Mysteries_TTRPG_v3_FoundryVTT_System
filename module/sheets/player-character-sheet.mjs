@@ -367,24 +367,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @returns {object[]}
    */
   _prepareAttributes() {
-    const sequenceBonuses = this._sequenceAttributeBonuses();
-
     return Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, label]) => {
-      const attr = this.actor.system.attributes[key] ?? {};
-      const base = attr.base ?? 0;
-      const beyonder_bonus = attr.beyonder_bonus ?? 0;
-      const corruption = attr.corruption ?? 0;
-      const sequence_bonus = sequenceBonuses[key] ?? 0;
-      const total = (attr.total ?? 0) + sequence_bonus;
-    return {
-      key,
-      label,
-      base,
-      beyonder_bonus,
-      sequence_bonus,
-      corruption,
-      total: total
-    };
+      const attr = this.actor.system.attributes[key];
+      return {
+        key, label,
+        base: attr.base,
+        beyonder_bonus: attr.beyonder_bonus,
+        corruption: attr.corruption,
+        sequence_bonus: attr.sequence_bonus,   // derived, display only
+        total: attr.total                       // derived
+      };
     });
   }
 
