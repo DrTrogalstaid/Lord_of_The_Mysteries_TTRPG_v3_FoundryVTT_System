@@ -68,19 +68,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
-        schema.beyonderData = new fields.SchemaField({
-            pathway: new fields.StringField({required: false, blank: true}),
-            sequenceList: new fields.ArrayField(
-                new fields.SchemaField({
-                    sequenceItem: new fields.DocumentUUIDField({type:"Item", required: true}),
-                    sequenceNumber: new fields.NumberField({required: true, integer: true, min:0}),
-                    title: new fields.StringField({ required: true}),
-                    digestionAmount: new fields.NumberField({required: true, integer: true, min:0, initial: 0})
-                })
-            ),
-            currentSequence: new fields.DocumentUUIDField({type:"Item", required: true})
-        });
-
         return schema;
     }
 

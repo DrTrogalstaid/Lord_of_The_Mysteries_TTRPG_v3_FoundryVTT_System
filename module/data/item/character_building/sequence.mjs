@@ -37,7 +37,9 @@ export default class LordOfTheMysteriesSequence extends LordOfTheMysteriesItemBa
     // Knowledge and Training bonus
     schema.trainingBonus = new fields.ArrayField(
         new fields.DocumentUUIDField({ type: "Item", required: true })
-    )
+    );
+
+    schema.digestionAmount = new fields.NumberField({required: true, integer: true, min: 1, max: 20, initial: 1});
 
     return schema;
   }
