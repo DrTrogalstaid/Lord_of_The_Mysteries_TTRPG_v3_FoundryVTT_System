@@ -111,11 +111,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      */
     _prepareResources() {
         // Health
-        this.resources.hp.max = (this.attributes.phy.total + 10);
+        this.resources.hp.max = (this.attributes.phy.base + 10);
         // Rationality
         this.resources.rp.max = (this.attributes.wil.total + 10);
         // Spirituality
-        this.resources.spp.max = (this.attributes.wil.total + this.attributes.ins.total);
+        this.resources.spp.max = (this.attributes.wil.base + this.attributes.ins.base);
         // Luck
         this.resources.lp.max = this.attributes.luc.total;
         // Sequence Resource Increase
@@ -180,8 +180,40 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      * it needs to be called last.
      */
     _prepareSequenceCalculations(sequences) {
-        
-        
+
+        const hasSequence4Flag = false;
+        const hasSequence2Flag = false;
+
+        // (initial will + initial inspiration) + (the number of currently promoted sequences * current inspiration value)
+        this.resources.spp.max += (this.attributes.ins.total * sequences.length);
+        this.resources.hp.max += (this.attributes.phy.total * sequences.length);
+
+        // Loop through all sequence items
+        for (const sequence of sequences) {
+            
+            // Digestion Bonuses
+            this.resources.hp.max += Math.floor(sequence.system.digestionAmount / 5);
+            this.resources.spp.max += Math.floor(sequence.system.digestionAmount / 5);
+
+            // Sequence 4 and 2 bonus
+            if (sequence.system.sequence_number == 4) {
+                hasSequence4Flag = true;
+            }
+            if (sequence.system.sequence_number == 2) {
+                hasSequence4Flag = true;
+            }
+        }
+
+        // High sequence bonuses
+        if (hasSequence4Flag == true) {
+            this.resources.hp.max *= 2;
+            this.resources.spp.max *= 2;
+        }
+
+        if (hasSequence2Flag == true) {
+            this.resources.hp.max *= 3;
+            this.resources.spp.max *= 3;
+        }
 
     }
 
