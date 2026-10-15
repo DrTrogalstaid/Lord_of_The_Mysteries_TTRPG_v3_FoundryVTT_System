@@ -815,7 +815,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({
       // Spirituality Restoration
       "system.resources.spp.value": res.spp.max,
-      // Rationality: +1
+      // Rationality +1
       "system.resources.rp.value": Math.min(this.actor.system.resources.rp.value + 1, this.actor.system.resources.rp.max)
     });
   }

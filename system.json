@@ -71,11 +71,23 @@
       },
       "flats": {}
     },
-        {
+    {
       "name": "action_compendium",
       "label": "Actions",
       "path": "packs/action_compendium",
       "type": "Item",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+    {
+      "name": "rules_compendium",
+      "label": "LOTM Rules",
+      "path": "packs/rules_compendium",
+      "type": "JournalEntry",
       "system": "lotm",
       "ownershop": {
         "PLAYER": "OBSERVER",
