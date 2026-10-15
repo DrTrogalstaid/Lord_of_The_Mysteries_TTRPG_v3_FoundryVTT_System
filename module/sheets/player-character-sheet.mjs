@@ -788,15 +788,36 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @param {PointerEvent} event
    * @param {HTMLElement} target
    */
-  static _onShortRest(event, target) {
-    console.log(`${this.actor.name}: Short Rest triggered (not yet implemented)`);
-    // TODO: call the Short Rest macro, e.g. game.macros.getName("Short Rest")?.execute({actor: this.actor});
+  static async _onShortRest(event, target) {
+
+    // Sleepless gain full Spirituality on short rests
+    const isSleepless = this.actor.items.some(
+      i => i.type === "sequence" && (i.name === "Sleepless" || i.system.name === "Sleepless")
+    );
+
+    var spiritualityGain = 0;
+    if (isSleepless == true) {
+      spiritualityGain = this.actor.system.resources.spp.max;
+    } 
+    else {
+      spiritualityGain = Math.floor(this.actor.system.resources.spp.max / 8);
+    }
+
+    await this.actor.update({
+      "system.resources.spp.value": Math.min(this.actor.system.resources.spp.value + spiritualityGain, this.actor.system.resources.spp.max)
+    });
   }
 
 
-  static _onLongRest(event, target) {
-    console.log(`${this.actor.name}: Long Rest triggered (not yet implemented)`);
-    // TODO: call the Long Rest macro.
+  static async _onLongRest(event, target) {
+    const res = this.actor.system.resources;
+
+    await this.actor.update({
+      // Spirituality Restoration
+      "system.resources.spp.value": res.spp.max,
+      // Rationality: +1
+      "system.resources.rp.value": Math.min(this.actor.system.resources.rp.value + 1, this.actor.system.resources.rp.max)
+    });
   }
 
 
