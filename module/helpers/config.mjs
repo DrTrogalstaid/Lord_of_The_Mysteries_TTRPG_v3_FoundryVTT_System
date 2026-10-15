@@ -137,3 +137,22 @@ LORD_OF_THE_MYSTERIES.damageTypes = {
     mental: 'LORD_OF_THE_MYSTERIES.DamageTypes.Mental',
     poison: 'LORD_OF_THE_MYSTERIES.DamageTypes.Poison',
 };
+
+LORD_OF_THE_MYSTERIES.commonLanguages = {
+    ancientFeysac: "Ancient Feysac",
+    loenese: "Loenese",
+    intisian: "Intisian",
+    feysac: "Faysac",
+    highlander: "Highlander",
+    lenburg: "Lenburg",
+    duntanese: "Duntanese"
+};
+
+LORD_OF_THE_MYSTERIES.mysticalLanguages = {
+    elvish: "Elvish",
+    dragonese: "Dragonese",
+    jotun: "Jotun",
+    devil: "Devil",
+    ancientHermes: "Ancient Hermes",
+    hermes: "Hermes"
+};

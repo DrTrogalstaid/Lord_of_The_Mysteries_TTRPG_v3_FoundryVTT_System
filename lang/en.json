@@ -286,9 +286,9 @@
       "Poison": "Poison"
     },
 
-    "DamageResistance": {
+    "GenericButtons": {
       "Add": "Add",
-      "Remove": "Remove resistance"
+      "Remove": "Remove"
     },
 
     "Languages": {

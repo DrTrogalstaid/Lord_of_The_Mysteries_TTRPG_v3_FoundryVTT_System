@@ -37,9 +37,12 @@ const DROP_SECTIONS = {
  */
 const ORDER_FLAG = "flags.lotm.order";
 
-/** What a newly added Damage Resistance entry starts as: a key of Damage_Types in en.json, and a value. */
+/** Newly added Damage Resistance */
 const DEFAULT_DAMAGE_TYPE = "Physical";
 const DEFAULT_DAMAGE_RESISTANCE = 1;
+
+const DEFAULT_COMMON_LANGUAGE = "Loenese";
+const DEFAULT_MYSTICAL_LANGUAGE = "Hermes";
 
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
@@ -171,6 +174,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       editImage: PlayerCharacterSheet._onEditImage,
       addDamageResistance: PlayerCharacterSheet._onAddDamageResistance,
       removeDamageResistance: PlayerCharacterSheet._onRemoveDamageResistance,
+      addCommonLanguage: PlayerCharacterSheet._onAddCommonLanguage,
+      removeCommonLanguage: PlayerCharacterSheet._onRemoveCommonLanguage,
+      addMysticalLanguage: PlayerCharacterSheet._onAddMysticalLanguage,
+      removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
@@ -290,9 +297,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (context.tabs?.[partId]) context.tab = context.tabs[partId];
 
     switch (partId) {
-      case "sidebar":
-        context.damageTypeChoices = this._prepareDamageTypes();
-        break;
 
       case "character":
         context.tab = context.tabs.character;
@@ -302,6 +306,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.grantedSkillTabs = await this._prepareGrantedSkills();
         context.attributeOptions = CONFIG.LORD_OF_THE_MYSTERIES.attributes;
         context.attributeAbbreviations = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations;
+        context.languageCommonChoices = this._prepareCommonLanguages();
+        context.languageMysticalChoices = this._prepareMysticalLanguages();
         break;
 
       case "abilities":
@@ -337,6 +343,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             relativeTo: this.actor,
           }
         );
+        break;
+      case "sidebar":
+        context.damageTypeChoices = this._prepareDamageTypes();
         break;
     }
 
@@ -888,6 +897,89 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ "system.damage_resistance": current.filter((_, i) => i !== index) });
   }
 
+
+  /**
+   * Languages (Common) dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareCommonLanguages() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Languages.Common") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Languages.Common.${key}`)])
+    );
+  }
+
+
+  /**
+   * Languages (Mystical) dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareMysticalLanguages() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Languages.Mystical") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Languages.Mystical.${key}`)])
+    );
+  }
+
+
+  /**
+   * Add Language (Common)
+   */
+  static async _onAddCommonLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.languages.common ?? [];
+    
+    await this.actor.update({
+      "system.languages.common": [...current, DEFAULT_COMMON_LANGUAGE]
+    });
+  }
+
+
+  /**
+   * Add Language (Mystical)
+   */
+  static async _onAddMysticalLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.languages.mystical ?? [];
+    
+    await this.actor.update({
+      "system.languages.mystical": [...current, DEFAULT_MYSTICAL_LANGUAGE]
+    });
+  }
+
+
+  /**
+   * Remove Language (Common)
+   */
+  static async _onRemoveCommonLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.languages.common ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.languages.common": current.filter((_, i) => i !== index) });
+  }
+
+
+    /**
+   * Remove Language (Mystical)
+   */
+  static async _onRemoveMysticalLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.languages.mystical ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.languages.mystical": current.filter((_, i) => i !== index) });
+  }
 
   /**
    * Open SkillCheckDialog for the clicked skill. All the data the dialog

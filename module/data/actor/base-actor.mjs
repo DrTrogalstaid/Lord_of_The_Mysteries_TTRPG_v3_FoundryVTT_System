@@ -68,6 +68,15 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
+        schema.languages = new fields.SchemaField({
+            common: new fields.ArrayField(
+                new fields.StringField({ required: false, blank: true })
+            ),
+            mystical: new fields.ArrayField(
+                new fields.StringField({ required: false, blank: true })
+            )
+        });
+
         return schema;
     }
 
