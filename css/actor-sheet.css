@@ -513,6 +513,10 @@
   font-size: 11px;
 }
 
+.lotm.sheet.actor .skill-tab[data-tab^="ability-"] {
+  flex: 0 1 auto;
+}
+
 .lotm.sheet.actor .skill-tab.active {
   color: var(--psx-text);
   border-color: #888;
