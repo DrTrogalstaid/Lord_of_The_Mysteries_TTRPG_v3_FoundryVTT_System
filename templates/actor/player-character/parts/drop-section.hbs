@@ -67,6 +67,22 @@
                   <span class="drop-entry-stat-value">{{entry.cost}}</span>
                 </div>
               {{/if}}
+              {{#if entry.hasDigestion}}
+                <div class="drop-entry-stat drop-entry-digestion-stat">
+                  <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Digestion"}}</span>
+                  {{#if ../editable}}
+                    {{#if entry.owned}}
+                      <input type="number" class="drop-entry-digestion" min="1" max="20" step="1"
+                             value="{{entry.digestion}}" data-digestion-input data-item-id="{{entry.id}}"
+                             data-tooltip="LORD_OF_THE_MYSTERIES.Drop.DigestionHint">
+                    {{else}}
+                      <span class="drop-entry-stat-value">{{entry.digestion}}</span>
+                    {{/if}}
+                  {{else}}
+                    <span class="drop-entry-stat-value">{{entry.digestion}}</span>
+                  {{/if}}
+                </div>
+              {{/if}}
             </div>
           {{/if}}
           {{#if ../editable}}

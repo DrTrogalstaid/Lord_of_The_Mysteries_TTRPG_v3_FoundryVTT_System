@@ -44,6 +44,10 @@ const DEFAULT_DAMAGE_RESISTANCE = 1;
 const DEFAULT_COMMON_LANGUAGE = "Loenese";
 const DEFAULT_MYSTICAL_LANGUAGE = "Hermes";
 
+/** Bounds of a Sequence's digestionAmount */
+const DIGESTION_MIN = 1;
+const DIGESTION_MAX = 20;
+
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
 
@@ -90,6 +94,7 @@ function buildEntry(item, { section, owned, key, grantedBy = [] }) {
   const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
   const actionType = system.actionType || system.action_type || "";
   const actionTypeText = actionTypeLabel(actionType);
+  const isSequence = item.type === "sequence";
   return {
     key,
     uuid: item.uuid,
@@ -106,10 +111,13 @@ function buildEntry(item, { section, owned, key, grantedBy = [] }) {
     hasCost: cost !== null,
     actionType,
     actionTypeLabel: actionTypeText,
-    hasStats: cost !== null || !!actionTypeText,
+    // Sequences show their digestion amount
+    digestion: isSequence ? (system.digestionAmount ?? DIGESTION_MIN) : null,
+    hasDigestion: isSequence,
+    hasStats: cost !== null || !!actionTypeText || isSequence,
     // Sequences show "Sequence 9 · <pathway>" and sort by rank.
-    rank: item.type === "sequence" ? (system.sequence_number ?? null) : null,
-    detail: item.type === "sequence" ? sequenceDetail(system) : "",
+    rank: isSequence ? (system.sequence_number ?? null) : null,
+    detail: isSequence ? sequenceDetail(system) : "",
     grantedBy: [...grantedBy],
     grantedByLabel: "",
   };
@@ -553,6 +561,21 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     });
 
+    // Digestion inputs on owned Sequence rows belong to the Sequence item, not the actor,
+    // so they have no `name` (the actor form skips them) and save here instead. The value is
+    // clamped to the schema's bounds so an out-of-range number doesn't fail validation.
+    this.element.querySelectorAll(".drop-entry [data-digestion-input]").forEach(input => {
+      input.addEventListener("change", async ev => {
+        const item = this.actor.items.get(ev.currentTarget.dataset.itemId);
+        if (!item || item.type !== "sequence") return;
+        const raw = Math.floor(Number(ev.currentTarget.value));
+        const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
+        ev.currentTarget.value = value;
+        if (value === item.system.digestionAmount) return;
+        await item.update({ "system.digestionAmount": value });
+      });
+    });
+
     // Enter in the custom-skill box adds it instead of submitting the sheet.
     this.element.querySelectorAll(".granted-skill-custom").forEach(input => {
       input.addEventListener("keydown", ev => {
@@ -632,7 +655,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
               key: uuid, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
               img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
               owned: false, nested: true, broken: true, cost: null, hasCost: false,
-              actionType: "", actionTypeLabel: "", hasStats: false, rank: null, detail: "",
+              actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
+              hasStats: false, rank: null, detail: "",
               grantedBy: [parent.name], grantedByLabel: "",
             };
             bySource.set(uuid, broken);

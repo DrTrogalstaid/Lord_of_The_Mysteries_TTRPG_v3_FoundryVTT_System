@@ -262,6 +262,8 @@
       "Remove": "Remove",
       "Cost": "Spirituality Cost",
       "ActionType": "Action Type",
+      "Digestion": "Digestion",
+      "DigestionHint": "How much of this Sequence's potion has been digested (1–20).",
       "GrantedBy": "Granted by",
       "Missing": "Missing item",
       "Duplicate": "{name} is already on this character.",
