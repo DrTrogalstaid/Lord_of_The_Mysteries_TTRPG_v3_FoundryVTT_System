@@ -274,7 +274,9 @@
       "DragHintSkills": "Skills are added by dragging them from the Skills compendium.",
       "DragHintInventory": "Items are added by dragging them onto the Inventory section.",
       "RemoveTitle": "Remove Item",
-      "RemoveConfirm": "Remove {name} from this character? (Hold Shift to skip this prompt.)"
+      "RemoveConfirm": "Remove {name}?",
+      "UnlistedSpells": "Other Spells",
+      "SpellListEmpty": "No spells in this list yet."
     },
 
     "Damage_Types": {

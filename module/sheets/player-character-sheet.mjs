@@ -12,6 +12,9 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 /** Shared partial that renders one drop section (header, entry list, drop target). */
 const DROP_SECTION_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-section.hbs";
 
+/** One entry row (icon, name, stats, move / remove buttons). Used by the Spells tab's grouped lists. */
+const DROP_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs";
+
 /* -------------------------------------------- */
 /*  Drop section configuration                   */
 /* -------------------------------------------- */
@@ -88,7 +91,7 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
  *   `key` identifies the entry in the saved order: the Item's source UUID, so an owned copy and a
  *   reference to the same Item share one key and a position survives re-renders.
  */
-function buildEntry(item, { section, owned, key, grantedBy = [] }) {
+function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
   const system = item.system ?? {};
   // Abilities and spells use camelCase fields; Actions use snake_case.
   const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
@@ -120,7 +123,83 @@ function buildEntry(item, { section, owned, key, grantedBy = [] }) {
     detail: isSequence ? sequenceDetail(system) : "",
     grantedBy: [...grantedBy],
     grantedByLabel: "",
+    // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
+    spellList,
   };
+}
+
+/** The Spell List name an ability starts with (see ability.mjs). An empty list with this name is not shown. */
+const DEFAULT_SPELL_LIST_NAME = "Spells";
+
+/**
+ * Whether an ability's Spell List still has the default name (or no name at all).
+ * Those lists only appear on the Spells tab once they contain a spell.
+ * @param {Item} ability
+ * @returns {boolean}
+ */
+function hasDefaultSpellListName(ability) {
+  const name = ability.system?.spellList?.name?.trim() ?? "";
+  return !name || name.toLocaleLowerCase() === DEFAULT_SPELL_LIST_NAME.toLocaleLowerCase();
+}
+
+/**
+ * The name an ability's Spell List is shown under on the Spells tab.
+ * A blank name falls back to the ability's own name, so unnamed lists don't all merge together.
+ * @param {Item} ability
+ * @returns {string}
+ */
+function spellListName(ability) {
+  const name = ability.system?.spellList?.name?.trim();
+  return name || ability.name;
+}
+
+/**
+ * Split the Spells section's entries into one group per Spell List name.
+ *
+ * Lists with the same name (ignoring upper/lower case and extra spaces) become ONE group, even when
+ * they come from different abilities. Spells that aren't in any list (dropped straight on the sheet)
+ * go in an "Other Spells" group at the bottom. Entries keep the order they already had, so the
+ * saved manual order still applies inside each group.
+ *
+ * @param {object[]} entries      The already-sorted entries of sections.spells.
+ * @param {string[]} [listNames]  Spell List names to show even when they have no spells yet.
+ * @returns {{key: string, name: string, entries: object[]}[]}
+ */
+function groupSpellLists(entries, listNames = []) {
+  const groups = new Map();   // lower-case list name -> group
+  const unlisted = [];
+
+  // Start with an empty group for every named list, so it shows up before any spell is added to it.
+  for (const name of listNames) {
+    const key = name.toLocaleLowerCase();
+    if (!groups.has(key)) groups.set(key, { key, name, entries: [] });
+  }
+
+  for (const entry of entries) {
+    if (!entry.spellList) {
+      unlisted.push(entry);
+      continue;
+    }
+    const key = entry.spellList.toLocaleLowerCase();
+    if (!groups.has(key)) groups.set(key, { key, name: entry.spellList, entries: [] });
+    groups.get(key).entries.push(entry);
+  }
+
+  const lists = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (unlisted.length) {
+    lists.push({ key: "", name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.UnlistedSpells"), entries: unlisted });
+  }
+
+  // Move buttons only move an entry within its own group, so the first / last of each group can't go further.
+  for (const list of lists) {
+    list.entries.forEach((entry, index) => {
+      entry.canMove = list.entries.length > 1;
+      entry.canMoveUp = index > 0;
+      entry.canMoveDown = index < list.entries.length - 1;
+    });
+  }
+
+  return lists;
 }
 
 /** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
@@ -149,6 +228,13 @@ async function createBlankItem(sheet, type) {
 
 
 export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+
+  /**
+   * Names of every non-default Spell List on the actor's abilities (owned or granted), filled in by
+   * #prepareSections on each render. The Spells tab shows these lists even when they are empty.
+   * @type {string[]}
+   */
+  #namedSpellLists = [];
 
 
   /** @override */
@@ -224,7 +310,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
     abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
@@ -316,6 +402,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.attributeAbbreviations = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations;
         context.languageCommonChoices = this._prepareCommonLanguages();
         context.languageMysticalChoices = this._prepareMysticalLanguages();
+        break;
+
+      case "spells":
+        // One group per Spell List name
+        context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
         break;
 
       case "abilities":
@@ -616,6 +707,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const bySource = new Map();     // source uuid -> entry already shown
     const ignored = new Set();      // source uuids of unsupported types
     const queue = [];
+    this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
     // 1. Owned Items
     for (const item of this.actor.items) {
@@ -632,10 +724,18 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     while (queue.length) {
       const parent = queue.shift();
 
+      // Every ability with a renamed Spell List gets a group on the Spells tab, spells or not.
+      if (parent.type === "ability" && !hasDefaultSpellListName(parent)) {
+        this.#namedSpellLists.push(spellListName(parent));
+      }
+
       for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
         const raw = foundry.utils.getProperty(parent.system ?? {}, path);
         if (!Array.isArray(raw)) continue;
         const uuids = pick ? raw.map((row) => row?.[pick]) : raw;
+
+        // Spells reached through an ability's Spell List remember that list's name, for grouping on the Spells tab.
+        const listName = path === "spellList.spells" ? spellListName(parent) : "";
 
         for (const uuid of uuids) {
           if (!uuid || ignored.has(uuid)) continue;
@@ -645,6 +745,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             if (existing.name !== parent.name && !existing.grantedBy.includes(parent.name)) {
               existing.grantedBy.push(parent.name);
             }
+            // An owned spell that is also in a Spell List is shown in that list. A spell in two
+            // differently-named lists stays in the first one found (each spell is shown once).
+            if (listName && !existing.spellList) existing.spellList = listName;
             continue;
           }
 
@@ -657,7 +760,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
               owned: false, nested: true, broken: true, cost: null, hasCost: false,
               actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
               hasStats: false, rank: null, detail: "",
-              grantedBy: [parent.name], grantedByLabel: "",
+              grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
             };
             bySource.set(uuid, broken);
             sections[fallbackSection].push(broken);
@@ -670,7 +773,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             continue;
           }
 
-          const entry = buildEntry(doc, { section, owned: false, key: uuid, grantedBy: [parent.name] });
+          const entry = buildEntry(doc, { section, owned: false, key: uuid, grantedBy: [parent.name], spellList: listName });
           bySource.set(uuid, entry);
           sections[section].push(entry);
           queue.push(doc);
@@ -1195,12 +1298,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const section = zone?.dataset.dropZone;
     if (!section) return;
 
+    // Every entry in the whole section, top to bottom. This full list is what gets saved.
     const keys = [...zone.querySelectorAll(".drop-section-list > .drop-entry")].map((li) => li.dataset.key);
-    const from = keys.indexOf(target.dataset.key);
-    const to = from + (target.dataset.direction === "up" ? -1 : 1);
-    if (from < 0 || to < 0 || to >= keys.length) return;
 
-    [keys[from], keys[to]] = [keys[to], keys[from]];
+    // The entries in the same list as the clicked one. Most sections have one list, so this is the same as
+    // `keys`; on the Spells tab each Spell List group is its own list, and an entry only moves inside its group.
+    const list = target.closest(".drop-section-list");
+    const siblings = list
+      ? [...list.children].filter((li) => li.matches(".drop-entry")).map((li) => li.dataset.key)
+      : keys;
+
+    const from = siblings.indexOf(target.dataset.key);
+    const to = from + (target.dataset.direction === "up" ? -1 : 1);
+    if (from < 0 || to < 0 || to >= siblings.length) return;
+
+    // Swap the two neighbours' places in the full list.
+    const a = keys.indexOf(siblings[from]);
+    const b = keys.indexOf(siblings[to]);
+    [keys[a], keys[b]] = [keys[b], keys[a]];
     await this.actor.update({ [`${ORDER_FLAG}.${section}`]: keys });
   }
 
