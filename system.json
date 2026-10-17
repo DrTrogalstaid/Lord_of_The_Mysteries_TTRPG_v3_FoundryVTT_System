@@ -100,6 +100,18 @@
         "ASSISTANT": "OWNER"
       },
       "flats": {}
+    },
+    {
+      "name": "containers_and_gear_compendium",
+      "label": "Containers and Gear",
+      "path": "packs/containers_and_gear_compendium",
+      "type": "Item",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
     }
   ],
   "packFolders": [],
