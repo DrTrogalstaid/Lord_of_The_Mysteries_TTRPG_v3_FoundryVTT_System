@@ -135,6 +135,15 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
   };
 }
 
+/**
+ * Add an Item's name to an entry's "Granted by" list, unless it's already there or it's the entry itself.
+ * @param {object} entry
+ * @param {string} name
+ */
+function addGrantedBy(entry, name) {
+  if (entry.name !== name && !entry.grantedBy.includes(name)) entry.grantedBy.push(name);
+}
+
 /** The Spell List name an ability starts with (see ability.mjs). An empty list with this name is not shown. */
 const DEFAULT_SPELL_LIST_NAME = "Spells";
 
@@ -755,6 +764,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const sections = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
     const bySource = new Map();     // source uuid -> entry already shown
     const ignored = new Set();      // source uuids of unsupported types
+    const abilityByName = new Map(); // lower-case ability name -> entry: a character has each ability once
     const queue = [];
     this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
@@ -768,6 +778,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
       bySource.set(key, entry);
+      if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
     }
 
@@ -791,11 +802,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         for (const uuid of uuids) {
           if (!uuid || ignored.has(uuid)) continue;
 
-          const existing = bySource.get(uuid);
+          // Actions on gear are always listed again, even when the character already has that action
+          // (two revolvers = two "Shoot" actions). Each gear Item's copy gets its own key, so it doesn't merge
+          // with other entries and keeps its own place when moved up / down.
+          const gearAction = parent.type === "gear" && path === "actionList";
+          const key = gearAction ? `${parent.uuid}#${uuid}` : uuid;
+
+          const existing = bySource.get(key);
           if (existing) {
-            if (existing.name !== parent.name && !existing.grantedBy.includes(parent.name)) {
-              existing.grantedBy.push(parent.name);
-            }
+            addGrantedBy(existing, parent.name);
             // An owned spell that is also in a Spell List is shown in that list. A spell in two
             // differently-named lists stays in the first one found (each spell is shown once).
             if (listName && !existing.spellList) existing.spellList = listName;
@@ -806,14 +821,14 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
           if (!doc || doc.documentName !== "Item") {
             const broken = {
-              key: uuid, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
+              key, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
               img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
               owned: false, nested: true, broken: true, cost: null, hasCost: false,
               actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
               hasStats: false, rank: null, detail: "",
               grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
             };
-            bySource.set(uuid, broken);
+            bySource.set(key, broken);
             sections[fallbackSection].push(broken);
             continue;
           }
@@ -824,10 +839,23 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             continue;
           }
 
-          const entry = buildEntry(doc, { section, owned: false, key: uuid, grantedBy: [parent.name], spellList: listName });
-          bySource.set(uuid, entry);
+          // A character has each ability once. If one with this name is already listed (owned, or granted by
+          // something else, even from a different source), this Item is added to its "Granted by" instead.
+          if (doc.type === "ability") {
+            const sameName = abilityByName.get(doc.name.toLocaleLowerCase());
+            if (sameName) {
+              addGrantedBy(sameName, parent.name);
+              bySource.set(uuid, sameName);
+              continue;
+            }
+          }
+
+          const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
+          bySource.set(key, entry);
           sections[section].push(entry);
-          queue.push(doc);
+          if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
+          // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
+          if (!gearAction) queue.push(doc);
         }
       }
     }

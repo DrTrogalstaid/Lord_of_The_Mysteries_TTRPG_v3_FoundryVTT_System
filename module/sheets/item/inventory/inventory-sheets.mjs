@@ -48,11 +48,37 @@ class InventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
 }
 
 
-/** Gear: size, quantity, and (once a character owns it) where it's carried. */
+/**
+ * The lists of Items a gear Item grants. Each is a list of UUIDs on the gear's system data, and the
+ * character sheet already shows them (NESTED_FIELDS in player-character-sheet.mjs).
+ *   field  The gear system field holding the UUIDs.
+ *   type   The only Item type that can be dropped on this list.
+ */
+const GRANT_LISTS = {
+  abilities: {
+    field: "abilities_gained", type: "ability",
+    label: "LORD_OF_THE_MYSTERIES.Inventory.GrantedAbilities",
+    hint: "LORD_OF_THE_MYSTERIES.Inventory.GrantedAbilitiesHint",
+    wrongType: "LORD_OF_THE_MYSTERIES.Inventory.Warnings.NotAnAbility",
+  },
+  actions: {
+    field: "actionList", type: "action",
+    label: "LORD_OF_THE_MYSTERIES.Inventory.GrantedActions",
+    hint: "LORD_OF_THE_MYSTERIES.Inventory.GrantedActionsHint",
+    wrongType: "LORD_OF_THE_MYSTERIES.Inventory.Warnings.NotAnAction",
+  },
+};
+
+
+/** Gear: size, quantity, (once a character owns it) where it's carried, and the abilities / actions it grants. */
 export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
   static DEFAULT_OPTIONS = {
     classes: ["gear"],
+    actions: {
+      openGrant: LordOfTheMysteriesGearSheet.#onOpenGrant,
+      removeGrant: LordOfTheMysteriesGearSheet.#onRemoveGrant,
+    },
   };
 
   static PARTS = {
@@ -77,7 +103,84 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
         if (item.type === "container") context.containerOptions[item.id] = item.name;
       }
     }
+
+    // The Abilities and Actions lists. Each UUID is looked up for its name and image;
+    // one that no longer exists (deleted Item) is shown as missing so it can still be removed.
+    context.grantLists = await Promise.all(Object.entries(GRANT_LISTS).map(async ([key, list]) => {
+      const uuids = system[list.field] ?? [];
+      const entries = await Promise.all(uuids.map(async (uuid) => {
+        const doc = await fromUuid(uuid).catch(() => null);
+        if (!doc) {
+          return { uuid, broken: true, img: "icons/svg/hazard.svg", name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing") };
+        }
+        return { uuid, broken: false, img: doc.img, name: doc.name };
+      }));
+      return { key, label: list.label, hint: list.hint, entries };
+    }));
+
     return context;
+  }
+
+  /** @override */
+  _onRender(context, options) {
+    super._onRender(context, options);
+    if (!this.isEditable) return;
+
+    // Each list is its own drop target. The part is redrawn on every render, so these are always fresh elements.
+    for (const zone of this.element.querySelectorAll("[data-grant-list]")) {
+      zone.addEventListener("dragover", (event) => {
+        event.preventDefault();               // without this the browser never fires "drop"
+        zone.classList.add("drag-over");
+      });
+      zone.addEventListener("dragleave", (event) => {
+        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
+      });
+      zone.addEventListener("drop", (event) => this.#onDropGrant(event, zone));
+    }
+  }
+
+  /**
+   * An Item was dropped on the Abilities or Actions list: add its UUID if it's the right type and not already there.
+   * @param {DragEvent} event
+   * @param {HTMLElement} zone   The list it landed on ([data-grant-list]).
+   */
+  async #onDropGrant(event, zone) {
+    event.preventDefault();
+    event.stopPropagation();                  // don't let the sheet's own drop handling see it too
+    zone.classList.remove("drag-over");
+
+    const list = GRANT_LISTS[zone.dataset.grantList];
+    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    if (!list || data?.type !== "Item" || !data.uuid) return;
+
+    const doc = await fromUuid(data.uuid);
+    if (!doc) return;
+    if (doc.type !== list.type) {
+      ui.notifications.warn(game.i18n.format(list.wrongType, { name: doc.name }));
+      return;
+    }
+
+    const current = this.item.toObject().system[list.field] ?? [];
+    if (current.includes(doc.uuid)) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.AlreadyGranted", { name: doc.name }));
+      return;
+    }
+    await this.item.update({ [`system.${list.field}`]: [...current, doc.uuid] });
+  }
+
+  /** Open the sheet of a granted ability / action. */
+  static async #onOpenGrant(event, target) {
+    const doc = await fromUuid(target.dataset.uuid);
+    doc?.sheet?.render({ force: true });
+  }
+
+  /** Remove an ability / action from its list (data-list = list key, data-uuid = the entry). */
+  static async #onRemoveGrant(event, target) {
+    if (!this.isEditable) return;
+    const list = GRANT_LISTS[target.dataset.list];
+    if (!list) return;
+    const current = this.item.toObject().system[list.field] ?? [];
+    await this.item.update({ [`system.${list.field}`]: current.filter((uuid) => uuid !== target.dataset.uuid) });
   }
 }
 

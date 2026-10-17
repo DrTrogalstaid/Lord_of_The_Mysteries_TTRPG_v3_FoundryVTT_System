@@ -144,5 +144,6 @@ LORD_OF_THE_MYSTERIES.mysticalLanguages = {
     jotun: "Jotun",
     devil: "Devil",
     ancientHermes: "Ancient Hermes",
-    hermes: "Hermes"
+    hermes: "Hermes",
+    death: "Death"
 };

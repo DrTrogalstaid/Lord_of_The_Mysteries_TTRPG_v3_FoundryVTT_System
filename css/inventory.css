@@ -252,3 +252,35 @@
   min-height: 6em;
   resize: vertical;
 }
+
+.lotm.inventory-item .gear-grants {
+  padding: 6px 10px;
+  border: 1px dashed var(--lotm-inventory-line);
+  border-radius: 4px;
+}
+
+.lotm.inventory-item .gear-grants.drag-over {
+  border-style: solid;
+  background: var(--lotm-inventory-fill);
+}
+
+.lotm.inventory-item .gear-grants-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lotm.inventory-item .gear-grants-header h4 {
+  margin: 0;
+}
+
+.lotm.inventory-item .gear-grants .hint {
+  margin: 2px 0 0;
+  opacity: 0.65;
+}
+
+.lotm.inventory-item .gear-grant-remove {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1;
+}
