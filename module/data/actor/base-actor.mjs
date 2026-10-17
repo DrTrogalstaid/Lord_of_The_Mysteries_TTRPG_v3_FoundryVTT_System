@@ -1,4 +1,5 @@
 import LordOfTheMysteriesDataModel from "../base-model.mjs";
+import { calculateCarrying } from "../../helpers/inventory.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -100,6 +101,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                     + (attr.corruption ?? 0) + attr.sequence_bonus;
         }
 
+        // Inventory: slots carried, and -1 Agility per slot over the Strength limit (see helpers/inventory.mjs).
+        // This has to happen before movement and defenses, because the Agility penalty lowers both.
+        // Only agi.total is lowered; agi.base (what the player types in) is never touched.
+        this.carrying = calculateCarrying(this.parent?.items ?? [], this.attributes.str.total);   // display only, not in the schema
+        this.attributes.agi.total -= this.carrying.penalty;
+
         // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
 
@@ -190,8 +197,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      */
     _prepareSequenceCalculations(sequences) {
 
-        const hasSequence4Flag = false;
-        const hasSequence2Flag = false;
+        let hasSequence4Flag = false;
+        let hasSequence2Flag = false;
 
         // (initial will + initial inspiration) + (the number of currently promoted sequences * current inspiration value)
         this.resources.spp.max += (this.attributes.ins.total * sequences.length);
@@ -209,7 +216,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 hasSequence4Flag = true;
             }
             if (sequence.system.sequence_number == 2) {
-                hasSequence4Flag = true;
+                hasSequence2Flag = true;
             }
         }
 

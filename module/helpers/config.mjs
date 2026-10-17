@@ -93,18 +93,8 @@ LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
     languages: 'Languages'
 };
 
-/**
- * The collection id (package id + pack name) of the compendium that holds all Skill items.
- */
 LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
 
-/**
- * Maps each system.skills bucket to the name of the Folder that holds those skills inside
- * the skills_compendium pack, so the character sheet can list every skill in that folder
- * without needing them individually dragged on first. Must match the folder names in
- * packs/skills_compendium exactly (case-sensitive). Categories without a folder here (e.g.
- * "luc", which has no in-compendium skill list) are simply skipped.
- */
 LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
     str: 'Strength',
     agi: 'Agility',

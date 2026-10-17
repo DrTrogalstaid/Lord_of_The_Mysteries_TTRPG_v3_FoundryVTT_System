@@ -11,6 +11,7 @@ import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/s
 import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building/ability-sheet.mjs';
 import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
 import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
+import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
 
 
 // Import helper/utility classes and constants.
@@ -85,7 +86,9 @@ Hooks.once('init', function () {
     sequence: models.LordOfTheMysteriesSequence,
     skill: models.LordOfTheMysteriesSkill,
     ability: models.LordOfTheMysteriesAbility,
-    action: models.LordOfTheMysteriesAction
+    action: models.LordOfTheMysteriesAction,
+    gear: models.LordOfTheMysteriesGear,
+    container: models.LordOfTheMysteriesContainer
   }
 
   // Active Effects are never copied to the Actor,
@@ -135,6 +138,16 @@ Hooks.once('init', function () {
     types: ['spell'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Action'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesGearSheet, {
+    types: ['gear'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Gear'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesContainerSheet, {
+    types: ['container'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Container'
   });
 
   // Preload Handlebars templates.

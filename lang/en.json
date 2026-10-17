@@ -24,14 +24,9 @@
       "Sequence": "Sequence",
       "Skill": "Skill",
       "Ability": "Ability",
-      "Action": "Action"
-    },
-
-    "Item": {
-      "Spell": {
-        "SpellLVL": "Level {level} Spells",
-        "AddLVL": "Add LVL {level}"
-      }
+      "Action": "Action",
+      "Gear": "Gear Sheet",
+      "Container": "Clothing / Bag Sheet"
     },
 
     "Effect": {
@@ -313,8 +308,89 @@
         "Lenburg": "Lenburg",
         "Duntanese": "Duntanese"
       }
-    }
+    },
     
+    "Inventory": {
+      "Carrying": "Carrying",
+      "StrengthLimit": "Strength limit (Strength × 2)",
+      "Stowed": "Pockets & bags",
+      "StowedHint": "Stowed / room in equipped clothing and bags",
+      "DropHint": "Drop gear on a coat or bag, or drop clothing and bags here",
+      "NoContainers": "No clothing or bags yet. Drop some here to get pockets.",
+      "OnPerson": "Held & worn",
+      "OnPersonHint": "Counts toward Strength, not pockets",
+      "NotStowed": "Not stowed",
+      "OtherItems": "Other items",
+      "LeftBehind": "Left behind",
+      "EmptyContainer": "Empty",
+      "Equipped": "Equipped (worn or carried)",
+      "Slots": "Item slots",
+      "SlotsEach": "Slots each",
+      "SlotsTotal": "Slots in total",
+      "HiddenPockets": "Hidden pockets",
+      "Hidden": "In a hidden pocket",
+      "Quantity": "Quantity",
+      "Size": "Size",
+      "Location": "Where it is",
+      "Carried": "Carried",
+      "Container": "Container",
+      "Kind": "Type",
+      "Upgrade": "Tailoring upgrade",
+      "UpgradeCheck": "Crafting check",
+      "Difficulty": "Difficulty",
+      "Pockets": "Pockets",
+      "PocketsHint": "Flavor only: the number of pockets doesn't change item slots.",
+      "MaxSize": "Largest item that fits",
+      "DrawLabel": "Taking items out",
+      "Prestige": "Prestige to wear",
+      "InCombat": "In combat",
+      "Contents": "Contents",
+      "Description": "Description",
+      "Sizes": {
+        "tiny": "Tiny (⅓ slot)",
+        "small": "Small (½ slot)",
+        "smallMedium": "Small-medium (1 slot)",
+        "medium": "Medium (2 slots)",
+        "mediumLarge": "Medium-large (3 slots)",
+        "large": "Large (4 slots)"
+      },
+      "Carry": {
+        "stowed": "Stowed",
+        "held": "Held",
+        "worn": "Worn"
+      },
+      "Draw": {
+        "move": "Move action",
+        "fullRound": "Full-round action"
+      },
+      "Containers": {
+        "poor": "Poor clothes",
+        "ordinary": "Ordinary clothes",
+        "formal": "Formal / performance wear",
+        "wizardRobe": "Wizard robe",
+        "messenger": "Messenger bag",
+        "backpack": "Backpack",
+        "suitcase": "Suitcase",
+        "largeSuitcase": "Large suitcase"
+      },
+      "Upgrades": {
+        "none": "None",
+        "proficient": "Proficient (+2 slots, +1 hidden)",
+        "advanced": "Advanced (+3 slots, +2 hidden)",
+        "mastery": "Mastery (+4 slots, +3 hidden)",
+        "lore": "Lore (+5 slots, +4 hidden)",
+        "grandMaster": "Grand Master (+6 slots, +5 hidden)"
+      },
+      "Warnings": {
+        "Overloaded": "Over the Strength limit by {slots}: Agility −{penalty}",
+        "ContainerFull": "Over capacity by {slots}.",
+        "HiddenFull": "More hidden than the hidden pockets hold.",
+        "TooBig": "Too big for this container.",
+        "NoContainer": "Not in any pocket or bag.",
+        "MultipleClothing": "More than one outfit is equipped.",
+        "Suitcase": "−2 to skill and ability checks while fighting with a suitcase"
+      }
+    }
   },
 
   "TYPES": {
@@ -330,7 +406,9 @@
       "sequence": "Sequence",
       "skill": "Skill",
       "ability": "Ability",
-      "action": "Action"
+      "action": "Action",
+      "container": "Container",
+      "gear": "Gear"
     }
   }
 }

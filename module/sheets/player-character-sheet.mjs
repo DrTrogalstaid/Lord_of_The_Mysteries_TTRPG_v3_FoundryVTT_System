@@ -5,6 +5,7 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
+import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -53,6 +54,12 @@ const DIGESTION_MAX = 20;
 
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
+
+/**
+ * Item types a character can own more than one copy of (two candles, two revolvers). They skip the
+ * duplicate check and are keyed by their own uuid, so two copies of the same compendium Item don't collide.
+ */
+const STACKABLE_TYPES = ["gear", "container"];
 
 /**
  * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
@@ -309,7 +316,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
     spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
     abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
@@ -407,6 +414,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       case "spells":
         // One group per Spell List name
         context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
+        break;
+
+      case "inventory":
+        // One group per coat / bag, plus "Held & worn" (see helpers/inventory.mjs)
+        context.inventory = buildInventoryView(context.sections.inventory, this.actor);
         break;
 
       case "abilities":
@@ -676,6 +688,25 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     });
 
+    // Inventory controls (quantity, hidden pocket, equipped) belong to the gear / container Item, not the actor,
+    // so like the digestion inputs they have no `name` and save here instead. `bound` stops a control that
+    // wasn't re-rendered from getting a second listener.
+    for (const input of this.element.querySelectorAll("[data-item-field]")) {
+      if (input.dataset.bound) continue;
+      input.dataset.bound = "1";
+      input.addEventListener("change", (event) => this.#onItemFieldChange(event));
+    }
+
+    // Each gear row's location dropdown: Held, Worn, or one of the character's coats / bags.
+    for (const select of this.element.querySelectorAll("[data-gear-location]")) {
+      if (select.dataset.bound) continue;
+      select.dataset.bound = "1";
+      select.addEventListener("change", async (event) => {
+        const item = this.actor.items.get(event.currentTarget.dataset.itemId);
+        await item?.update(placementUpdate(event.currentTarget.value));
+      });
+    }
+
     // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
     for (const zone of this.element.querySelectorAll(".drop-section")) {
       if (zone.dataset.dropBound) continue;
@@ -686,6 +717,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
       zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
     }
+  }
+
+
+  /**
+   * Save an inventory control to its own Item. The input says which Item (data-item-id) and which
+   * field (data-item-field, e.g. "system.quantity").
+   * @param {Event} event
+   */
+  async #onItemFieldChange(event) {
+    const input = event.currentTarget;
+    const item = this.actor.items.get(input.dataset.itemId);
+    if (!item) return;
+
+    let value = input.value;
+    if (input.type === "checkbox") value = input.checked;
+    else if (input.type === "number") value = Math.max(0, Math.floor(Number(input.value) || 0));
+
+    await item.update({ [input.dataset.itemField]: value });
   }
 
 
@@ -713,7 +762,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     for (const item of this.actor.items) {
       const section = sectionForType(item.type);
       if (!section) continue;
-      const key = item._stats?.compendiumSource ?? item.uuid;
+      // Gear and containers can be owned twice from the same source, so they use their own uuid.
+      const source = STACKABLE_TYPES.includes(item.type) ? null : item._stats?.compendiumSource;
+      const key = source ?? item.uuid;
       const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
       bySource.set(key, entry);
@@ -828,8 +879,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (document.documentName !== "Item") return super._onDropDocument(event, document);
     if (!this.isEditable) return null;
 
-    // Already on this actor: leave it to Foundry (re-sorting).
-    if (document.parent === this.actor) return super._onDropDocument(event, document);
+    // Gear dropped on a coat / bag (or on "Held & worn") in the Inventory tab goes there.
+    const place = event.target?.closest?.("[data-inventory-place]")?.dataset.inventoryPlace;
+    const placement = (document.type === "gear" && place !== undefined) ? placementUpdate(place) : null;
+
+    // Already on this actor: move it if it was dropped on an inventory group, otherwise leave it to Foundry (re-sorting).
+    if (document.parent === this.actor) {
+      if (placement) return document.update(placement);
+      return super._onDropDocument(event, document);
+    }
 
     const section = sectionForType(document.type);
     if (!section) {
@@ -847,7 +905,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
 
     if (section === "skills") return this.#dropSkill(document);
-    return this.#dropEmbedded(document);
+    return this.#dropEmbedded(document, placement);
   }
 
   
@@ -856,12 +914,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * _stats.compendiumSource so duplicates are caught and nested references to the same
    * Item are recognised as the one the actor already owns.
    * @param {Item} item
+   * @param {object|null} [placement]  For gear: where it was dropped (see placementUpdate). When it wasn't
+   *                                   dropped on a coat / bag, it goes in the first one with room.
    * @returns {Promise<Item|null>}
    */
-  async #dropEmbedded(item) {
+  async #dropEmbedded(item, placement = null) {
     // Same Item already owned (by source), or, for abilities, one with the same name: _onDropItem below holds the
     // same rule, but drops from outside the actor are handled here and never reach it.
-    const alreadyOwned = this.actor.items.some((owned) =>
+    // Gear and containers can be owned more than once, so they skip this.
+    const alreadyOwned = !STACKABLE_TYPES.includes(item.type) && this.actor.items.some((owned) =>
       owned._stats?.compendiumSource === item.uuid
       || (item.type === "ability" && owned.type === "ability" && owned.name === item.name)
     );
@@ -876,6 +937,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     delete data.sort;
     delete data.ownership;
     foundry.utils.setProperty(data, "_stats.compendiumSource", item.uuid);
+
+    // Gear: put it somewhere. Its old containerId (from another actor) means nothing here, so it's always replaced.
+    if (item.type === "gear") {
+      const where = placement ?? autoPlacement(this.actor, data);
+      foundry.utils.mergeObject(data, foundry.utils.expandObject(where));
+    }
 
     const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     return created ?? null;
