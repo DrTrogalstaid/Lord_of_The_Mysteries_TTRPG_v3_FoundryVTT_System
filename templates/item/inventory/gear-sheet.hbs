@@ -1,0 +1,64 @@
+{{!-- Gear sheet. Context from LordOfTheMysteriesGearSheet._prepareContext (sheets/item/inventory/inventory-sheets.mjs). --}}
+<div class="inventory-sheet">
+
+  <header class="inventory-sheet-header">
+    <img class="inventory-sheet-img" src="{{item.img}}" alt="" data-action="editImage" data-tooltip="{{item.name}}">
+    <input class="inventory-sheet-name" type="text" name="name" value="{{item.name}}" {{#unless editable}}disabled{{/unless}}>
+  </header>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Size"}}</label>
+    <div class="form-fields">
+      <select name="system.size" {{#unless editable}}disabled{{/unless}}>
+        {{selectOptions sizeOptions selected=source.size localize=true}}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Quantity"}}</label>
+    <div class="form-fields">
+      <input type="number" name="system.quantity" value="{{source.quantity}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+    </div>
+  </div>
+
+  <dl class="inventory-readout">
+    <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.SlotsEach"}}</dt><dd>{{slotsEach}}</dd>
+    <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.SlotsTotal"}}</dt><dd>{{slotsTotal}}</dd>
+  </dl>
+
+  {{!-- Where it's carried: only once a character owns it. --}}
+  {{#if actor}}
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Carried"}}</label>
+      <div class="form-fields">
+        <select name="system.carry" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions carryOptions selected=source.carry localize=true}}
+        </select>
+      </div>
+    </div>
+
+    {{#if stowed}}
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Container"}}</label>
+        <div class="form-fields">
+          <select name="system.containerId" {{#unless editable}}disabled{{/unless}}>
+            {{selectOptions containerOptions selected=source.containerId}}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Hidden"}}</label>
+        <div class="form-fields">
+          <input type="checkbox" name="system.hidden" {{checked source.hidden}} {{#unless editable}}disabled{{/unless}}>
+        </div>
+      </div>
+    {{/if}}
+  {{/if}}
+
+  <div class="form-group stacked">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Description"}}</label>
+    <textarea name="system.description" {{#unless editable}}disabled{{/unless}}>{{source.description}}</textarea>
+  </div>
+</div>

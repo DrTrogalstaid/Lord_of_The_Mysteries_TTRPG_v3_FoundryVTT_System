@@ -1,8 +1,101 @@
 <section class="tab inventory-tab {{tab.cssClass}}" data-group="sheet" data-tab="inventory">
-  {{!-- No "+" button here: inventory Items come from the sidebar or a compendium, so the section's drop hint covers it. --}}
-  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
-      zone="inventory"
-      label="LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"
-      entries=sections.inventory
-      remove="deleteItem"}}
+
+  {{!-- Totals: the Strength limit and the room in pockets and bags. Built by buildInventoryView() in helpers/inventory.mjs. --}}
+  <div class="inventory-summary">
+    <div class="inventory-meter{{#if inventory.summary.overloaded}} over{{/if}}">
+      <span class="inventory-meter-label">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Carrying"}}</span>
+      <span class="inventory-meter-value">{{inventory.summary.carried}} / {{inventory.summary.strength}}</span>
+      <span class="inventory-meter-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.StrengthLimit"}}</span>
+    </div>
+    <div class="inventory-meter{{#if inventory.summary.stowedOver}} over{{/if}}">
+      <span class="inventory-meter-label">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Stowed"}}</span>
+      <span class="inventory-meter-value">{{inventory.summary.stowed}} / {{inventory.summary.capacity}}</span>
+      <span class="inventory-meter-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.StowedHint"}}</span>
+    </div>
+  </div>
+
+  {{#each inventory.summary.warnings as |warning|}}
+    <p class="inventory-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{warning}}</p>
+  {{/each}}
+
+  {{!-- One drop section for the whole tab, so drops and the move buttons work like the other tabs.
+        Each group inside is its own list; data-inventory-place says where gear dropped on it goes. --}}
+  <div class="drop-section inventory-section" data-drop-zone="inventory">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.DropHint"}}</span>
+      {{/if}}
+    </header>
+
+    {{#if inventory.noContainers}}
+      <p class="inventory-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.NoContainers"}}</p>
+    {{/if}}
+
+    {{#each inventory.groups as |group|}}
+      <div class="inventory-group{{#if group.container}} inventory-container{{/if}}{{#if group.leftBehind}} left-behind{{/if}}{{#if group.full}} over{{/if}}"
+           {{#if group.place}}data-inventory-place="{{group.place}}"{{/if}}>
+
+        <header class="inventory-group-header">
+          {{#if group.container}}
+            {{!-- A coat or bag: the image posts it to chat (same button as the item rows), its name opens its sheet. --}}
+            <button type="button" class="drop-entry-icon inventory-group-icon" data-action="sendToChat" data-uuid="{{group.uuid}}" data-tooltip="Send to chat">
+              <img class="drop-entry-img" src="{{group.img}}" alt="" width="28" height="28">
+              <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+            </button>
+            <div class="inventory-group-main">
+              <a class="drop-entry-name" data-action="openItem" data-uuid="{{group.uuid}}">{{group.name}}</a>
+              <span class="drop-entry-detail">
+                {{group.kindLabel}}{{#if group.drawLabel}} · {{group.drawLabel}}{{/if}}{{#if group.leftBehind}} · {{localize "LORD_OF_THE_MYSTERIES.Inventory.LeftBehind"}}{{/if}}
+              </span>
+            </div>
+            <div class="inventory-group-stats">
+              {{#if group.warning}}
+                <span class="inventory-stat over" data-tooltip="{{group.warning}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
+              {{/if}}
+              <span class="inventory-stat{{#if group.full}} over{{/if}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Slots">
+                {{group.used}} / {{group.capacity}}
+              </span>
+              {{#if group.hiddenCapacity}}
+                <span class="inventory-stat{{#if group.hiddenFull}} over{{/if}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.HiddenPockets">
+                  <i class="fa-solid fa-eye-slash"></i> {{group.hiddenUsed}} / {{group.hiddenCapacity}}
+                </span>
+              {{/if}}
+              {{#if group.combatPenalty}}
+                <span class="inventory-stat warn" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Warnings.Suitcase">
+                  <i class="fa-solid fa-suitcase"></i> {{group.combatPenalty}}
+                </span>
+              {{/if}}
+            </div>
+            {{#if @root.editable}}
+              <label class="inventory-equip" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Equipped">
+                <input type="checkbox" data-item-field="system.equipped" data-item-id="{{group.id}}" {{checked group.equipped}}>
+                <i class="fa-solid fa-shirt"></i>
+              </label>
+              <button type="button" class="drop-entry-remove" data-action="deleteItem" data-item-id="{{group.id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            {{/if}}
+          {{else}}
+            {{!-- Held & worn / Not stowed / Other items --}}
+            <h4 class="inventory-group-title">{{group.name}}</h4>
+            {{#if group.hint}}<span class="inventory-group-hint">{{group.hint}}</span>{{/if}}
+            {{#if group.warning}}
+              <span class="inventory-stat over" data-tooltip="{{group.warning}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            {{/if}}
+          {{/if}}
+        </header>
+
+        {{#if group.entries.length}}
+          <ol class="drop-section-list">
+            {{#each group.entries as |entry|}}
+              {{> "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs" entry deleteAction="deleteItem"}}
+            {{/each}}
+          </ol>
+        {{else}}
+          <p class="drop-section-empty">{{group.emptyText}}</p>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
 </section>

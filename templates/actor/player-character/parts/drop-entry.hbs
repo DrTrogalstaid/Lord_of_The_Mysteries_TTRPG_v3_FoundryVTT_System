@@ -46,6 +46,35 @@
   </div>
   {{/if}}
 
+  {{!-- Gear only (Inventory tab): slots taken, quantity, hidden pocket and where it is.
+        Built by buildInventoryView() in helpers/inventory.mjs. The inputs have no `name`: they save to
+        the gear Item through the [data-item-field] / [data-gear-location] listeners in the sheet's _onRender. --}}
+  {{#if gear}}
+  <div class="drop-entry-gear">
+    {{#if gear.warning}}
+    <span class="gear-warning" data-tooltip="{{gear.warning}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
+    {{/if}}
+    <span class="gear-slots" data-tooltip="{{gear.sizeLabel}}">{{gear.slotsLabel}}</span>
+    {{#if (and owned @root.editable)}}
+      <input type="number" class="gear-quantity" min="0" step="1" value="{{gear.quantity}}"
+             data-item-field="system.quantity" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Quantity">
+      {{#if gear.canHide}}
+      <label class="gear-hidden" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Hidden">
+        <input type="checkbox" data-item-field="system.hidden" data-item-id="{{id}}" {{checked gear.hidden}}>
+        <i class="fa-solid fa-eye-slash"></i>
+      </label>
+      {{/if}}
+      <select class="gear-location" data-gear-location data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Location">
+        {{selectOptions @root.inventory.locationOptions selected=gear.location}}
+      </select>
+    {{else}}
+      <span class="gear-quantity-text">×{{gear.quantity}}</span>
+      {{#if gear.hidden}}<i class="fa-solid fa-eye-slash" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Hidden"></i>{{/if}}
+      <span class="gear-location-text">{{gear.locationLabel}}</span>
+    {{/if}}
+  </div>
+  {{/if}}
+
   {{!-- Move up / down within this list. --}}
   {{#if (and canMove @root.editable)}}
   <div class="drop-entry-move">
@@ -58,7 +87,7 @@
   </div>
   {{/if}}
 
-  {{!-- Only Items the actor owns can be removed here; granted ones are removed from the Item that grants them. --}}
+  {{!-- Only Items the actor owns can be removed here --}}
   {{#if (and owned @root.editable)}}
   <button type="button" class="drop-entry-remove" data-action="{{deleteAction}}" data-item-id="{{id}}" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Remove"}}">
     <i class="fa-solid fa-trash"></i>
