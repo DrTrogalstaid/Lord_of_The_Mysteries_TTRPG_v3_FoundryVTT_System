@@ -24,14 +24,9 @@
       "Sequence": "Sequence",
       "Skill": "Skill",
       "Ability": "Ability",
-      "Action": "Action"
-    },
-
-    "Item": {
-      "Spell": {
-        "SpellLVL": "Level {level} Spells",
-        "AddLVL": "Add LVL {level}"
-      }
+      "Action": "Action",
+      "Gear": "Gear Sheet",
+      "Container": "Clothing / Bag Sheet"
     },
 
     "Effect": {
@@ -64,7 +59,11 @@
         "Roll": "Roll",
         "Flavor": "{skill} Check ({attribute})",
         "FlavorOverride": "{skill} Check ({attribute} instead of {defaultAttribute})",
-        "UntrainedBlocked": "{skill} is untrained, and the GM has disabled untrained skill checks."
+        "UntrainedBlocked": "{skill} is untrained, and the GM has disabled untrained skill checks.",
+        "ActionFlavor": "{action}: {check}",
+        "ActionDice": "Dice",
+        "InvalidActionFormula": "The roll formula on {action} (\"{formula}\") isn't valid, so 1d20 was rolled.",
+        "InvalidActionFormulaHint": "This action's roll formula isn't valid, so 1d20 will be rolled instead:"
     },
 
     "GrantedSkills": {
@@ -262,6 +261,8 @@
       "Remove": "Remove",
       "Cost": "Spirituality Cost",
       "ActionType": "Action Type",
+      "Digestion": "Digestion",
+      "DigestionHint": "How much of this Sequence's potion has been digested (1–20).",
       "GrantedBy": "Granted by",
       "Missing": "Missing item",
       "Duplicate": "{name} is already on this character.",
@@ -272,7 +273,160 @@
       "DragHintSkills": "Skills are added by dragging them from the Skills compendium.",
       "DragHintInventory": "Items are added by dragging them onto the Inventory section.",
       "RemoveTitle": "Remove Item",
-      "RemoveConfirm": "Remove {name} from this character? (Hold Shift to skip this prompt.)"
+      "RemoveConfirm": "Remove {name}?",
+      "UnlistedSpells": "Other Spells",
+      "SpellListEmpty": "No spells in this list yet.",
+      "Roll": "Roll",
+      "Damage": "Damage",
+      "Range": "Range",
+      "RangeFeet": "{range} ft"
+    },
+
+    "DamageTypes": {
+      "Physical": "Physical",
+      "Curse": "Curse",
+      "Fire": "Fire",
+      "Cold": "Cold",
+      "Holy": "Holy",
+      "Lightning": "Lightning",
+      "Mental": "Mental",
+      "Poison": "Poison"
+    },
+
+    "GenericButtons": {
+      "Add": "Add",
+      "Remove": "Remove"
+    },
+
+    "Languages": {
+      "Mystical": {
+        "Elvish": "Elvish",
+        "Dragonese": "Dragonese",
+        "Jotun": "Jotun",
+        "Devil": "Devil",
+        "AncientHermes": "Ancient Hermes",
+        "Hermes": "Hermes",
+        "Death": "Death"
+      },
+      "Common": {
+        "AncientFeysac": "Ancient Feysac",
+        "Loenese": "Loenese",
+        "Intisian": "Intisian",
+        "Feysac": "Faysac",
+        "Highlander": "Highlander",
+        "Lenburg": "Lenburg",
+        "Duntanese": "Duntanese"
+      }
+    },
+    
+    "Inventory": {
+      "Carrying": "Carrying",
+      "StrengthLimit": "Strength limit (Strength × 2)",
+      "Stowed": "Pockets & bags",
+      "StowedHint": "Stowed / room in equipped clothing and bags",
+      "DropHint": "Drop gear on a coat or bag, or drop clothing and bags here",
+      "NoContainers": "No clothing or bags yet. Drop some here to get pockets.",
+      "OnPerson": "Held & worn",
+      "OnPersonHint": "Counts toward Strength, not pockets",
+      "NotStowed": "Not stowed",
+      "OtherItems": "Other items",
+      "LeftBehind": "Left behind",
+      "EmptyContainer": "Empty",
+      "Equipped": "Equipped (worn or carried)",
+      "Slots": "Item slots",
+      "SlotsEach": "Slots each",
+      "SlotsTotal": "Slots in total",
+      "HiddenPockets": "Hidden pockets",
+      "Hidden": "In a hidden pocket",
+      "Quantity": "Quantity",
+      "Size": "Size",
+      "Location": "Where it is",
+      "Carried": "Carried",
+      "Container": "Container",
+      "Kind": "Type",
+      "Upgrade": "Tailoring upgrade",
+      "UpgradeCheck": "Crafting check",
+      "Difficulty": "Difficulty",
+      "Pockets": "Pockets",
+      "PocketsHint": "Flavor only: the number of pockets doesn't change item slots.",
+      "MaxSize": "Largest item that fits",
+      "DrawLabel": "Taking items out",
+      "Prestige": "Prestige to wear",
+      "InCombat": "In combat",
+      "Contents": "Contents",
+      "Description": "Description",
+      "GrantedAbilities": "Abilities it grants",
+      "GrantedAbilitiesHint": "Drop abilities here",
+      "GrantedActions": "Actions it grants",
+      "GrantedActionsHint": "Drop actions here",
+      "SkillUsed": "Skill used",
+      "SkillUsedHint": "Drop the skill this item's actions roll with (e.g. Pistol)",
+      "NoSkill": "None: its actions can't be rolled from the sheet",
+      "Sizes": {
+        "tiny": "Tiny (⅓ slot)",
+        "small": "Small (½ slot)",
+        "smallMedium": "Small-medium (1 slot)",
+        "medium": "Medium (2 slots)",
+        "mediumLarge": "Medium-large (3 slots)",
+        "large": "Large (4 slots)"
+      },
+      "Carry": {
+        "stowed": "Stowed",
+        "held": "Held",
+        "worn": "Worn"
+      },
+      "Draw": {
+        "move": "Move action",
+        "fullRound": "Full-round action"
+      },
+      "Containers": {
+        "poor": "Poor clothes",
+        "ordinary": "Ordinary clothes",
+        "formal": "Formal / performance wear",
+        "wizardRobe": "Wizard robe",
+        "messenger": "Messenger bag",
+        "backpack": "Backpack",
+        "suitcase": "Suitcase",
+        "largeSuitcase": "Large suitcase"
+      },
+      "Upgrades": {
+        "none": "None",
+        "proficient": "Proficient (+2 slots, +1 hidden)",
+        "advanced": "Advanced (+3 slots, +2 hidden)",
+        "mastery": "Mastery (+4 slots, +3 hidden)",
+        "lore": "Lore (+5 slots, +4 hidden)",
+        "grandMaster": "Grand Master (+6 slots, +5 hidden)"
+      },
+      "Warnings": {
+        "Overloaded": "Over the Strength limit by {slots}: Agility −{penalty}",
+        "ContainerFull": "Over capacity by {slots}.",
+        "HiddenFull": "More hidden than the hidden pockets hold.",
+        "TooBig": "Too big for this container.",
+        "NoContainer": "Not in any pocket or bag.",
+        "MultipleClothing": "More than one outfit is equipped.",
+        "Suitcase": "−2 to skill and ability checks while fighting with a suitcase",
+        "NotAnAbility": "{name} is not an ability.",
+        "NotAnAction": "{name} is not an action.",
+        "AlreadyGranted": "{name} is already on this item.",
+        "NotASkill": "{name} is not a skill.",
+        "SkillMissing": "The skill on {name} no longer exists."
+      }
+    },
+    
+    "ActionSkill": {
+      "Label": "Skill",
+      "Hint": "Drop the skill this action rolls with (e.g. Pistol)",
+      "None": "None: this action can't be rolled from the character sheet",
+      "NotASkill": "{name} is not a skill.",
+      "Missing": "The skill on {name} no longer exists."
+    },
+    
+    "Action":{
+      "RollDamage": "Roll Damage",
+      "DamageFlavor": "{action}: Damage{type}",
+      "InvalidDamage": "{name} has no valid damage formula.",
+      "NoActor": "{name} needs a character to roll.",
+      "Gone": "That action or character no longer exists."
     }
   },
 
@@ -289,7 +443,9 @@
       "sequence": "Sequence",
       "skill": "Skill",
       "ability": "Ability",
-      "action": "Action"
+      "action": "Action",
+      "container": "Container",
+      "gear": "Gear"
     }
   }
 }

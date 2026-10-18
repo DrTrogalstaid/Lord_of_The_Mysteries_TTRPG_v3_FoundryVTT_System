@@ -1,0 +1,97 @@
+{{!-- Clothing / bag sheet. Context from LordOfTheMysteriesContainerSheet._prepareContext (sheets/item/inventory/inventory-sheets.mjs). --}}
+<div class="inventory-sheet">
+
+  <header class="inventory-sheet-header">
+    <img class="inventory-sheet-img" src="{{item.img}}" alt="" data-action="editImage" data-tooltip="{{item.name}}">
+    <input class="inventory-sheet-name" type="text" name="name" value="{{item.name}}" {{#unless editable}}disabled{{/unless}}>
+  </header>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Kind"}}</label>
+    <div class="form-fields">
+      <select name="system.kind" {{#unless editable}}disabled{{/unless}}>
+        {{selectOptions kindOptions selected=source.kind localize=true}}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Upgrade"}}</label>
+    <div class="form-fields">
+      <select name="system.upgrade" {{#unless editable}}disabled{{/unless}}>
+        {{selectOptions upgradeOptions selected=source.upgrade localize=true}}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Pockets"}}</label>
+    <div class="form-fields">
+      <input type="number" name="system.pockets" value="{{source.pockets}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.PocketsHint"}}</p>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Equipped"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.equipped" {{checked source.equipped}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+  </div>
+
+  {{!-- The numbers this kind + upgrade work out to (container.mjs prepareDerivedData). --}}
+  <dl class="inventory-readout">
+    <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Slots"}}</dt>
+    <dd{{#if full}} class="over"{{/if}}>{{#if actor}}{{used}} / {{/if}}{{system.slots}}</dd>
+
+    <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.HiddenPockets"}}</dt>
+    <dd>{{system.hiddenPockets}}</dd>
+
+    <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.MaxSize"}}</dt>
+    <dd>{{maxSizeLabel}}</dd>
+
+    {{#if drawLabel}}
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.DrawLabel"}}</dt>
+      <dd>{{drawLabel}}</dd>
+    {{/if}}
+
+    {{#if isClothing}}
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Prestige"}}</dt>
+      <dd>{{prestigeLabel}}</dd>
+    {{/if}}
+
+    {{#if upgradeDc}}
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.UpgradeCheck"}}</dt>
+      <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Difficulty"}} {{upgradeDc}}</dd>
+    {{/if}}
+
+    {{#if system.combatPenalty}}
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.InCombat"}}</dt>
+      <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Warnings.Suitcase"}}</dd>
+    {{/if}}
+  </dl>
+
+  {{!-- What's in it, once a character owns it. --}}
+  {{#if actor}}
+    <h4>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Contents"}}</h4>
+    {{#if contents.length}}
+      <ul class="inventory-contents">
+        {{#each contents as |thing|}}
+          <li>
+            <img src="{{thing.img}}" alt="">
+            <span class="name">{{thing.name}}{{#if thing.hidden}} <i class="fa-solid fa-eye-slash"></i>{{/if}}</span>
+            <span>×{{thing.quantity}}</span>
+            <span>{{thing.slots}}</span>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.EmptyContainer"}}</p>
+    {{/if}}
+  {{/if}}
+
+  <div class="form-group stacked">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Description"}}</label>
+    <textarea name="system.description" {{#unless editable}}disabled{{/unless}}>{{source.description}}</textarea>
+  </div>
+</div>

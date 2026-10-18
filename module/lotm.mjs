@@ -11,14 +11,18 @@ import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/s
 import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building/ability-sheet.mjs';
 import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
 import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
-
+import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
+import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
+
+// Import action attack/damage rolls (the "Roll Damage" chat button listener).
+import { registerActionChatListeners } from './helpers/action-roll.mjs';
 
 // Import DataModel classes
 import * as models from './data/_module.mjs';
@@ -38,6 +42,7 @@ Hooks.once('init', function () {
 
   // Add custom constants for configuration.
   CONFIG.LORD_OF_THE_MYSTERIES = LORD_OF_THE_MYSTERIES;
+  CONFIG.LORD_OF_THE_MYSTERIES.inventory = { ...INVENTORY_RULES };
 
   /**
    * Set an initiative formula for the system
@@ -56,6 +61,9 @@ Hooks.once('init', function () {
   // stays registered for older chat messages and other modules' rolls.
   CONFIG.Dice.rolls.unshift(LOTM_VTTRoll);
 
+  // Make the "Roll damage" button on action attack messages work.
+  registerActionChatListeners();
+
   // World setting read by SkillCheckDialog.prompt(): when off, untrained
   // skills can't be rolled at all.
   game.settings.register('lotm', 'allowUntrainedSkillChecks', {
@@ -69,7 +77,6 @@ Hooks.once('init', function () {
 
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;
-
   // Note that you don't need to declare a DataModel
   // for the base actor/item classes - they are included
   // with the Character/NPC as part of super.defineSchema()
@@ -85,7 +92,9 @@ Hooks.once('init', function () {
     sequence: models.LordOfTheMysteriesSequence,
     skill: models.LordOfTheMysteriesSkill,
     ability: models.LordOfTheMysteriesAbility,
-    action: models.LordOfTheMysteriesAction
+    action: models.LordOfTheMysteriesAction,
+    gear: models.LordOfTheMysteriesGear,
+    container: models.LordOfTheMysteriesContainer
   }
 
   // Active Effects are never copied to the Actor,
@@ -135,6 +144,16 @@ Hooks.once('init', function () {
     types: ['spell'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Action'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesGearSheet, {
+    types: ['gear'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Gear'
+  });
+  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesContainerSheet, {
+    types: ['container'],
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Container'
   });
 
   // Preload Handlebars templates.
@@ -220,7 +239,8 @@ function rollItemMacro(itemUuid) {
       );
     }
 
-    // Trigger the item roll
+    // Actions roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
+    if (item.type === 'action') return item.system.rollAttack();
     item.roll();
   });
 }

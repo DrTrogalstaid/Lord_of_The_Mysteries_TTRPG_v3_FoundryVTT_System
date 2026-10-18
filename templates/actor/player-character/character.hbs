@@ -23,27 +23,47 @@
     <span class="collapse-toggle" title="Collapse (not yet wired up)"></span>
     <div class="box-title">Languages</div>
     <div class="languages-columns">
-      <div class="language-column">
-        <label>Normal Languages:</label>
-        <ul class="language-list">
-          {{#each system.languages}}
-          {{#unless this.mystical}}
-          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
-          {{/unless}}
-          {{/each}}
-        </ul>
-      </div>
-      <div class="language-column">
-        <label>Mystical Languages:</label>
-        <ul class="language-list">
-          {{#each system.languages}}
-          {{#if this.mystical}}
-          <li><input type="text" name="system.languages.{{@index}}.language" value="{{this.language}}" /></li>
-          {{/if}}
-          {{/each}}
-        </ul>
-      </div>
+    <div class="language-common-column">
+      <label>Common Languages:</label>
+      <ul class="language-list">
+        {{#each system.languages.common as |row|}}
+        <li class="language-row">
+          <select class="language-row-value" name="system.languages.common.{{@index}}">
+            {{selectOptions @root.languageCommonChoices selected=row}}
+          </select>
+          <a class="language-remove" data-action="removeCommonLanguage" data-index="{{@index}}"
+            title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Remove'}}">
+            <i class="fas fa-trash"></i>
+          </a>
+        </li>
+        {{/each}}
+      </ul>
+      <button type="button" class="language-add-button" data-action="addCommonLanguage"
+          title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Add'}}">
+        <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.GenericButtons.Add"}}
+      </button>
     </div>
+    <div class="language-mystical-column">
+      <label>Mystical Languages:</label>
+      <ul class="language-list">
+        {{#each system.languages.mystical as |row|}}
+        <li class="language-row">
+          <select class="language-row-value" name="system.languages.mystical.{{@index}}">
+            {{selectOptions @root.languageMysticalChoices selected=row}}
+          </select>
+          <a class="language-remove" data-action="removeMysticalLanguage" data-index="{{@index}}"
+            title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Remove'}}">
+            <i class="fas fa-trash"></i>
+          </a>
+        </li>
+        {{/each}}
+      </ul>
+      <button type="button" class="language-add-button" data-action="addMysticalLanguage"
+          title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Add'}}">
+        <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.GenericButtons.Add"}}
+      </button>
+    </div>
+  </div>
 
     <div class="skills-box">
       <nav class="skill-tabs tabs" data-group="skills">

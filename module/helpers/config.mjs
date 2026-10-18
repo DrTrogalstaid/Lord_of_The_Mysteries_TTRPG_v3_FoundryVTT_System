@@ -93,18 +93,8 @@ LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
     languages: 'Languages'
 };
 
-/**
- * The collection id (package id + pack name) of the compendium that holds all Skill items.
- */
 LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
 
-/**
- * Maps each system.skills bucket to the name of the Folder that holds those skills inside
- * the skills_compendium pack, so the character sheet can list every skill in that folder
- * without needing them individually dragged on first. Must match the folder names in
- * packs/skills_compendium exactly (case-sensitive). Categories without a folder here (e.g.
- * "luc", which has no in-compendium skill list) are simply skipped.
- */
 LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
     str: 'Strength',
     agi: 'Agility',
@@ -125,4 +115,35 @@ LORD_OF_THE_MYSTERIES.actionTypes = {
 LORD_OF_THE_MYSTERIES.actionCategories = {
     combat: 'LORD_OF_THE_MYSTERIES.Action_Category.combat',
     downTime: 'LORD_OF_THE_MYSTERIES.Action_Category.downtime',
+};
+
+LORD_OF_THE_MYSTERIES.damageTypes = {
+    physical: 'LORD_OF_THE_MYSTERIES.DamageTypes.Physical',
+    curse: 'LORD_OF_THE_MYSTERIES.DamageTypes.Curse',
+    fire: 'LORD_OF_THE_MYSTERIES.DamageTypes.Fire',
+    cold: 'LORD_OF_THE_MYSTERIES.DamageTypes.Cold',
+    holy: 'LORD_OF_THE_MYSTERIES.DamageTypes.Holy',
+    lightning: 'LORD_OF_THE_MYSTERIES.DamageTypes.Lightning',
+    mental: 'LORD_OF_THE_MYSTERIES.DamageTypes.Mental',
+    poison: 'LORD_OF_THE_MYSTERIES.DamageTypes.Poison',
+};
+
+LORD_OF_THE_MYSTERIES.commonLanguages = {
+    ancientFeysac: "Ancient Feysac",
+    loenese: "Loenese",
+    intisian: "Intisian",
+    feysac: "Faysac",
+    highlander: "Highlander",
+    lenburg: "Lenburg",
+    duntanese: "Duntanese"
+};
+
+LORD_OF_THE_MYSTERIES.mysticalLanguages = {
+    elvish: "Elvish",
+    dragonese: "Dragonese",
+    jotun: "Jotun",
+    devil: "Devil",
+    ancientHermes: "Ancient Hermes",
+    hermes: "Hermes",
+    death: "Death"
 };

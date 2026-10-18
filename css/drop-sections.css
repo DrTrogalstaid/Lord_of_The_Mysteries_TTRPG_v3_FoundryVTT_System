@@ -253,3 +253,137 @@
   font-style: italic;
   opacity: 0.55;
 }
+
+.lotm.sheet.player-character .spells-tab {
+  grid-area: content;
+  overflow-y: auto;
+}
+
+.lotm.sheet.player-character .spell-list + .spell-list {
+  margin-top: 0.75rem;
+}
+
+.lotm.sheet.player-character .spell-list-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0 0 0.3rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #999);
+  font-weight: 600;
+}
+
+.lotm.sheet.player-character .spell-list-count {
+  font-size: var(--font-size-11, 0.875rem);
+  font-weight: normal;
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .spell-list-empty {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-12, 0.75rem);
+}
+
+.lotm.sheet.player-character .drop-entry-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lotm.sheet.player-character .drop-entry-title-row .drop-entry-source {
+  min-width: 0;
+}
+
+.lotm.sheet.player-character .drop-entry.action {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.lotm.sheet.player-character .drop-entry-rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.lotm.sheet.player-character .drop-entry-roll-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: auto;
+  height: 1.35rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #fff;
+  font-size: var(--font-size-11, 0.7rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter 0.12s, box-shadow 0.12s;
+}
+
+.lotm.sheet.player-character .drop-entry-roll-btn:hover,
+.lotm.sheet.player-character .drop-entry-roll-btn:focus-visible {
+  filter: brightness(1.2);
+  box-shadow: 0 0 4px var(--color-border-highlight, #ff6400);
+}
+
+/* Attack: blue, like pf2e's Strike button. */
+.lotm.sheet.player-character .drop-entry-roll-btn.attack {
+  background: #2c3f7c;
+  border-color: #1c2a57;
+}
+
+/* Damage: dark red. */
+.lotm.sheet.player-character .drop-entry-roll-btn.damage {
+  background: #7d1f1f;
+  border-color: #561414;
+}
+
+/* The "+5" part of the attack button. */
+.lotm.sheet.player-character .drop-entry-roll-bonus {
+  padding-left: 0.3rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm.sheet.player-character .drop-entry.action .drop-entry-action-type { width: 4.75rem; }
+.lotm.sheet.player-character .drop-entry.action .drop-entry-cost        { width: 7.5rem; }
+.lotm.sheet.player-character .drop-entry.action .drop-entry-range       { width: 3.25rem; }
+
+.lotm.sheet.player-character .drop-entry-stat-value:empty::before {
+  content: "\00a0";
+}
+
+.lotm .action-skill.drag-over {
+  outline: 2px dashed currentColor;
+  outline-offset: -2px;
+}
+
+.lotm .action-skill-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm .action-skill-entry img {
+  flex: 0 0 24px;
+  border: none;
+}
+
+.lotm .action-skill-name {
+  flex: 1;
+}
+
+.lotm .action-skill .hint {
+  margin: 2px 0 0;
+  opacity: 0.65;
+}

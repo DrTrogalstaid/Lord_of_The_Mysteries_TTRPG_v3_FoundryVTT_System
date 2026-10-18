@@ -15,3 +15,5 @@ export {default as LordOfTheMysteriesSkill} from "./item/character_building/skil
 export {default as LordOfTheMysteriesAbility} from "./item/character_building/ability.mjs";
 export {default as LordOfTheMysteriesAction} from "./item/character_building/action.mjs";
 export {default as LordOfTheMysteriesSpell} from "./item/character_building/spell.mjs";
+export {default as LordOfTheMysteriesGear } from "./item/character_building/gear.mjs";
+export {default as LordOfTheMysteriesContainer } from "./item/character_building/container.mjs";

@@ -23,7 +23,13 @@
     "verified": "14.368"
   },
   "esmodules": ["module/lotm.mjs"],
-  "styles": ["css/lotm.css","css/actor-sheet.css", "css/item-sheet.css","css/drop-sections.css"],
+  "styles": [
+    "css/lotm.css",
+    "css/actor-sheet.css", 
+    "css/item-sheet.css",
+    "css/drop-sections.css",
+    "css/inventory.css"
+  ],
   "languages": [
     {
       "lang": "en",
@@ -71,10 +77,34 @@
       },
       "flats": {}
     },
-        {
+    {
       "name": "action_compendium",
       "label": "Actions",
       "path": "packs/action_compendium",
+      "type": "Item",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+    {
+      "name": "rules_compendium",
+      "label": "LOTM Rules",
+      "path": "packs/rules_compendium",
+      "type": "JournalEntry",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
+    },
+    {
+      "name": "containers_and_gear_compendium",
+      "label": "Containers and Gear",
+      "path": "packs/containers_and_gear_compendium",
       "type": "Item",
       "system": "lotm",
       "ownershop": {
@@ -94,18 +124,20 @@
     "units": "ft"
   },
   "documentTypes": {
-  "Actor": {
-    "character": {},
-    "npc": {}
-  },
-  "Item": {
-    "item": {},
-    "feature": {},
-    "spell": {},
-    "sequence": {},
-    "skill": {},
-    "ability": {},
-    "action": {}
+    "Actor": {
+      "character": {},
+      "npc": {}
+    },
+    "Item": {
+      "item": {},
+      "feature": {},
+      "spell": {},
+      "sequence": {},
+      "skill": {},
+      "ability": {},
+      "action": {},
+      "gear": {},
+      "container": {}
+    }
   }
-}
 }

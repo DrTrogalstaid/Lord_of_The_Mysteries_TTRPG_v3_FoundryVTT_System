@@ -1,0 +1,98 @@
+{{!--
+  One row in a drop section list. The context is one entry built by buildEntry() in player-character-sheet.mjs.
+  Extra value passed in by the caller:
+    deleteAction  the sheet action for the remove button, e.g. "deleteSpell"
+--}}
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"{{#if id}} data-item-id="{{id}}"{{/if}}>
+
+  {{!-- Image. Click posts the Item to chat. Broken references get a plain image. --}}
+  {{#if broken}}
+  <span class="drop-entry-icon"><img class="drop-entry-img" src="{{img}}" alt=""></span>
+  {{else}}
+  <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}" data-tooltip="Send to chat">
+    <img class="drop-entry-img" src="{{img}}" alt="">
+    <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+  </button>
+  {{/if}}
+
+  {{!-- Name (click opens the Item's sheet), detail line, and where it came from. --}}
+  <div class="drop-entry-main">
+    {{#if broken}}
+    <span class="drop-entry-name">{{name}}</span>
+    {{else}}
+    <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
+    {{/if}}
+    {{#if detail}}<span class="drop-entry-detail">{{detail}}</span>{{/if}}
+    {{#if grantedByLabel}}
+    <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}}: {{grantedByLabel}}</span>
+    {{/if}}
+  </div>
+
+  {{!-- Labeled stats on the right. --}}
+  {{#if hasStats}}
+  <div class="drop-entry-stats">
+    {{#if actionTypeLabel}}
+    <div class="drop-entry-stat">
+      <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+      <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+    </div>
+    {{/if}}
+    {{#if hasCost}}
+    <div class="drop-entry-stat">
+      <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+      <span class="drop-entry-stat-value">{{cost}}</span>
+    </div>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{!-- Gear only (Inventory tab): slots taken, quantity, hidden pocket and where it is.
+        Built by buildInventoryView() in helpers/inventory.mjs. The inputs have no `name`: they save to
+        the gear Item through the [data-item-field] / [data-gear-location] listeners in the sheet's _onRender. --}}
+  {{#if gear}}
+  <div class="drop-entry-gear">
+    {{#if gear.warning}}
+    <span class="gear-warning" data-tooltip="{{gear.warning}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
+    {{/if}}
+    <span class="gear-slots" data-tooltip="{{gear.sizeLabel}}">{{gear.slotsLabel}}</span>
+    {{#if (and owned @root.editable)}}
+      <input type="number" class="gear-quantity" min="0" step="1" value="{{gear.quantity}}"
+             data-item-field="system.quantity" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Quantity">
+      {{#if gear.canHide}}
+      <label class="gear-hidden" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Hidden">
+        <input type="checkbox" data-item-field="system.hidden" data-item-id="{{id}}" {{checked gear.hidden}}>
+        <i class="fa-solid fa-eye-slash"></i>
+      </label>
+      {{/if}}
+      <select class="gear-location" data-gear-location data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Location">
+        {{selectOptions @root.inventory.locationOptions selected=gear.location}}
+      </select>
+    {{else}}
+      <span class="gear-quantity-text">×{{gear.quantity}}</span>
+      {{#if gear.hidden}}<i class="fa-solid fa-eye-slash" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Hidden"></i>{{/if}}
+      <span class="gear-location-text">{{gear.locationLabel}}</span>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{!-- Move up / down within this list. --}}
+  {{#if (and canMove @root.editable)}}
+  <div class="drop-entry-move">
+    <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{key}}" {{#unless canMoveUp}}disabled{{/unless}}>
+      <i class="fa-solid fa-chevron-up"></i>
+    </button>
+    <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{key}}" {{#unless canMoveDown}}disabled{{/unless}}>
+      <i class="fa-solid fa-chevron-down"></i>
+    </button>
+  </div>
+  {{/if}}
+
+  {{!-- Only Items the actor owns can be removed here --}}
+  {{#if (and owned @root.editable)}}
+  <button type="button" class="drop-entry-remove" data-action="{{deleteAction}}" data-item-id="{{id}}" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Remove"}}">
+    <i class="fa-solid fa-trash"></i>
+  </button>
+  {{else}}
+  <span class="drop-entry-spacer"></span>
+  {{/if}}
+</li>

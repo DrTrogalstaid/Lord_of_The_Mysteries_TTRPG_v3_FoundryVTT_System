@@ -24,11 +24,13 @@
     </div>
   </div>
 
+  <!--Long and Short Rrest-->
   <div class="rest-row">
     <button type="button" class="rest-btn" data-action="shortRest">Short<br />Rest</button>
     <button type="button" class="rest-btn" data-action="longRest">Long<br />Rest</button>
   </div>
 
+  <!--Defense -->
   <div class="defense-box">
     <div class="stat-box full-width">
       <label>Physical</label>
@@ -46,32 +48,43 @@
     </div>
     <div class="stat-box full-width damage-resistance-box">
       <label>Damage Resistance</label>
+      <!--TODO: Base this off of the Sequence sheet attribute gain section-->
       <ul class="damage-resistance-list">
-        {{#each system.damage_resistance}}
+        {{#each system.damage_resistance as |row|}}
         <li class="damage-resistance-row">
-          <input
-            type="text"
-            class="dr-type"
-            name="system.damage_resistance.{{@index}}.damage_type"
-            value="{{this.damage_type}}"
-            placeholder="Type"
-          />
+          <select class="damage-resistance-type" name="system.damage_resistance.{{@index}}.damageType">
+            {{selectOptions @root.damageTypeChoices selected=row.damageType}}
+          </select>
           <input
             type="number"
-            class="dr-value"
+            class="damage-resistance-value"
             name="system.damage_resistance.{{@index}}.value"
-            value="{{this.value}}"
+            value="{{row.value}}"
+            min="0"
           />
+          <a class="damage-resistance-remove" data-action="removeDamageResistance" data-index="{{@index}}"
+             title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Remove'}}">
+            <i class="fas fa-trash"></i>
+          </a>
         </li>
-        {{else}}
-        <li class="empty-note">None</li>
         {{/each}}
       </ul>
+      <button type="button" class="damage-resistance-add-button" data-action="addDamageResistance"
+              title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Add'}}">
+        <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.GenericButtons.Add"}}
+      </button>
     </div>
   </div>
 
+  <!--Movement-->
+  <div class="speed-container">
+    <div class="speed-box full-width">
+      <label>Movement Speed</label>
+      <input type="number" name="system.movement", value="{{system.movement}}" readonly>
+    </div>
+  </div>
 
-
+  <!--Spirit and Luck-->
   <div class="pool-row">
     <div class="pool-box">
       <label>Spirituality</label>
@@ -85,7 +98,7 @@
     <div class="pool-box">
       <label>Luck</label>
       <div class="pool-values">
-        <input type="number" name="system.resources.lp.value" value="{{system.resources.lp.value}}" readonly/>
+        <input type="number" name="system.resources.lp.value" value="{{system.resources.lp.value}}"/>
         <span class="pool-sep">/</span>
         <input type="number" name="system.resources.lp.max" value="{{system.resources.lp.max}}" readonly/>
       </div>

@@ -1,0 +1,286 @@
+.lotm {
+  --lotm-inventory-over: #b3261e;
+  --lotm-inventory-warn: #b26a00;
+  --lotm-inventory-line: #999;
+  --lotm-inventory-fill: rgba(0, 0, 0, 0.04);
+}
+
+/* ---- Totals at the top of the tab ---- */
+
+.lotm .inventory-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lotm .inventory-meter {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  background: var(--lotm-inventory-fill);
+}
+
+.lotm .inventory-meter-label {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.lotm .inventory-meter-value {
+  font-size: 1.4em;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm .inventory-meter-hint {
+  font-size: 0.8em;
+  opacity: 0.65;
+}
+
+.lotm .inventory-meter.over {
+  border-color: var(--lotm-inventory-over);
+}
+
+.lotm .inventory-meter.over .inventory-meter-value {
+  color: var(--lotm-inventory-over);
+}
+
+.lotm .inventory-warning {
+  margin: 0 0 6px;
+  color: var(--lotm-inventory-over);
+}
+
+.lotm .inventory-hint {
+  margin: 4px 0 8px;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.lotm .inventory-group {
+  margin-top: 8px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+}
+
+.lotm .inventory-group.over {
+  border-color: var(--lotm-inventory-over);
+}
+
+.lotm .inventory-group.left-behind {
+  opacity: 0.6;
+}
+
+.lotm .inventory-group .drop-section-list {
+  margin: 0;
+}
+
+.lotm .inventory-group .drop-section-empty {
+  margin: 0;
+  padding: 6px 10px;
+  opacity: 0.6;
+}
+
+.lotm .inventory-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--lotm-inventory-fill);
+  border-bottom: 1px solid var(--lotm-inventory-line);
+}
+
+.lotm .inventory-group-title {
+  margin: 0;
+}
+
+.lotm .inventory-group-hint {
+  font-size: 0.8em;
+  opacity: 0.65;
+}
+
+/* The coat / bag icon uses the row's .drop-entry-icon button; this just keeps it from stretching in the header. */
+.lotm .inventory-group-icon {
+  flex: 0 0 auto;
+}
+
+.lotm .inventory-group-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lotm .inventory-group-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lotm .inventory-stat {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm .inventory-stat.over {
+  color: var(--lotm-inventory-over);
+  font-weight: bold;
+}
+
+.lotm .inventory-stat.warn {
+  color: var(--lotm-inventory-warn);
+}
+
+.lotm .inventory-equip,
+.lotm .gear-hidden {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+/* ---- Gear controls on each row ---- */
+
+.lotm .drop-entry-gear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.lotm .drop-entry-gear .gear-slots {
+  min-width: 2.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm .drop-entry-gear .gear-quantity {
+  width: 3.5em;
+  text-align: center;
+}
+
+.lotm .drop-entry-gear .gear-location {
+  width: 9em;
+}
+
+.lotm .drop-entry-gear .gear-warning {
+  color: var(--lotm-inventory-over);
+}
+
+/* ---- Gear and container sheets ---- */
+
+.lotm.inventory-item .inventory-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.lotm.inventory-item .inventory-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lotm.inventory-item .inventory-sheet-img {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.lotm.inventory-item .inventory-sheet-name {
+  flex: 1;
+  font-size: 1.5em;
+  height: auto;
+}
+
+.lotm.inventory-item .inventory-readout {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  background: var(--lotm-inventory-fill);
+}
+
+.lotm.inventory-item .inventory-readout dt {
+  opacity: 0.75;
+}
+
+.lotm.inventory-item .inventory-readout dd {
+  margin: 0;
+  font-weight: bold;
+}
+
+.lotm.inventory-item .inventory-readout .over {
+  color: var(--lotm-inventory-over);
+}
+
+.lotm.inventory-item .inventory-contents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lotm.inventory-item .inventory-contents li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.lotm.inventory-item .inventory-contents img {
+  width: 24px;
+  height: 24px;
+  border: none;
+}
+
+.lotm.inventory-item .inventory-contents .name {
+  flex: 1;
+}
+
+.lotm.inventory-item textarea {
+  width: 100%;
+  min-height: 6em;
+  resize: vertical;
+}
+
+.lotm.inventory-item .gear-grants {
+  padding: 6px 10px;
+  border: 1px dashed var(--lotm-inventory-line);
+  border-radius: 4px;
+}
+
+.lotm.inventory-item .gear-grants.drag-over {
+  border-style: solid;
+  background: var(--lotm-inventory-fill);
+}
+
+.lotm.inventory-item .gear-grants-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lotm.inventory-item .gear-grants-header h4 {
+  margin: 0;
+}
+
+.lotm.inventory-item .gear-grants .hint {
+  margin: 2px 0 0;
+  opacity: 0.65;
+}
+
+.lotm.inventory-item .gear-grant-remove {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1;
+}

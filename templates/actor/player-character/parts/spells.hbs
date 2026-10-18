@@ -1,8 +1,43 @@
+{{!--
+  Spells tab. Spells are grouped by the name of the ability Spell List they come from;
+  lists with the same name from different abilities share one group. Spells dropped
+  straight onto the sheet go in "Other Spells" at the bottom.
+
+  The whole box is still ONE drop section (data-drop-zone="spells"), so dropping a spell
+  anywhere in it works the same as before.
+--}}
 <section class="tab spells-tab {{tab.cssClass}}" data-group="sheet" data-tab="spells">
-  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
-      zone="spells"
-      label="LORD_OF_THE_MYSTERIES.Drop.Sections.spells"
-      entries=sections.spells
-      remove="deleteSpell"
-      add="addSpell"}}
+  <div class="drop-section" data-drop-zone="spells">
+
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.spells"}}</h3>
+      <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+      {{#if editable}}
+      <button type="button" class="drop-section-add" data-action="addSpell" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Add"}}">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+      {{/if}}
+    </header>
+
+    {{#each spellLists as |list|}}
+    <div class="spell-list" data-spell-list="{{list.key}}">
+      <h4 class="spell-list-title">
+        {{list.name}}
+      </h4>
+      {{#if list.entries.length}}
+      <ol class="drop-section-list">
+        {{#each list.entries}}
+          {{> "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs" this deleteAction="deleteSpell"}}
+        {{/each}}
+      </ol>
+      {{else}}
+      {{!-- A named Spell List with no spells in it yet. --}}
+      <p class="drop-section-empty spell-list-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.SpellListEmpty"}}</p>
+      {{/if}}
+    </div>
+    {{else}}
+    <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+    {{/each}}
+
+  </div>
 </section>

@@ -3,14 +3,19 @@
  **/
 
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
+import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
+import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 /** Shared partial that renders one drop section (header, entry list, drop target). */
 const DROP_SECTION_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-section.hbs";
+
+/** One entry row (icon, name, stats, move / remove buttons). Used by the Spells tab's grouped lists. */
+const DROP_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs";
 
 /* -------------------------------------------- */
 /*  Drop section configuration                   */
@@ -37,8 +42,25 @@ const DROP_SECTIONS = {
  */
 const ORDER_FLAG = "flags.lotm.order";
 
+/** Newly added Damage Resistance */
+const DEFAULT_DAMAGE_TYPE = "Physical";
+const DEFAULT_DAMAGE_RESISTANCE = 1;
+
+const DEFAULT_COMMON_LANGUAGE = "Loenese";
+const DEFAULT_MYSTICAL_LANGUAGE = "Hermes";
+
+/** Bounds of a Sequence's digestionAmount */
+const DIGESTION_MIN = 1;
+const DIGESTION_MAX = 20;
+
 /** Item types that cannot be dropped on a character sheet at all. */
 const UNSUPPORTED_TYPES = ["pathway"];
+
+/**
+ * Item types a character can own more than one copy of (two candles, two revolvers). They skip the
+ * duplicate check and are keyed by their own uuid, so two copies of the same compendium Item don't collide.
+ */
+const STACKABLE_TYPES = ["gear", "container"];
 
 /**
  * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
@@ -77,12 +99,14 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
  *   `key` identifies the entry in the saved order: the Item's source UUID, so an owned copy and a
  *   reference to the same Item share one key and a position survives re-renders.
  */
-function buildEntry(item, { section, owned, key, grantedBy = [] }) {
+function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
   const system = item.system ?? {};
-  // Abilities and spells use camelCase fields; Actions use snake_case.
-  const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
-  const actionType = system.actionType || system.action_type || "";
+  const isAction = item.type === "action";
+  // Actions always show a cost (blank counts as 0); for abilities and spells an unset cost is hidden.
+  const cost = isAction ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
+  const actionType = system.actionType || "";
   const actionTypeText = actionTypeLabel(actionType);
+  const isSequence = item.type === "sequence";
   return {
     key,
     uuid: item.uuid,
@@ -99,13 +123,110 @@ function buildEntry(item, { section, owned, key, grantedBy = [] }) {
     hasCost: cost !== null,
     actionType,
     actionTypeLabel: actionTypeText,
-    hasStats: cost !== null || !!actionTypeText,
+    // Sequences show their digestion amount
+    digestion: isSequence ? (system.digestionAmount ?? DIGESTION_MIN) : null,
+    hasDigestion: isSequence,
+    hasStats: cost !== null || !!actionTypeText || isSequence,
     // Sequences show "Sequence 9 · <pathway>" and sort by rank.
-    rank: item.type === "sequence" ? (system.sequence_number ?? null) : null,
-    detail: item.type === "sequence" ? sequenceDetail(system) : "",
+    rank: isSequence ? (system.sequence_number ?? null) : null,
+    detail: isSequence ? sequenceDetail(system) : "",
     grantedBy: [...grantedBy],
     grantedByLabel: "",
+    // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
+    spellList,
+    // Actions: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
+    isAction,
+    rangeLabel: isAction && system.range != null
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RangeFeet", { range: system.range })
+      : "",
+    // The attack and damage buttons. They need the character, so #addActionButtons fills them in later.
+    attack: null,
+    damage: null,
+    hasRolls: false,
   };
+}
+
+/**
+ * Add an Item's name to an entry's "Granted by" list, unless it's already there or it's the entry itself.
+ * @param {object} entry
+ * @param {string} name
+ */
+function addGrantedBy(entry, name) {
+  if (entry.name !== name && !entry.grantedBy.includes(name)) entry.grantedBy.push(name);
+}
+
+/** The Spell List name an ability starts with (see ability.mjs). An empty list with this name is not shown. */
+const DEFAULT_SPELL_LIST_NAME = "Spells";
+
+/**
+ * Whether an ability's Spell List still has the default name (or no name at all).
+ * Those lists only appear on the Spells tab once they contain a spell.
+ * @param {Item} ability
+ * @returns {boolean}
+ */
+function hasDefaultSpellListName(ability) {
+  const name = ability.system?.spellList?.name?.trim() ?? "";
+  return !name || name.toLocaleLowerCase() === DEFAULT_SPELL_LIST_NAME.toLocaleLowerCase();
+}
+
+/**
+ * The name an ability's Spell List is shown under on the Spells tab.
+ * A blank name falls back to the ability's own name, so unnamed lists don't all merge together.
+ * @param {Item} ability
+ * @returns {string}
+ */
+function spellListName(ability) {
+  const name = ability.system?.spellList?.name?.trim();
+  return name || ability.name;
+}
+
+/**
+ * Split the Spells section's entries into one group per Spell List name.
+ *
+ * Lists with the same name (ignoring upper/lower case and extra spaces) become ONE group, even when
+ * they come from different abilities. Spells that aren't in any list (dropped straight on the sheet)
+ * go in an "Other Spells" group at the bottom. Entries keep the order they already had, so the
+ * saved manual order still applies inside each group.
+ *
+ * @param {object[]} entries      The already-sorted entries of sections.spells.
+ * @param {string[]} [listNames]  Spell List names to show even when they have no spells yet.
+ * @returns {{key: string, name: string, entries: object[]}[]}
+ */
+function groupSpellLists(entries, listNames = []) {
+  const groups = new Map();   // lower-case list name -> group
+  const unlisted = [];
+
+  // Start with an empty group for every named list, so it shows up before any spell is added to it.
+  for (const name of listNames) {
+    const key = name.toLocaleLowerCase();
+    if (!groups.has(key)) groups.set(key, { key, name, entries: [] });
+  }
+
+  for (const entry of entries) {
+    if (!entry.spellList) {
+      unlisted.push(entry);
+      continue;
+    }
+    const key = entry.spellList.toLocaleLowerCase();
+    if (!groups.has(key)) groups.set(key, { key, name: entry.spellList, entries: [] });
+    groups.get(key).entries.push(entry);
+  }
+
+  const lists = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+  if (unlisted.length) {
+    lists.push({ key: "", name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.UnlistedSpells"), entries: unlisted });
+  }
+
+  // Move buttons only move an entry within its own group, so the first / last of each group can't go further.
+  for (const list of lists) {
+    list.entries.forEach((entry, index) => {
+      entry.canMove = list.entries.length > 1;
+      entry.canMoveUp = index > 0;
+      entry.canMoveDown = index < list.entries.length - 1;
+    });
+  }
+
+  return lists;
 }
 
 /** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
@@ -134,6 +255,13 @@ async function createBlankItem(sheet, type) {
 
 
 export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+
+  /**
+   * Names of every non-default Spell List on the actor's abilities (owned or granted), filled in by
+   * #prepareSections on each render. The Spells tab shows these lists even when they are empty.
+   * @type {string[]}
+   */
+  #namedSpellLists = [];
 
 
   /** @override */
@@ -165,8 +293,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       spendLuck: PlayerCharacterSheet._onSpendLuck,
       spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
       editImage: PlayerCharacterSheet._onEditImage,
+      addDamageResistance: PlayerCharacterSheet._onAddDamageResistance,
+      removeDamageResistance: PlayerCharacterSheet._onRemoveDamageResistance,
+      addCommonLanguage: PlayerCharacterSheet._onAddCommonLanguage,
+      removeCommonLanguage: PlayerCharacterSheet._onRemoveCommonLanguage,
+      addMysticalLanguage: PlayerCharacterSheet._onAddMysticalLanguage,
+      removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
+      rollAction: PlayerCharacterSheet.#onRollAction,
+      rollDamage: PlayerCharacterSheet.#onRollDamage,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
       addGrantedCustom: PlayerCharacterSheet._onAddGrantedCustom,
       addGrantedAnalysis: PlayerCharacterSheet._onAddGrantedAnalysis,
@@ -202,8 +338,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
     abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
@@ -284,6 +420,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (context.tabs?.[partId]) context.tab = context.tabs[partId];
 
     switch (partId) {
+
       case "character":
         context.tab = context.tabs.character;
         context.attributesList = this._prepareAttributes();
@@ -292,6 +429,18 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.grantedSkillTabs = await this._prepareGrantedSkills();
         context.attributeOptions = CONFIG.LORD_OF_THE_MYSTERIES.attributes;
         context.attributeAbbreviations = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations;
+        context.languageCommonChoices = this._prepareCommonLanguages();
+        context.languageMysticalChoices = this._prepareMysticalLanguages();
+        break;
+
+      case "spells":
+        // One group per Spell List name
+        context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
+        break;
+
+      case "inventory":
+        // One group per coat / bag, plus "Held & worn" (see helpers/inventory.mjs)
+        context.inventory = buildInventoryView(context.sections.inventory, this.actor);
         break;
 
       case "abilities":
@@ -328,6 +477,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           }
         );
         break;
+      case "sidebar":
+        context.damageTypeChoices = this._prepareDamageTypes();
+        break;
     }
 
     return context;
@@ -357,24 +509,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @returns {object[]}
    */
   _prepareAttributes() {
-    const sequenceBonuses = this._sequenceAttributeBonuses();
-
     return Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, label]) => {
-      const attr = this.actor.system.attributes[key] ?? {};
-      const base = attr.base ?? 0;
-      const beyonder_bonus = attr.beyonder_bonus ?? 0;
-      const corruption = attr.corruption ?? 0;
-      const sequence_bonus = sequenceBonuses[key] ?? 0;
-      const total = (attr.total ?? 0) + sequence_bonus;
-    return {
-      key,
-      label,
-      base,
-      beyonder_bonus,
-      sequence_bonus,
-      corruption,
-      total: total
-    };
+      const attr = this.actor.system.attributes[key];
+      return {
+        key, label,
+        base: attr.base,
+        beyonder_bonus: attr.beyonder_bonus,
+        corruption: attr.corruption,
+        sequence_bonus: attr.sequence_bonus,   // derived, display only
+        total: attr.total                       // derived
+      };
     });
   }
 
@@ -542,6 +686,21 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     });
 
+    // Digestion inputs on owned Sequence rows belong to the Sequence item, not the actor,
+    // so they have no `name` (the actor form skips them) and save here instead. The value is
+    // clamped to the schema's bounds so an out-of-range number doesn't fail validation.
+    this.element.querySelectorAll(".drop-entry [data-digestion-input]").forEach(input => {
+      input.addEventListener("change", async ev => {
+        const item = this.actor.items.get(ev.currentTarget.dataset.itemId);
+        if (!item || item.type !== "sequence") return;
+        const raw = Math.floor(Number(ev.currentTarget.value));
+        const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
+        ev.currentTarget.value = value;
+        if (value === item.system.digestionAmount) return;
+        await item.update({ "system.digestionAmount": value });
+      });
+    });
+
     // Enter in the custom-skill box adds it instead of submitting the sheet.
     this.element.querySelectorAll(".granted-skill-custom").forEach(input => {
       input.addEventListener("keydown", ev => {
@@ -550,6 +709,25 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         PlayerCharacterSheet._onAddGrantedCustom.call(this, ev, ev.currentTarget);
       });
     });
+
+    // Inventory controls (quantity, hidden pocket, equipped) belong to the gear / container Item, not the actor,
+    // so like the digestion inputs they have no `name` and save here instead. `bound` stops a control that
+    // wasn't re-rendered from getting a second listener.
+    for (const input of this.element.querySelectorAll("[data-item-field]")) {
+      if (input.dataset.bound) continue;
+      input.dataset.bound = "1";
+      input.addEventListener("change", (event) => this.#onItemFieldChange(event));
+    }
+
+    // Each gear row's location dropdown: Held, Worn, or one of the character's coats / bags.
+    for (const select of this.element.querySelectorAll("[data-gear-location]")) {
+      if (select.dataset.bound) continue;
+      select.dataset.bound = "1";
+      select.addEventListener("change", async (event) => {
+        const item = this.actor.items.get(event.currentTarget.dataset.itemId);
+        await item?.update(placementUpdate(event.currentTarget.value));
+      });
+    }
 
     // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
     for (const zone of this.element.querySelectorAll(".drop-section")) {
@@ -561,6 +739,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
       zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
     }
+  }
+
+
+  /**
+   * Save an inventory control to its own Item. The input says which Item (data-item-id) and which
+   * field (data-item-field, e.g. "system.quantity").
+   * @param {Event} event
+   */
+  async #onItemFieldChange(event) {
+    const input = event.currentTarget;
+    const item = this.actor.items.get(input.dataset.itemId);
+    if (!item) return;
+
+    let value = input.value;
+    if (input.type === "checkbox") value = input.checked;
+    else if (input.type === "number") value = Math.max(0, Math.floor(Number(input.value) || 0));
+
+    await item.update({ [input.dataset.itemField]: value });
   }
 
 
@@ -581,16 +777,23 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const sections = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
     const bySource = new Map();     // source uuid -> entry already shown
     const ignored = new Set();      // source uuids of unsupported types
+    const abilityByName = new Map(); // lower-case ability name -> entry: a character has each ability once
     const queue = [];
+    const actionRows = [];          // [entry, action Item] pairs: their roll buttons are filled in at the end
+    this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
     // 1. Owned Items
     for (const item of this.actor.items) {
       const section = sectionForType(item.type);
       if (!section) continue;
-      const key = item._stats?.compendiumSource ?? item.uuid;
+      // Gear and containers can be owned twice from the same source, so they use their own uuid.
+      const source = STACKABLE_TYPES.includes(item.type) ? null : item._stats?.compendiumSource;
+      const key = source ?? item.uuid;
       const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
       bySource.set(key, entry);
+      if (item.type === "action") actionRows.push([entry, item]);
+      if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
     }
 
@@ -598,19 +801,34 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     while (queue.length) {
       const parent = queue.shift();
 
+      // Every ability with a renamed Spell List gets a group on the Spells tab, spells or not.
+      if (parent.type === "ability" && !hasDefaultSpellListName(parent)) {
+        this.#namedSpellLists.push(spellListName(parent));
+      }
+
       for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
         const raw = foundry.utils.getProperty(parent.system ?? {}, path);
         if (!Array.isArray(raw)) continue;
         const uuids = pick ? raw.map((row) => row?.[pick]) : raw;
 
+        // Spells reached through an ability's Spell List remember that list's name, for grouping on the Spells tab.
+        const listName = path === "spellList.spells" ? spellListName(parent) : "";
+
         for (const uuid of uuids) {
           if (!uuid || ignored.has(uuid)) continue;
 
-          const existing = bySource.get(uuid);
+          // Actions on gear are always listed again, even when the character already has that action
+          // (two revolvers = two "Shoot" actions). Each gear Item's copy gets its own key, so it doesn't merge
+          // with other entries and keeps its own place when moved up / down.
+          const gearAction = parent.type === "gear" && path === "actionList";
+          const key = gearAction ? `${parent.uuid}#${uuid}` : uuid;
+
+          const existing = bySource.get(key);
           if (existing) {
-            if (existing.name !== parent.name && !existing.grantedBy.includes(parent.name)) {
-              existing.grantedBy.push(parent.name);
-            }
+            addGrantedBy(existing, parent.name);
+            // An owned spell that is also in a Spell List is shown in that list. A spell in two
+            // differently-named lists stays in the first one found (each spell is shown once).
+            if (listName && !existing.spellList) existing.spellList = listName;
             continue;
           }
 
@@ -618,13 +836,14 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
           if (!doc || doc.documentName !== "Item") {
             const broken = {
-              key: uuid, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
+              key, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
               img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
               owned: false, nested: true, broken: true, cost: null, hasCost: false,
-              actionType: "", actionTypeLabel: "", hasStats: false, rank: null, detail: "",
-              grantedBy: [parent.name], grantedByLabel: "",
+              actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
+              hasStats: false, rank: null, detail: "",
+              grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
             };
-            bySource.set(uuid, broken);
+            bySource.set(key, broken);
             sections[fallbackSection].push(broken);
             continue;
           }
@@ -635,10 +854,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             continue;
           }
 
-          const entry = buildEntry(doc, { section, owned: false, key: uuid, grantedBy: [parent.name] });
-          bySource.set(uuid, entry);
+          // A character has each ability once. If one with this name is already listed (owned, or granted by
+          // something else, even from a different source), this Item is added to its "Granted by" instead.
+          if (doc.type === "ability") {
+            const sameName = abilityByName.get(doc.name.toLocaleLowerCase());
+            if (sameName) {
+              addGrantedBy(sameName, parent.name);
+              bySource.set(uuid, sameName);
+              continue;
+            }
+          }
+
+          const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
+          bySource.set(key, entry);
           sections[section].push(entry);
-          queue.push(doc);
+          if (doc.type === "action") actionRows.push([entry, doc]);
+          if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
+          // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
+          if (!gearAction) queue.push(doc);
         }
       }
     }
@@ -671,7 +904,26 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     }
 
+    // Attack and damage buttons on every action row. Promise.all looks up all the actions' skills at once
+    // instead of one after another.
+    await Promise.all(actionRows.map(([entry, action]) => this.#addActionButtons(entry, action)));
+
     return sections;
+  }
+
+
+  /**
+   * Fill in an action row's buttons:
+   *   entry.attack  "Pistol +5" (missing when the action has no skill, or its skill is gone)
+   *   entry.damage  hover text like "1d8+3 Physical" (missing when the action has no damage formula)
+   * @param {object} entry   The row from buildEntry.
+   * @param {Item} action
+   */
+  async #addActionButtons(entry, action) {
+    entry.attack = await getActionAttackSummary(this.actor, action);
+    const damageTooltip = getDamageTooltip(this.actor, action);
+    entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
+    entry.hasRolls = !!(entry.attack || entry.damage);
   }
 
   /* -------------------------------------------- */
@@ -690,8 +942,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (document.documentName !== "Item") return super._onDropDocument(event, document);
     if (!this.isEditable) return null;
 
-    // Already on this actor: leave it to Foundry (re-sorting).
-    if (document.parent === this.actor) return super._onDropDocument(event, document);
+    // Gear dropped on a coat / bag (or on "Held & worn") in the Inventory tab goes there.
+    const place = event.target?.closest?.("[data-inventory-place]")?.dataset.inventoryPlace;
+    const placement = (document.type === "gear" && place !== undefined) ? placementUpdate(place) : null;
+
+    // Already on this actor: move it if it was dropped on an inventory group, otherwise leave it to Foundry (re-sorting).
+    if (document.parent === this.actor) {
+      if (placement) return document.update(placement);
+      return super._onDropDocument(event, document);
+    }
 
     const section = sectionForType(document.type);
     if (!section) {
@@ -709,20 +968,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
 
     if (section === "skills") return this.#dropSkill(document);
-    return this.#dropEmbedded(document);
+    return this.#dropEmbedded(document, placement);
   }
 
+  
   /**
    * Copy an Item onto the actor as an embedded Item. The source UUID is kept in
    * _stats.compendiumSource so duplicates are caught and nested references to the same
    * Item are recognised as the one the actor already owns.
    * @param {Item} item
+   * @param {object|null} [placement]  For gear: where it was dropped (see placementUpdate). When it wasn't
+   *                                   dropped on a coat / bag, it goes in the first one with room.
    * @returns {Promise<Item|null>}
    */
-  async #dropEmbedded(item) {
+  async #dropEmbedded(item, placement = null) {
     // Same Item already owned (by source), or, for abilities, one with the same name: _onDropItem below holds the
     // same rule, but drops from outside the actor are handled here and never reach it.
-    const alreadyOwned = this.actor.items.some((owned) =>
+    // Gear and containers can be owned more than once, so they skip this.
+    const alreadyOwned = !STACKABLE_TYPES.includes(item.type) && this.actor.items.some((owned) =>
       owned._stats?.compendiumSource === item.uuid
       || (item.type === "ability" && owned.type === "ability" && owned.name === item.name)
     );
@@ -737,6 +1000,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     delete data.sort;
     delete data.ownership;
     foundry.utils.setProperty(data, "_stats.compendiumSource", item.uuid);
+
+    // Gear: put it somewhere. Its old containerId (from another actor) means nothing here, so it's always replaced.
+    if (item.type === "gear") {
+      const where = placement ?? autoPlacement(this.actor, data);
+      foundry.utils.mergeObject(data, foundry.utils.expandObject(where));
+    }
 
     const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     return created ?? null;
@@ -785,15 +1054,36 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @param {PointerEvent} event
    * @param {HTMLElement} target
    */
-  static _onShortRest(event, target) {
-    console.log(`${this.actor.name}: Short Rest triggered (not yet implemented)`);
-    // TODO: call the Short Rest macro, e.g. game.macros.getName("Short Rest")?.execute({actor: this.actor});
+  static async _onShortRest(event, target) {
+
+    // Sleepless gain full Spirituality on short rests
+    const isSleepless = this.actor.items.some(
+      i => i.type === "sequence" && (i.name === "Sleepless" || i.system.name === "Sleepless")
+    );
+
+    var spiritualityGain = 0;
+    if (isSleepless == true) {
+      spiritualityGain = this.actor.system.resources.spp.max;
+    } 
+    else {
+      spiritualityGain = Math.floor(this.actor.system.resources.spp.max / 8);
+    }
+
+    await this.actor.update({
+      "system.resources.spp.value": Math.min(this.actor.system.resources.spp.value + spiritualityGain, this.actor.system.resources.spp.max)
+    });
   }
 
 
-  static _onLongRest(event, target) {
-    console.log(`${this.actor.name}: Long Rest triggered (not yet implemented)`);
-    // TODO: call the Long Rest macro.
+  static async _onLongRest(event, target) {
+    const res = this.actor.system.resources;
+
+    await this.actor.update({
+      // Spirituality Restoration
+      "system.resources.spp.value": res.spp.max,
+      // Rationality +1
+      "system.resources.rp.value": Math.min(this.actor.system.resources.rp.value + 1, this.actor.system.resources.rp.max)
+    });
   }
 
 
@@ -824,6 +1114,131 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
   /**
+   * Damage types for Damage Resistance dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareDamageTypes() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.DamageTypes") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.DamageTypes.${key}`)])
+    );
+  }
+
+
+  /**
+   * Add Damage Resistance
+   */
+  static async _onAddDamageResistance(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.damage_resistance ?? [];
+    
+    await this.actor.update({
+      "system.damage_resistance": [...current, { damageType: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
+    });
+  }
+
+
+  /**
+   * Remove Damage Resistance
+   */
+  static async _onRemoveDamageResistance(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.damage_resistance ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.damage_resistance": current.filter((_, i) => i !== index) });
+  }
+
+
+  /**
+   * Languages (Common) dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareCommonLanguages() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Languages.Common") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Languages.Common.${key}`)])
+    );
+  }
+
+
+  /**
+   * Languages (Mystical) dropdown
+   * @returns {Record<string, string>}
+   */
+  _prepareMysticalLanguages() {
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Languages.Mystical") ?? {};
+    
+    return Object.fromEntries(
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Languages.Mystical.${key}`)])
+    );
+  }
+
+
+  /**
+   * Add Language (Common)
+   */
+  static async _onAddCommonLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.languages.common ?? [];
+    
+    await this.actor.update({
+      "system.languages.common": [...current, DEFAULT_COMMON_LANGUAGE]
+    });
+  }
+
+
+  /**
+   * Add Language (Mystical)
+   */
+  static async _onAddMysticalLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const current = this.actor.toObject().system.languages.mystical ?? [];
+    
+    await this.actor.update({
+      "system.languages.mystical": [...current, DEFAULT_MYSTICAL_LANGUAGE]
+    });
+  }
+
+
+  /**
+   * Remove Language (Common)
+   */
+  static async _onRemoveCommonLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.languages.common ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.languages.common": current.filter((_, i) => i !== index) });
+  }
+
+
+    /**
+   * Remove Language (Mystical)
+   */
+  static async _onRemoveMysticalLanguage(event, target) {
+    if (!this.isEditable) return;
+    
+    const index = Number(target.dataset.index);
+    const current = this.actor.toObject().system.languages.mystical ?? [];
+    
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    
+    await this.actor.update({ "system.languages.mystical": current.filter((_, i) => i !== index) });
+  }
+
+  /**
    * Open SkillCheckDialog for the clicked skill. All the data the dialog
    * needs (uuid/name/level/category/attribute) travels in via data-*
    * attributes on the skill row, set from _prepareSkillList()'s entry -
@@ -843,6 +1258,28 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
+  /**
+   * Roll an action with its skill (data-uuid = the action). Works for any action on the sheet, whether the
+   * character owns it or it's granted by a Sequence, ability or gear. All the rolling lives in
+   * helpers/action-roll.mjs, so the sheet, hotbar macros and the chat damage button share one path.
+   */
+  static async #onRollAction(event, target) {
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await rollActionAttack(this.actor, action);
+  }
+
+
+  /**
+   * Roll an action's damage straight from the sheet (data-uuid = the action), without rolling the attack first.
+   * Same roll and chat message as the "Roll Damage" button in chat.
+   */
+  static async #onRollDamage(event, target) {
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await rollActionDamage(this.actor, action);
+  }
+
+
   /**
    * The ability item and granted-skill id behind a clicked granted-skill control.
    * @returns {{ability: Item|undefined, grantedId: string|undefined}}
@@ -853,6 +1290,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       grantedId: target.closest("[data-granted-id]")?.dataset.grantedId
     };
   }
+
 
   /** Save a new granted-skills list on the ability, warning on duplicates. */
   async _saveGrantedSkill(ability, skill) {
@@ -867,6 +1305,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await ability.update({ "system.grantedSkills": list });
   }
 
+
   /** Add the skill picked in a granted-skills section's dropdown. */
   static async _onAddGrantedOption(event, target) {
     const { ability } = this._grantedSkillTarget(target);
@@ -880,6 +1319,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
   /** Add a custom-named skill, linked to the attribute picked next to the name box. */
   static async _onAddGrantedCustom(event, target) {
     const { ability } = this._grantedSkillTarget(target);
@@ -889,6 +1329,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (!ability || !input) return;
     await this._saveGrantedSkill(ability, { name: input.value, attribute });
   }
+
 
   /**
    * Analyze a regular skill (Extraordinary Knowledge). Education skills count it on
@@ -919,6 +1360,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
+
   /**
    * Add one analysis to a granted skill's counter. The GM decides when the
    * count earns a new level.
@@ -931,6 +1373,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       "system.grantedSkills": updateGrantedSkill(ability.system.grantedSkills, grantedId, { analysis: entry.analysis + 1 })
     });
   }
+
 
   /** Remove a granted skill (and its progress) from the ability, after confirming. */
   static async _onRemoveGrantedSkill(event, target) {
@@ -946,6 +1389,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     await ability.update({ "system.grantedSkills": ability.system.grantedSkills.filter(s => s.id !== grantedId) });
   }
 
+
   /**
    * Open an owned item's sheet (the Abilities tab's edit control).
    */
@@ -954,6 +1398,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     item?.sheet.render(true);
   }
 
+
   /**
    * Remove an owned item from the actor (the Abilities tab's delete control).
    */
@@ -961,6 +1406,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const item = this.actor.items.get(target.closest("[data-item-id]")?.dataset.itemId);
     await item?.deleteDialog();
   }
+
 
   /* -------------------------------------------- */
   /*  Drag & Drop                                  */
@@ -1003,12 +1449,24 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const section = zone?.dataset.dropZone;
     if (!section) return;
 
+    // Every entry in the whole section, top to bottom. This full list is what gets saved.
     const keys = [...zone.querySelectorAll(".drop-section-list > .drop-entry")].map((li) => li.dataset.key);
-    const from = keys.indexOf(target.dataset.key);
-    const to = from + (target.dataset.direction === "up" ? -1 : 1);
-    if (from < 0 || to < 0 || to >= keys.length) return;
 
-    [keys[from], keys[to]] = [keys[to], keys[from]];
+    // The entries in the same list as the clicked one. Most sections have one list, so this is the same as
+    // `keys`; on the Spells tab each Spell List group is its own list, and an entry only moves inside its group.
+    const list = target.closest(".drop-section-list");
+    const siblings = list
+      ? [...list.children].filter((li) => li.matches(".drop-entry")).map((li) => li.dataset.key)
+      : keys;
+
+    const from = siblings.indexOf(target.dataset.key);
+    const to = from + (target.dataset.direction === "up" ? -1 : 1);
+    if (from < 0 || to < 0 || to >= siblings.length) return;
+
+    // Swap the two neighbours' places in the full list.
+    const a = keys.indexOf(siblings[from]);
+    const b = keys.indexOf(siblings[to]);
+    [keys[a], keys[b]] = [keys[b], keys[a]];
     await this.actor.update({ [`${ORDER_FLAG}.${section}`]: keys });
   }
 
