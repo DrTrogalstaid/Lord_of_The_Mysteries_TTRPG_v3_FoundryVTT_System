@@ -151,7 +151,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         for (var i in this.skills.agi){
             var skill = this.skills.agi[i];
             
-            //TODO: Will this uuid change??
             if (skill.skill == "Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ")
             {
                 //TODO: Make this better by storing modifier in skill item??

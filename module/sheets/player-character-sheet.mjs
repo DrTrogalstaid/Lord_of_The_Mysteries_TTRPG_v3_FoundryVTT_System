@@ -132,6 +132,8 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     grantedByLabel: "",
     // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
     spellList,
+    // Actions with a skill get a dice button that rolls them with that skill (#onRollAction).
+    canRoll: item.type === "action" && !!system.skill,
   };
 }
 
@@ -290,6 +292,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
+      rollAction: PlayerCharacterSheet.#onRollAction,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
       addGrantedCustom: PlayerCharacterSheet._onAddGrantedCustom,
       addGrantedAnalysis: PlayerCharacterSheet._onAddGrantedAnalysis,
@@ -1221,6 +1224,58 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       level: row.dataset.level,
       flatModifier: Number(row.dataset.flatModifier) || 0
     });
+  }
+
+
+  /**
+   * Roll an action with its skill (data-uuid = the action). Works for any action on the sheet, whether the
+   * character owns it or it's granted by a Sequence, ability or gear. Opens the same SkillCheckDialog as the
+   * Character tab, filled in with the character's level in that skill, so the bonus matches the Character tab.
+   */
+  static async #onRollAction(event, target) {
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    const skillUuid = action?.system.skill;
+    if (!skillUuid) return;
+
+    const skill = await fromUuid(skillUuid).catch(() => null);
+    if (!skill) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.ActionSkill.Missing", { name: action.name }));
+      return;
+    }
+
+    const { uuid, category, level } = this._findSkillEntry(skill, skillUuid);
+    SkillCheckDialog.prompt(this.actor, {
+      uuid,
+      name: skill.name,
+      category,
+      attribute: skill.system.skill_attribute || category,
+      level,
+      flatModifier: skill.system.modifier ?? 0,
+      // The dialog titles itself "Shoot (Pistol)" and rolls the action's formula plus the skill bonuses.
+      action: { name: action.name, formula: action.system.attackRollMacro ?? "" },
+    });
+  }
+
+
+  /**
+   * Find the character's record of a skill: which category it's stored under and its level.
+   * A skill dropped on gear may be the compendium copy or a world copy of the one on the character,
+   * so it matches either. A skill the character has never touched is untrained, filed under the same
+   * category a drop on the sheet would use (see #dropSkill).
+   * @param {Item} skill
+   * @param {string} skillUuid
+   * @returns {{uuid: string, category: string, level: string}}
+   */
+  _findSkillEntry(skill, skillUuid) {
+    const ids = [skillUuid, skill.uuid, skill._stats?.compendiumSource].filter(Boolean);
+    for (const [category, entries] of Object.entries(this.actor.system.skills ?? {})) {
+      const entry = (entries ?? []).find((e) => ids.includes(e.skill));
+      if (entry) return { uuid: entry.skill, category, level: entry.level };
+    }
+    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
+    const category = [skill.system.category, skill.system.skill_attribute].find((key) => key && key in folders)
+      ?? skill.system.skill_attribute;
+    return { uuid: skillUuid, category, level: "untrained" };
   }
 
 

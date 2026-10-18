@@ -17,6 +17,7 @@ import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from '.
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
+import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -39,6 +40,7 @@ Hooks.once('init', function () {
 
   // Add custom constants for configuration.
   CONFIG.LORD_OF_THE_MYSTERIES = LORD_OF_THE_MYSTERIES;
+  CONFIG.LORD_OF_THE_MYSTERIES.inventory = { ...INVENTORY_RULES };
 
   /**
    * Set an initiative formula for the system

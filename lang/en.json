@@ -59,7 +59,11 @@
         "Roll": "Roll",
         "Flavor": "{skill} Check ({attribute})",
         "FlavorOverride": "{skill} Check ({attribute} instead of {defaultAttribute})",
-        "UntrainedBlocked": "{skill} is untrained, and the GM has disabled untrained skill checks."
+        "UntrainedBlocked": "{skill} is untrained, and the GM has disabled untrained skill checks.",
+        "ActionFlavor": "{action}: {check}",
+        "ActionDice": "Dice",
+        "InvalidActionFormula": "The roll formula on {action} (\"{formula}\") isn't valid, so 1d20 was rolled.",
+        "InvalidActionFormulaHint": "This action's roll formula isn't valid, so 1d20 will be rolled instead:"
     },
 
     "GrantedSkills": {
@@ -271,7 +275,8 @@
       "RemoveTitle": "Remove Item",
       "RemoveConfirm": "Remove {name}?",
       "UnlistedSpells": "Other Spells",
-      "SpellListEmpty": "No spells in this list yet."
+      "SpellListEmpty": "No spells in this list yet.",
+      "Roll": "Roll"
     },
 
     "Damage_Types": {
@@ -351,6 +356,9 @@
       "GrantedAbilitiesHint": "Drop abilities here",
       "GrantedActions": "Actions it grants",
       "GrantedActionsHint": "Drop actions here",
+      "SkillUsed": "Skill used",
+      "SkillUsedHint": "Drop the skill this item's actions roll with (e.g. Pistol)",
+      "NoSkill": "None: its actions can't be rolled from the sheet",
       "Sizes": {
         "tiny": "Tiny (⅓ slot)",
         "small": "Small (½ slot)",
@@ -396,8 +404,18 @@
         "Suitcase": "−2 to skill and ability checks while fighting with a suitcase",
         "NotAnAbility": "{name} is not an ability.",
         "NotAnAction": "{name} is not an action.",
-        "AlreadyGranted": "{name} is already on this item."
+        "AlreadyGranted": "{name} is already on this item.",
+        "NotASkill": "{name} is not a skill.",
+        "SkillMissing": "The skill on {name} no longer exists."
       }
+    },
+    
+    "ActionSkill": {
+      "Label": "Skill",
+      "Hint": "Drop the skill this action rolls with (e.g. Pistol)",
+      "None": "None: this action can't be rolled from the character sheet",
+      "NotASkill": "{name} is not a skill.",
+      "Missing": "The skill on {name} no longer exists."
     }
   },
 

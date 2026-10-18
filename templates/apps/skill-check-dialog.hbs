@@ -1,11 +1,25 @@
 <div class="skill-check-dialog-content">
     <header class="skill-check-header">
+        {{!-- Only when rolling an action (e.g. a revolver's "Shoot"): its name and the dice it rolls. --}}
+        {{#if actionName}}
+        <span class="skill-check-action">{{actionName}}</span>
+        {{/if}}
         <span class="skill-name">{{skillName}}</span>
         <span class="skill-level">{{levelLabel}} ({{numberFormat levelBonus decimals=0 sign=true}})</span>
         {{#if flatModifier}}
         <span class="skill-flat-modifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.ItemModifier"}} ({{numberFormat flatModifier decimals=0 sign=true}})</span>
         {{/if}}
+        {{#if actionName}}
+        <span class="skill-check-dice">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.ActionDice"}}: {{actionDice}}</span>
+        {{/if}}
     </header>
+
+    {{#if actionFormulaInvalid}}
+    <p class="hint skill-check-formula-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.InvalidActionFormulaHint"}} <code>{{actionFormula}}</code>
+    </p>
+    {{/if}}
 
     <div class="form-group">
         <label>{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.LinkedAttribute"}}</label>

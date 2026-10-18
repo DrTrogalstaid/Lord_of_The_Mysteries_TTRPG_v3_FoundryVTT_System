@@ -283,3 +283,35 @@
   margin: 0.15rem 0 0;
   font-size: var(--font-size-12, 0.75rem);
 }
+
+.lotm .drop-entry-roll {
+  flex: 0 0 auto;
+  width: auto;
+  line-height: 1;
+}
+
+/* Skill slot on the action sheet's Details tab */
+.lotm .action-skill.drag-over {
+  outline: 2px dashed currentColor;
+  outline-offset: -2px;
+}
+
+.lotm .action-skill-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm .action-skill-entry img {
+  flex: 0 0 24px;
+  border: none;
+}
+
+.lotm .action-skill-name {
+  flex: 1;
+}
+
+.lotm .action-skill .hint {
+  margin: 2px 0 0;
+  opacity: 0.65;
+}

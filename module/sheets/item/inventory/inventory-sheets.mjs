@@ -117,7 +117,6 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
       }));
       return { key, label: list.label, hint: list.hint, entries };
     }));
-
     return context;
   }
 
@@ -149,12 +148,13 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     event.stopPropagation();                  // don't let the sheet's own drop handling see it too
     zone.classList.remove("drag-over");
 
-    const list = GRANT_LISTS[zone.dataset.grantList];
     const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
-    if (!list || data?.type !== "Item" || !data.uuid) return;
-
+    if (data?.type !== "Item" || !data.uuid) return;
     const doc = await fromUuid(data.uuid);
     if (!doc) return;
+
+    const list = GRANT_LISTS[zone.dataset.grantList];
+    if (!list) return;
     if (doc.type !== list.type) {
       ui.notifications.warn(game.i18n.format(list.wrongType, { name: doc.name }));
       return;

@@ -61,11 +61,16 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
      * @param {string} skillEntry.category    The system.skills bucket this entry lives in (str/agi/cha/ins/edu/languages)
      * @param {string} skillEntry.level       Current proficiency level for this actor (untrained/trained/.../grandMaster)
      * @param {string} [skillEntry.attribute] The skill's default linked attribute key, if already known (avoids a fromUuid lookup)
+     * @param {object} [skillEntry.action]    Set when rolling an action (e.g. a revolver's "Shoot") with this skill:
+     * @param {string} skillEntry.action.name       Shown in the window title and the chat card.
+     * @param {string} [skillEntry.action.formula]  The action's roll formula (its attackRollMacro). Used instead of the
+     *                                              plain 1d20; the skill bonuses are added after it. Blank = 1d20.
      */
     constructor(actor, skillEntry, options = {}) {
         super(options);
         this.actor = actor;
         this.skillEntry = skillEntry;
+        this.action = skillEntry.action ?? null;
         this.defaultAttribute = skillEntry.attribute ?? skillEntry.category;
         this.attributeKey = this.defaultAttribute;
         this.modifiers = []; // { id, label, value }
@@ -106,6 +111,33 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
     /*  Context / rendering                          */
     /* -------------------------------------------- */
 
+    /**
+     * Window title: "Shoot (Pistol)" when rolling an action, the usual skill check title otherwise.
+     * @override
+     */
+    get title() {
+        if (this.action) return `${this.action.name} (${this.skillEntry.name})`;
+        return super.title;
+    }
+
+    /**
+     * The dice part of the roll: the action's own formula when it has a valid one, otherwise 1d20.
+     * buildSkillCheckFormula puts this first and adds the attribute, skill level and modifiers after it,
+     * so the action formula should hold the dice plus anything special to that action (e.g. "1d20 + 1"),
+     * not the skill bonus. @-references (e.g. @attributes.str.total) use the actor's roll data.
+     * @returns {{die: string, custom: boolean, invalid: boolean, formula: string}}
+     *   die      What to roll.
+     *   custom   True when that's the action's formula.
+     *   invalid  The action has a formula, but it isn't a valid roll, so 1d20 is used instead.
+     */
+    #baseDie() {
+        const DEFAULT = "1d20"; // adjust to whatever this system's actual base die turns out to be
+        const formula = this.action?.formula?.trim() ?? "";
+        if (!formula || formula.toLowerCase() === "na") return { die: DEFAULT, custom: false, invalid: false, formula };
+        if (!Roll.validate(formula)) return { die: DEFAULT, custom: false, invalid: true, formula };
+        return { die: formula, custom: true, invalid: false, formula };
+    }
+
     async _prepareContext() {
         const attributes = Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, labelKey]) => ({
             key,
@@ -117,8 +149,14 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
 
         const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
         const flatModifier = this.skillEntry.flatModifier ?? 0;
+        const base = this.#baseDie();
 
         return {
+            // Rolling an action: its name, and the dice it rolls before the skill bonuses below are added.
+            actionName: this.action?.name ?? "",
+            actionDice: base.die,
+            actionFormulaInvalid: base.invalid,
+            actionFormula: base.formula,
             skillName: this.skillEntry.name,
             levelLabel: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level),
             levelBonus,
@@ -192,8 +230,15 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
         const levelLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level);
         const flatModifier = this.skillEntry.flatModifier ?? 0;
 
+        const base = this.#baseDie();
+        if (base.invalid) {
+            ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.InvalidActionFormula", {
+                action: this.action.name, formula: base.formula
+            }));
+        }
+
         const formula = buildSkillCheckFormula({
-            baseDie: "1d20", // adjust to whatever this system's actual base die turns out to be
+            baseDie: base.die, // 1d20, or the action's own formula (see #baseDie)
             attrAbbr,
             attrTotal,
             levelLabel,
@@ -208,7 +253,7 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
 
         const attributeChanged = this.attributeKey !== this.defaultAttribute;
         const defaultAttrLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.defaultAttribute]);
-        const flavor = attributeChanged
+        const checkFlavor = attributeChanged
             ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.FlavorOverride", {
                   skill: this.skillEntry.name,
                   attribute: game.i18n.localize(attr),
@@ -218,6 +263,14 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
                   skill: this.skillEntry.name,
                   attribute: game.i18n.localize(attr)
               });
+
+        // Rolling an action: put its name in front, e.g. "Shoot: Pistol check (Agility)".
+        const flavor = this.action
+            ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.ActionFlavor", {
+                  action: Handlebars.escapeExpression(this.action.name),
+                  check: checkFlavor
+              })
+            : checkFlavor;
 
         await roll.toMessage({
             speaker: ChatMessage.getSpeaker({ actor: this.actor }),

@@ -24,6 +24,12 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     schema.attackRollMacro = new fields.StringField({ required: false});
     schema.damageRollMacro = new fields.StringField({ required: false});
 
+    // The skill this action rolls with (UUID of a skill Item, e.g. Pistol). Blank = none.
+    // Set by dropping a skill on the action sheet's Skill slot (see helpers/skill-slot.mjs).
+    // When set, the action gets a dice button on the character sheet that opens the skill check
+    // dialog: the Attack Roll Macro is rolled, plus the character's bonuses in this skill.
+    schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
+
     //DC_Results
     schema.dcResults = new fields.StringField({ required: true, initial: "Results" });
 

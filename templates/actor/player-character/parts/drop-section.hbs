@@ -53,6 +53,13 @@
               <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{entry.grantedByLabel}}</span>
             {{/if}}
           </div>
+          {{!-- Actions with a skill: roll with that skill (PlayerCharacterSheet.#onRollAction). --}}
+          {{#if entry.canRoll}}
+            <button type="button" class="drop-entry-roll" data-action="rollAction" data-uuid="{{entry.uuid}}"
+                    data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Roll" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Roll'}}">
+              <i class="fa-solid fa-dice-d20"></i>
+            </button>
+          {{/if}}
           {{#if entry.hasStats}}
             <div class="drop-entry-stats">
               {{#if entry.actionTypeLabel}}

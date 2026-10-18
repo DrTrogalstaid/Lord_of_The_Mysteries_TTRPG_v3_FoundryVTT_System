@@ -89,10 +89,34 @@
         <input id="modifiers" class="blend-input" type="number" name="system.modifiers" value="{{system.modifiers}}" step="1" />
       </fieldset>
 
+      <!--Skill: the skill this action rolls with (e.g. Pistol). Drop a skill here; dropping another replaces it.
+          Drop handling: bindSkillSlot() in helpers/skill-slot.mjs. -->
+      <fieldset class="action-skill" data-skill-slot>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.Label"}}</legend>
+        {{#if actionSkill}}
+          <div class="action-skill-entry">
+            <img src="{{actionSkill.img}}" alt="" width="24" height="24">
+            {{#if actionSkill.broken}}
+              <span class="action-skill-name">{{actionSkill.name}}</span>
+            {{else}}
+              <a class="action-skill-name" data-action="openSkill" data-uuid="{{actionSkill.uuid}}">{{actionSkill.name}}</a>
+            {{/if}}
+            {{#if editable}}
+              <a class="item-control" data-action="removeSkill" title="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                <i class="fas fa-trash"></i>
+              </a>
+            {{/if}}
+          </div>
+        {{else}}
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.None"}}</p>
+        {{/if}}
+        {{#if editable}}<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.Hint"}}</p>{{/if}}
+      </fieldset>
+
       <!--Attack Roll Macro-->
       <fieldset>
         <legend>Attack Roll Macro</legend>
-        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="Attack roll macro" />
+        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
       </fieldset>
 
       <!--Damage Roll Macro-->
