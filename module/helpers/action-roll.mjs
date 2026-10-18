@@ -157,6 +157,8 @@ export function registerActionChatListeners() {
     const button = html.querySelector("button[data-lotm-action='damage']");
     if (!button) return;
 
+    html.querySelector(".message-content")?.append(button);
+
     button.addEventListener("click", async () => {
       // SkillCheckDialog saved which action and character this attack was for.
       const actionUuid = message.getFlag("lotm", "actionUuid");
