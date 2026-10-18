@@ -1087,10 +1087,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    * @returns {Record<string, string>}
    */
   _prepareDamageTypes() {
-    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.Damage_Types") ?? {};
+    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.DamageTypes") ?? {};
     
     return Object.fromEntries(
-      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.Damage_Types.${key}`)])
+      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.DamageTypes.${key}`)])
     );
   }
 

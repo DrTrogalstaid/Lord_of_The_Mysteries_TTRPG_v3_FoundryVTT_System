@@ -279,7 +279,7 @@
       "Roll": "Roll"
     },
 
-    "Damage_Types": {
+    "DamageTypes": {
       "Physical": "Physical",
       "Curse": "Curse",
       "Fire": "Fire",

@@ -58,8 +58,8 @@
       <!--Action Type-->
       <fieldset class="actionType">
         <legend>Action Type</legend>
-        <select name="system.action_type" {{#unless editable}}disabled{{/unless}}>
-          {{selectOptions config.actionTypes selected=system.action_type localize=true}}
+        <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.actionTypes selected=system.actionType localize=true}}
         </select>
       </fieldset>
 
@@ -74,7 +74,7 @@
       <!--Spirituality Cost-->
       <fieldset>
         <legend>Spirituality Cost</legend>
-        <input id="spirituality_cost" class="blend-input" type="number" name="system.spirituality_cost" value="{{system.spirituality_cost}}" min="0" step="1" />
+        <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" min="0" step="1" />
       </fieldset>
 
       <!--Range-->
@@ -125,13 +125,13 @@
         <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="Damage roll macro" />
       </fieldset>
 
-      <!--Damage Type: only shown in the damage chat message title, e.g. "Revolver: Damage (piercing)"-->
-      <fieldset>
+      <!--Damage Type: shown in the damage chat message title. Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.
+          The blank first option = no damage type. -->
+      <fieldset class="damageType">
         <legend>Damage Type</legend>
-        <select class="blend-input" name="system.damageType">
-          {{selectOptions @root.damageTypeChoices selected=row.damageType}}
+        <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.damageTypes selected=system.damageType blank="" localize=true}}
         </select>
-        <input id="damageType" class="blend-input" type="text" name="system.damageType" value="{{system.damageType}}" placeholder="e.g. piercing" />
       </fieldset>
 
       <!--DC Results-->
