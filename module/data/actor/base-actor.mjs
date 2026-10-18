@@ -33,6 +33,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             return obj;
         }, {}));
 
+        schema.damageBonus = new fields.NumberField({...requiredInteger, initial: 0});
+
         schema.movement = new fields.NumberField({ required: true, integer: true});
         
         schema.defenses = new fields.SchemaField({
@@ -89,7 +91,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     prepareDerivedData() {
         const sequences = this.parent?.items.filter(i => i.type === "sequence") ?? [];
 
-
         // Attribute Bonus Calculation
         // Including sequence gains so resource calculations are correct.
         for (const [key, attr] of Object.entries(this.attributes)) {
@@ -100,6 +101,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0)
                     + (attr.corruption ?? 0) + attr.sequence_bonus;
         }
+
+        // Strength Bonus Calculation
+        const strengthDamageBonusTable = CONFIG.LORD_OF_THE_MYSTERIES.strengthDamageBonus;
+        const strength = this.attributes.str.total;
+        const strengthRow = strengthDamageBonusTable.findLast((r) => strength >= r.strength) ?? table[0];
+        this.damageBonus = strengthRow.bonus;
 
         // Inventory: slots carried, and -1 Agility per slot over the Strength limit (see helpers/inventory.mjs).
         // This has to happen before movement and defenses, because the Agility penalty lowers both.

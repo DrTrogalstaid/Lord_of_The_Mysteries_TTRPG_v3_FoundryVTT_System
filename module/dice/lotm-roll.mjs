@@ -42,10 +42,26 @@ export default class LOTM_VTTRoll extends Roll {
                     rolls: []
                 });
             }
+            else if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.FunctionTerm)
+                || foundry.utils.isSubclass(term.constructor, foundry.dice.terms.ParentheticalTerm) ) {
+                // Dice inside floor(...) or (...) get their own rows, like top-level dice (the 1d6).
+                for ( const die of term.dice ?? [] ) {
+                    parts.push(die.getTooltipData());
+                }
+                // Then one row for the result, labelled like the attack's STR row (e.g. "Half STR  1").
+                parts.push({
+                    formula: term.flavor || term.formula,
+                    total: term.total,
+                    faces: null,
+                    flavor: "",
+                    rolls: []
+                });
+            }
         }
 
         return foundry.applications.handlebars.renderTemplate(this.constructor.TOOLTIP_TEMPLATE, { parts });
     }
+
 
     /* -------------------------------------------- */
 
@@ -64,6 +80,13 @@ export default class LOTM_VTTRoll extends Roll {
 
         return cleanFormula;
     }
+
+    async _prepareChatRenderContext(options = {}) {
+        const context = await super._prepareChatRenderContext(options);
+        if ( !options.isPrivate ) context.formula = this.cleanFormula;
+        return context;
+    }
+
 
     /* -------------------------------------------- */
     /*  Roll result inspection (crit / fumble / dice pools)         */

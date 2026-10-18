@@ -147,3 +147,25 @@ LORD_OF_THE_MYSTERIES.mysticalLanguages = {
     hermes: "Hermes",
     death: "Death"
 };
+
+LORD_OF_THE_MYSTERIES.strengthDamageBonus = [
+    { strength: 0,  bonus: "-2" },
+    { strength: 1,  bonus: "-1" },
+    { strength: 2,  bonus: "0" },
+    { strength: 3,  bonus: "1" },
+    { strength: 4,  bonus: "1d2" },
+    { strength: 5,  bonus: "1d4" },
+    { strength: 6,  bonus: "1d6" },
+    { strength: 7,  bonus: "1d8" },
+    { strength: 8,  bonus: "1d10" },
+    { strength: 9,  bonus: "1d12" },
+    { strength: 10, bonus: "2d6" },
+    { strength: 11, bonus: "2d8" },
+    { strength: 12, bonus: "2d10" },
+    { strength: 13, bonus: "2d12" },
+    { strength: 14, bonus: "3d8" },
+    { strength: 15, bonus: "3d10" },
+    { strength: 20, bonus: "3d12" },
+    { strength: 25, bonus: "4d10" },
+    { strength: 30, bonus: "4d12" },
+];
