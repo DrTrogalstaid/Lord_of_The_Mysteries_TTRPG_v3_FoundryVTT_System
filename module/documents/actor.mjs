@@ -37,6 +37,7 @@ export class LordOfTheMysteriesActor extends Actor {
 
   /** @override */
   prepareBaseData() {
+    super.prepareBaseData();
     // Data modifications in this step occur before processing embedded
     // documents or derived data.
   }
@@ -49,6 +50,7 @@ export class LordOfTheMysteriesActor extends Actor {
    * is queried and has a roll executed directly from it).
    */
   prepareDerivedData() {
+    super.prepareDerivedData();
     const actorData = this;
     const flags = actorData.flags.lotm || {};
   }

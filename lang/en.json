@@ -416,6 +416,14 @@
       "None": "None: this action can't be rolled from the character sheet",
       "NotASkill": "{name} is not a skill.",
       "Missing": "The skill on {name} no longer exists."
+    },
+    
+    "Action":{
+      "RollDamage": "Roll Damage",
+      "DamageFlavor": "{action}: Damage{type}",
+      "InvalidDamage": "{name} has no valid damage formula.",
+      "NoActor": "{name} needs a character to roll.",
+      "Gone": "That action or character no longer exists."
     }
   },
 

@@ -61,10 +61,13 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
      * @param {string} skillEntry.category    The system.skills bucket this entry lives in (str/agi/cha/ins/edu/languages)
      * @param {string} skillEntry.level       Current proficiency level for this actor (untrained/trained/.../grandMaster)
      * @param {string} [skillEntry.attribute] The skill's default linked attribute key, if already known (avoids a fromUuid lookup)
-     * @param {object} [skillEntry.action]    Set when rolling an action (e.g. a revolver's "Shoot") with this skill:
-     * @param {string} skillEntry.action.name       Shown in the window title and the chat card.
-     * @param {string} [skillEntry.action.formula]  The action's roll formula (its attackRollMacro). Used instead of the
-     *                                              plain 1d20; the skill bonuses are added after it. Blank = 1d20.
+     * @param {Item} [skillEntry.action]      The action item, when rolling an action (e.g. a revolver's "Shoot") with
+     *                                        this skill. Opened through helpers/action-roll.mjs. The dialog uses its
+     *                                        name (window title, chat card), system.attackRollMacro (rolled instead of
+     *                                        the plain 1d20) and system.modifiers (added as a removable modifier).
+     * @param {object} [skillEntry.chat]      Extra things to put on the chat message:
+     * @param {object} [skillEntry.chat.flags]   Message flags (actions save which action/character this was).
+     * @param {string} [skillEntry.chat.footer]  HTML added after the flavor text (actions add a "Roll Damage" button).
      */
     constructor(actor, skillEntry, options = {}) {
         super(options);
@@ -76,6 +79,13 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
         this.modifiers = []; // { id, label, value }
         this.submitted = false;
         this.resolve = null;
+
+        // The action's own Modifiers field starts in the modifier list, labelled with the action's name,
+        // so the player sees it in the breakdown and can remove it for this roll if it doesn't apply.
+        const actionModifier = Number(this.action?.system.modifiers) || 0;
+        if (actionModifier) {
+            this.modifiers.push({ id: foundry.utils.randomID(), label: this.action.name, value: actionModifier });
+        }
     }
 
     /**
@@ -132,7 +142,7 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
      */
     #baseDie() {
         const DEFAULT = "1d20"; // adjust to whatever this system's actual base die turns out to be
-        const formula = this.action?.formula?.trim() ?? "";
+        const formula = this.action?.system.attackRollMacro?.trim() ?? "";
         if (!formula || formula.toLowerCase() === "na") return { die: DEFAULT, custom: false, invalid: false, formula };
         if (!Roll.validate(formula)) return { die: DEFAULT, custom: false, invalid: true, formula };
         return { die: formula, custom: true, invalid: false, formula };
@@ -272,9 +282,13 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
               })
             : checkFlavor;
 
+        // Extras from the caller, e.g. an action's "Roll Damage" button and the flags it needs.
+        const chat = this.skillEntry.chat ?? {};
+
         await roll.toMessage({
             speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-            flavor,
+            flavor: flavor + (chat.footer ?? ""),
+            flags: chat.flags ?? {},
             rollMode: game.settings.get("core", "rollMode")
         });
 

@@ -3,6 +3,7 @@
  **/
 
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
+import { rollActionAttack } from "../helpers/action-roll.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
@@ -101,8 +102,8 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
 function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
   const system = item.system ?? {};
   // Abilities and spells use camelCase fields; Actions use snake_case.
-  const cost = system.spiritualityCost ?? system.spirituality_cost ?? null;
-  const actionType = system.actionType || system.action_type || "";
+  const cost = system.spiritualityCost ?? system.spiritualityCost ?? null;
+  const actionType = system.actionType || system.actionType || "";
   const actionTypeText = actionTypeLabel(actionType);
   const isSequence = item.type === "sequence";
   return {
@@ -1229,53 +1230,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /**
    * Roll an action with its skill (data-uuid = the action). Works for any action on the sheet, whether the
-   * character owns it or it's granted by a Sequence, ability or gear. Opens the same SkillCheckDialog as the
-   * Character tab, filled in with the character's level in that skill, so the bonus matches the Character tab.
+   * character owns it or it's granted by a Sequence, ability or gear. All the rolling lives in
+   * helpers/action-roll.mjs, so the sheet, hotbar macros and the chat damage button share one path.
    */
   static async #onRollAction(event, target) {
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
-    const skillUuid = action?.system.skill;
-    if (!skillUuid) return;
-
-    const skill = await fromUuid(skillUuid).catch(() => null);
-    if (!skill) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.ActionSkill.Missing", { name: action.name }));
-      return;
-    }
-
-    const { uuid, category, level } = this._findSkillEntry(skill, skillUuid);
-    SkillCheckDialog.prompt(this.actor, {
-      uuid,
-      name: skill.name,
-      category,
-      attribute: skill.system.skill_attribute || category,
-      level,
-      flatModifier: skill.system.modifier ?? 0,
-      // The dialog titles itself "Shoot (Pistol)" and rolls the action's formula plus the skill bonuses.
-      action: { name: action.name, formula: action.system.attackRollMacro ?? "" },
-    });
-  }
-
-
-  /**
-   * Find the character's record of a skill: which category it's stored under and its level.
-   * A skill dropped on gear may be the compendium copy or a world copy of the one on the character,
-   * so it matches either. A skill the character has never touched is untrained, filed under the same
-   * category a drop on the sheet would use (see #dropSkill).
-   * @param {Item} skill
-   * @param {string} skillUuid
-   * @returns {{uuid: string, category: string, level: string}}
-   */
-  _findSkillEntry(skill, skillUuid) {
-    const ids = [skillUuid, skill.uuid, skill._stats?.compendiumSource].filter(Boolean);
-    for (const [category, entries] of Object.entries(this.actor.system.skills ?? {})) {
-      const entry = (entries ?? []).find((e) => ids.includes(e.skill));
-      if (entry) return { uuid: entry.skill, category, level: entry.level };
-    }
-    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-    const category = [skill.system.category, skill.system.skill_attribute].find((key) => key && key in folders)
-      ?? skill.system.skill_attribute;
-    return { uuid: skillUuid, category, level: "untrained" };
+    if (action) await rollActionAttack(this.actor, action);
   }
 
 

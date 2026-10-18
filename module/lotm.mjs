@@ -13,7 +13,6 @@ import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/
 import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
 import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
 
-
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
@@ -21,6 +20,9 @@ import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
+
+// Import action attack/damage rolls (the "Roll Damage" chat button listener).
+import { registerActionChatListeners } from './helpers/action-roll.mjs';
 
 // Import DataModel classes
 import * as models from './data/_module.mjs';
@@ -59,6 +61,9 @@ Hooks.once('init', function () {
   // stays registered for older chat messages and other modules' rolls.
   CONFIG.Dice.rolls.unshift(LOTM_VTTRoll);
 
+  // Make the "Roll damage" button on action attack messages work.
+  registerActionChatListeners();
+
   // World setting read by SkillCheckDialog.prompt(): when off, untrained
   // skills can't be rolled at all.
   game.settings.register('lotm', 'allowUntrainedSkillChecks', {
@@ -72,7 +77,6 @@ Hooks.once('init', function () {
 
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;
-
   // Note that you don't need to declare a DataModel
   // for the base actor/item classes - they are included
   // with the Character/NPC as part of super.defineSchema()
@@ -235,7 +239,8 @@ function rollItemMacro(itemUuid) {
       );
     }
 
-    // Trigger the item roll
+    // Actions roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
+    if (item.type === 'action') return item.system.rollAttack();
     item.roll();
   });
 }
