@@ -276,7 +276,10 @@
       "RemoveConfirm": "Remove {name}?",
       "UnlistedSpells": "Other Spells",
       "SpellListEmpty": "No spells in this list yet.",
-      "Roll": "Roll"
+      "Roll": "Roll",
+      "Damage": "Damage",
+      "Range": "Range",
+      "RangeFeet": "{range} ft"
     },
 
     "DamageTypes": {

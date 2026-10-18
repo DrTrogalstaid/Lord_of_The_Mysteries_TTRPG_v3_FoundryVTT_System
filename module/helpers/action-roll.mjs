@@ -1,5 +1,7 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
+import { calculateSkillModifier } from "./skill-modifiers.mjs";
+import { computeSkillCheckTotal } from "./skill-check-formula.mjs";
 
 /**
  * Action rolls
@@ -43,6 +45,80 @@ export function findSkillEntry(actor, skill, skillUuid) {
   return { uuid: skillUuid, category, level: "untrained" };
 }
 
+/**
+ * Everything SkillCheckDialog needs to know about the skill an action rolls with.
+ * Used both to roll the action and to show its "+5" on the sheet, so the two always agree.
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {Promise<{skill: Item, uuid: string, category: string, level: string, attribute: string, flatModifier: number}|null>}
+ *   null when the action has no skill, or its skill no longer exists.
+ */
+async function resolveActionSkill(actor, action) {
+  const skillUuid = action.system.skill;
+  if (!skillUuid) return null;
+
+  const skill = await fromUuid(skillUuid).catch(() => null);
+  if (!skill) return null;
+
+  const { uuid, category, level } = findSkillEntry(actor, skill, skillUuid);
+  return {
+    skill,
+    uuid,
+    category,
+    level,
+    attribute: skill.system.skill_attribute || category,
+    flatModifier: skill.system.modifier ?? 0,
+  };
+}
+
+/**
+ * The dice an action's attack rolls: its Attack Roll Macro when that's a valid formula, otherwise 1d20.
+ * (The same rule as SkillCheckDialog #baseDie.)
+ * @param {Item} action
+ * @returns {string}
+ */
+export function getAttackDice(action) {
+  const formula = action?.system.attackRollMacro?.trim() ?? "";
+  if (!formula || formula.toLowerCase() === "na" || !Roll.validate(formula)) return "1d20";
+  return formula;
+}
+
+/**
+ * What the sheet's attack button shows for an action: the skill name and the bonus added to the dice.
+ * The bonus is worked out exactly like the total in SkillCheckDialog before the player adds anything:
+ *   attribute total + skill level bonus + the skill's own modifier + the action's Modifiers field
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {Promise<{label: string, bonus: number, bonusLabel: string, tooltip: string}|null>}
+ *   null when there's nothing to roll with (no character, no skill, or the skill is gone).
+ */
+export async function getActionAttackSummary(actor, action) {
+  if (!actor) return null;
+  const info = await resolveActionSkill(actor, action);
+  if (!info) return null;
+
+  // The action's Modifiers field goes in as one modifier, the same way the dialog adds it.
+  const actionModifier = Number(action.system.modifiers) || 0;
+  const modifiers = actionModifier ? [{ id: "action", label: action.name, value: actionModifier }] : [];
+
+  const bonus = computeSkillCheckTotal({
+    attrTotal: actor.system.attributes[info.attribute]?.total ?? 0,
+    levelBonus: calculateSkillModifier(info.level, 0),
+    flatModifier: info.flatModifier,
+    modifiers,
+  });
+
+  // "+5", "+0" or "-2"
+  const bonusLabel = bonus < 0 ? `${bonus}` : `+${bonus}`;
+  return {
+    label: info.skill.name,
+    bonus,
+    bonusLabel,
+    // Hover text, e.g. "1d20 + 5"
+    tooltip: `${getAttackDice(action)} ${bonus < 0 ? "-" : "+"} ${Math.abs(bonus)}`,
+  };
+}
+
 /* -------------------------------------------- */
 /*  Attack                                       */
 /* -------------------------------------------- */
@@ -60,23 +136,21 @@ export async function rollActionAttack(actor, action) {
     return null;
   }
 
-  const skillUuid = action.system.skill;
-  if (!skillUuid) return null; // no skill set: the sheet doesn't show a dice button for these
+  if (!action.system.skill) return null; // no skill set: the sheet doesn't show an attack button for these
 
-  const skill = await fromUuid(skillUuid).catch(() => null);
-  if (!skill) {
+  const info = await resolveActionSkill(actor, action);
+  if (!info) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.ActionSkill.Missing", { name: action.name }));
     return null;
   }
 
-  const { uuid, category, level } = findSkillEntry(actor, skill, skillUuid);
   return SkillCheckDialog.prompt(actor, {
-    uuid,
-    name: skill.name,
-    category,
-    attribute: skill.system.skill_attribute || category,
-    level,
-    flatModifier: skill.system.modifier ?? 0,
+    uuid: info.uuid,
+    name: info.skill.name,
+    category: info.category,
+    attribute: info.attribute,
+    level: info.level,
+    flatModifier: info.flatModifier,
     // The action item itself. The dialog reads its fields straight from action.system.
     action,
     // Added to the chat message: which action/character this was (for the damage button),
@@ -104,6 +178,40 @@ export function getDamageFormula(action) {
 }
 
 /**
+ * The action's damage type as a readable name. The field is free text, so:
+ *   "fire" (a key in CONFIG.LORD_OF_THE_MYSTERIES.damageTypes) -> "Fire" in the user's language
+ *   anything else ("piercing")                                 -> shown as typed
+ * @param {Item} action
+ * @returns {string}  "" when the action has no damage type.
+ */
+export function getDamageTypeLabel(action) {
+  const type = action?.system.damageType?.trim() ?? "";
+  if (!type) return "";
+  const key = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes?.[type.toLowerCase()];
+  return key ? game.i18n.localize(key) : type;
+}
+
+/**
+ * What the sheet's Damage button shows on hover, e.g. "2d6+3 Fire".
+ * Values like @str are filled in from the character, so the player sees the real numbers.
+ * @param {Actor} actor   The character whose sheet this is (can be empty, then @values stay as typed).
+ * @param {Item} action
+ * @returns {string}  "" when the action has no damage formula (the sheet then hides the button).
+ */
+export function getDamageTooltip(actor, action) {
+  let formula = getDamageFormula(action);
+  if (!formula) return "";
+
+  if (actor) {
+    // missing: "0" means an @value the character doesn't have counts as 0, same as when it's rolled.
+    formula = Roll.replaceFormulaData(formula, actor.getRollData(), { missing: "0" });
+  }
+
+  const type = getDamageTypeLabel(action);
+  return type ? `${formula} ${type}` : formula;
+}
+
+/**
  * Roll an action's damage from its Damage Roll Macro and post it to chat.
  * @param {Actor} actor
  * @param {Item} action
@@ -123,7 +231,7 @@ export async function rollActionDamage(actor, action) {
 
   const roll = await new LOTM_VTTRoll(formula, actor.getRollData()).evaluate();
 
-  const damageType = action.system.damageType?.trim();
+  const damageType = getDamageTypeLabel(action);
   const flavor = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamageFlavor", {
     action: Handlebars.escapeExpression(action.name),
     type: damageType ? ` (${Handlebars.escapeExpression(damageType)})` : "",

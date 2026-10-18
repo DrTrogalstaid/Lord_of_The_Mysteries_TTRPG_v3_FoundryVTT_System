@@ -12,6 +12,12 @@
   entries  Array from context.sections.<zone>.
   remove   data-action for the delete button (owned entries only).
   add      Optional data-action for the "+" button.
+
+  Action entries (entry.isAction) get extra fields (buildEntry / #addActionButtons in player-character-sheet.mjs):
+    entry.attack   { label, bonusLabel, tooltip }  the attack button ("Pistol +5"). Empty = no skill set.
+    entry.damage   { tooltip }                     the damage button. Empty = no damage formula.
+    entry.hasRolls                                 true when there's at least one of the two buttons.
+    entry.rangeLabel                               the Range stat ("30 ft", blank when unset).
 --}}
 <div class="drop-section" data-drop-zone="{{zone}}">
   <header class="drop-section-header">
@@ -29,7 +35,7 @@
   {{#if entries.length}}
     <ol class="drop-section-list">
       {{#each entries as |entry|}}
-        <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}" data-key="{{entry.key}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
+        <li class="drop-entry{{#if entry.nested}} granted{{/if}}{{#if entry.broken}} broken{{/if}}{{#if entry.isAction}} action{{/if}}" data-key="{{entry.key}}" data-uuid="{{entry.uuid}}" data-item-id="{{entry.id}}">
           {{#if entry.broken}}
             <span class="drop-entry-icon">
               <img class="drop-entry-img" src="{{entry.img}}" alt="" width="28" height="28">
@@ -40,27 +46,66 @@
               <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
             </button>
           {{/if}}
+
           <div class="drop-entry-main">
-            {{#if entry.broken}}
-              <span class="drop-entry-name">{{entry.name}}</span>
-            {{else}}
-              <a class="drop-entry-name" data-action="openItem" data-uuid="{{entry.uuid}}">{{entry.name}}</a>
-            {{/if}}
+            <div class="drop-entry-title-row">
+              {{#if entry.broken}}
+                <span class="drop-entry-name">{{entry.name}}</span>
+              {{else}}
+                <a class="drop-entry-name" data-action="openItem" data-uuid="{{entry.uuid}}">{{entry.name}}</a>
+              {{/if}}
+              {{#if entry.grantedByLabel}}
+                <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{entry.grantedByLabel}}</span>
+              {{/if}}
+            </div>
             {{#if entry.detail}}
               <span class="drop-entry-detail">{{entry.detail}}</span>
             {{/if}}
-            {{#if entry.grantedByLabel}}
-              <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{entry.grantedByLabel}}</span>
-            {{/if}}
+
+            {{!-- Action buttons, pf2e style: [d20 Pistol +5] [Damage]. Hidden on broken entries. --}}
+            {{#unless entry.broken}}
+              {{#if entry.isAction}}
+                {{#if entry.hasRolls}}
+                  <div class="drop-entry-rolls">
+                    {{#if entry.attack}}
+                      {{!-- Opens the skill check dialog (PlayerCharacterSheet.#onRollAction). --}}
+                      <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{entry.uuid}}"
+                              data-tooltip="{{entry.attack.tooltip}}">
+                        <i class="fa-solid fa-dice-d20"></i>
+                        <span class="drop-entry-roll-label">{{entry.attack.label}}</span>
+                        <span class="drop-entry-roll-bonus">{{entry.attack.bonusLabel}}</span>
+                      </button>
+                    {{/if}}
+                    {{#if entry.damage}}
+                      {{!-- Hover shows what will be rolled, e.g. "2d6+1 Piercing" (getDamageTooltip in action-roll.mjs). --}}
+                      <button type="button" class="drop-entry-roll-btn damage" data-action="rollDamage" data-uuid="{{entry.uuid}}"
+                              data-tooltip="{{entry.damage.tooltip}}">
+                        {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
+                      </button>
+                    {{/if}}
+                  </div>
+                {{/if}}
+              {{/if}}
+            {{/unless}}
           </div>
-          {{!-- Actions with a skill: roll with that skill (PlayerCharacterSheet.#onRollAction). --}}
-          {{#if entry.canRoll}}
-            <button type="button" class="drop-entry-roll" data-action="rollAction" data-uuid="{{entry.uuid}}"
-                    data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Roll" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Roll'}}">
-              <i class="fa-solid fa-dice-d20"></i>
-            </button>
-          {{/if}}
-          {{#if entry.hasStats}}
+
+          {{!-- Stats on the right. Actions always show all three, so the columns line up row to row. --}}
+          {{#if entry.isAction}}
+            <div class="drop-entry-stats">
+              <div class="drop-entry-stat drop-entry-action-type">
+                <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+                <span class="drop-entry-stat-value">{{entry.actionTypeLabel}}</span>
+              </div>
+              <div class="drop-entry-stat drop-entry-cost">
+                <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+                <span class="drop-entry-stat-value">{{entry.cost}}</span>
+              </div>
+              <div class="drop-entry-stat drop-entry-range">
+                <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Range"}}</span>
+                <span class="drop-entry-stat-value">{{entry.rangeLabel}}</span>
+              </div>
+            </div>
+          {{else if entry.hasStats}}
             <div class="drop-entry-stats">
               {{#if entry.actionTypeLabel}}
                 <div class="drop-entry-stat drop-entry-action-type">
@@ -92,6 +137,7 @@
               {{/if}}
             </div>
           {{/if}}
+
           {{#if ../editable}}
             {{#if entry.canMove}}
               <div class="drop-entry-move">

@@ -3,7 +3,7 @@
  **/
 
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
-import { rollActionAttack } from "../helpers/action-roll.mjs";
+import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
@@ -101,9 +101,10 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
  */
 function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
   const system = item.system ?? {};
-  // Abilities and spells use camelCase fields; Actions use snake_case.
-  const cost = system.spiritualityCost ?? system.spiritualityCost ?? null;
-  const actionType = system.actionType || system.actionType || "";
+  const isAction = item.type === "action";
+  // Actions always show a cost (blank counts as 0); for abilities and spells an unset cost is hidden.
+  const cost = isAction ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
+  const actionType = system.actionType || "";
   const actionTypeText = actionTypeLabel(actionType);
   const isSequence = item.type === "sequence";
   return {
@@ -133,8 +134,15 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     grantedByLabel: "",
     // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
     spellList,
-    // Actions with a skill get a dice button that rolls them with that skill (#onRollAction).
-    canRoll: item.type === "action" && !!system.skill,
+    // Actions: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
+    isAction,
+    rangeLabel: isAction && system.range != null
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RangeFeet", { range: system.range })
+      : "",
+    // The attack and damage buttons. They need the character, so #addActionButtons fills them in later.
+    attack: null,
+    damage: null,
+    hasRolls: false,
   };
 }
 
@@ -294,6 +302,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
       rollAction: PlayerCharacterSheet.#onRollAction,
+      rollDamage: PlayerCharacterSheet.#onRollDamage,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
       addGrantedCustom: PlayerCharacterSheet._onAddGrantedCustom,
       addGrantedAnalysis: PlayerCharacterSheet._onAddGrantedAnalysis,
@@ -770,6 +779,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const ignored = new Set();      // source uuids of unsupported types
     const abilityByName = new Map(); // lower-case ability name -> entry: a character has each ability once
     const queue = [];
+    const actionRows = [];          // [entry, action Item] pairs: their roll buttons are filled in at the end
     this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
     // 1. Owned Items
@@ -782,6 +792,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
       bySource.set(key, entry);
+      if (item.type === "action") actionRows.push([entry, item]);
       if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
     }
@@ -857,6 +868,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
           bySource.set(key, entry);
           sections[section].push(entry);
+          if (doc.type === "action") actionRows.push([entry, doc]);
           if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
           // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
           if (!gearAction) queue.push(doc);
@@ -892,7 +904,26 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     }
 
+    // Attack and damage buttons on every action row. Promise.all looks up all the actions' skills at once
+    // instead of one after another.
+    await Promise.all(actionRows.map(([entry, action]) => this.#addActionButtons(entry, action)));
+
     return sections;
+  }
+
+
+  /**
+   * Fill in an action row's buttons:
+   *   entry.attack  "Pistol +5" (missing when the action has no skill, or its skill is gone)
+   *   entry.damage  hover text like "1d8+3 Physical" (missing when the action has no damage formula)
+   * @param {object} entry   The row from buildEntry.
+   * @param {Item} action
+   */
+  async #addActionButtons(entry, action) {
+    entry.attack = await getActionAttackSummary(this.actor, action);
+    const damageTooltip = getDamageTooltip(this.actor, action);
+    entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
+    entry.hasRolls = !!(entry.attack || entry.damage);
   }
 
   /* -------------------------------------------- */
@@ -1236,6 +1267,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   static async #onRollAction(event, target) {
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
     if (action) await rollActionAttack(this.actor, action);
+  }
+
+
+  /**
+   * Roll an action's damage straight from the sheet (data-uuid = the action), without rolling the attack first.
+   * Same roll and chat message as the "Roll Damage" button in chat.
+   */
+  static async #onRollDamage(event, target) {
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await rollActionDamage(this.actor, action);
   }
 
 
