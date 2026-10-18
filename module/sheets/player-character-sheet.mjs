@@ -1104,7 +1104,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const current = this.actor.toObject().system.damage_resistance ?? [];
     
     await this.actor.update({
-      "system.damage_resistance": [...current, { damage_type: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
+      "system.damage_resistance": [...current, { damageType: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
     });
   }
 

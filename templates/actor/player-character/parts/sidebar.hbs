@@ -52,8 +52,8 @@
       <ul class="damage-resistance-list">
         {{#each system.damage_resistance as |row|}}
         <li class="damage-resistance-row">
-          <select class="damage-resistance-type" name="system.damage_resistance.{{@index}}.damage_type">
-            {{selectOptions @root.damageTypeChoices selected=row.damage_type}}
+          <select class="damage-resistance-type" name="system.damage_resistance.{{@index}}.damageType">
+            {{selectOptions @root.damageTypeChoices selected=row.damageType}}
           </select>
           <input
             type="number"

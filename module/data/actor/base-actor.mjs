@@ -45,7 +45,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         schema.damage_resistance = new fields.ArrayField(
             new fields.SchemaField({
-                damage_type: new fields.StringField({ required: true, initial: CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.Physical }),
+                damageType: new fields.StringField({ required: true, initial: CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.Physical }),
                 value : new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 })
             })
         );

@@ -128,6 +128,9 @@
       <!--Damage Type: only shown in the damage chat message title, e.g. "Revolver: Damage (piercing)"-->
       <fieldset>
         <legend>Damage Type</legend>
+        <select class="blend-input" name="system.damageType">
+          {{selectOptions @root.damageTypeChoices selected=row.damageType}}
+        </select>
         <input id="damageType" class="blend-input" type="text" name="system.damageType" value="{{system.damageType}}" placeholder="e.g. piercing" />
       </fieldset>
 
