@@ -112,6 +112,18 @@
         "ASSISTANT": "OWNER"
       },
       "flats": {}
+    },
+    {
+      "name": "spell_and_rituals_compendium",
+      "label": "Spell and Rituals",
+      "path": "packs/spell_and_rituals_compendium",
+      "type": "Item",
+      "system": "lotm",
+      "ownershop": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flats": {}
     }
   ],
   "packFolders": [],
