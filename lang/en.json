@@ -426,7 +426,8 @@
       "DamageFlavor": "{action}: Damage{type}",
       "InvalidDamage": "{name} has no valid damage formula.",
       "NoActor": "{name} needs a character to roll.",
-      "Gone": "That action or character no longer exists."
+      "Gone": "That action or character no longer exists.",
+      "InvalidAttack": "{name} has no valid attack formula."
     }
   },
 

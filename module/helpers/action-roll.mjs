@@ -1,7 +1,7 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
-import { computeSkillCheckTotal } from "./skill-check-formula.mjs";
+import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 
 /**
  * Action rolls
@@ -84,16 +84,31 @@ export function getAttackDice(action) {
 }
 
 /**
+ * The action's own Attack Roll Macro, or "" when it has none. Blank and "na" both mean none.
+ * Unlike getAttackDice there's no 1d20 fallback: an action with no skill needs a real formula to roll.
+ * @param {Item} action
+ * @returns {string}
+ */
+export function getAttackFormula(action) {
+  const formula = action?.system.attackRollMacro?.trim() ?? "";
+  return formula.toLowerCase() === "na" ? "" : formula;
+}
+
+/**
  * What the sheet's attack button shows for an action: the skill name and the bonus added to the dice.
  * The bonus is worked out exactly like the total in SkillCheckDialog before the player adds anything:
  *   attribute total + skill level bonus + the skill's own modifier + the action's Modifiers field
+ * An action with no skill but its own Attack Roll Macro gets a plain "Roll" button instead
+ * (see getUnskilledAttackSummary).
  * @param {Actor} actor
  * @param {Item} action
  * @returns {Promise<{label: string, bonus: number, bonusLabel: string, tooltip: string}|null>}
- *   null when there's nothing to roll with (no character, no skill, or the skill is gone).
+ *   null when there's nothing to roll with (no character, no skill or formula, or the skill is gone).
  */
 export async function getActionAttackSummary(actor, action) {
   if (!actor) return null;
+  if (!action.system.skill) return getUnskilledAttackSummary(actor, action);
+
   const info = await resolveActionSkill(actor, action);
   if (!info) return null;
 
@@ -119,13 +134,51 @@ export async function getActionAttackSummary(actor, action) {
   };
 }
 
+/**
+ * The attack button for an action with no skill: "Roll", plus the action's Modifiers field when it has one.
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {{label: string, bonus: number, bonusLabel: string, tooltip: string}|null}
+ *   null when the action has no Attack Roll Macro either, so there's nothing to roll.
+ */
+function getUnskilledAttackSummary(actor, action) {
+  const formula = getAttackFormula(action);
+  if (!formula) return null;
+
+  const bonus = Number(action.system.modifiers) || 0;
+  // Hover text with @values filled in from the character, e.g. "1d20 +3[AGI]", like the damage button's.
+  const filled = Roll.replaceFormulaData(formula, actor.getRollData(), { missing: "0" });
+  return {
+    label: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Roll"),
+    bonus,
+    // Only show a bonus when the action adds one; the formula itself already has its own terms.
+    bonusLabel: bonus ? signedTerm(bonus) : "",
+    tooltip: bonus ? `${filled} ${signedTerm(bonus)}` : filled,
+  };
+}
+
 /* -------------------------------------------- */
 /*  Attack                                       */
 /* -------------------------------------------- */
 
 /**
- * Roll an action's attack: opens SkillCheckDialog for the action's skill.
- * The dialog adds the action's Attack Roll Macro, its Modifiers field, and the "Roll Damage" button.
+ * What every action attack adds to its chat message: which action/character it was (for the
+ * damage button), and the "Roll Damage" button itself when the action has a damage formula.
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {{flags: object, footer: string}}
+ */
+function actionChatExtras(actor, action) {
+  return {
+    flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid } },
+    footer: getDamageFormula(action) ? damageButtonHTML() : "",
+  };
+}
+
+/**
+ * Roll an action's attack. With a skill: opens SkillCheckDialog, which adds the action's
+ * Attack Roll Macro, its Modifiers field, and the "Roll Damage" button. Without a skill:
+ * rolls the Attack Roll Macro straight away (rollActionWithoutSkill below).
  * @param {Actor} actor   The character rolling.
  * @param {Item} action   The action item.
  * @returns {Promise<Roll|null>}  The roll, or null if it was cancelled or couldn't happen.
@@ -136,7 +189,7 @@ export async function rollActionAttack(actor, action) {
     return null;
   }
 
-  if (!action.system.skill) return null; // no skill set: the sheet doesn't show an attack button for these
+  if (!action.system.skill) return rollActionWithoutSkill(actor, action);
 
   const info = await resolveActionSkill(actor, action);
   if (!info) {
@@ -153,13 +206,40 @@ export async function rollActionAttack(actor, action) {
     flatModifier: info.flatModifier,
     // The action item itself. The dialog reads its fields straight from action.system.
     action,
-    // Added to the chat message: which action/character this was (for the damage button),
-    // and the "Roll Damage" button itself when the action has a damage formula.
-    chat: {
-      flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid } },
-      footer: getDamageFormula(action) ? damageButtonHTML() : "",
-    },
+    // Added to the chat message: the flags and "Roll Damage" button (see actionChatExtras).
+    chat: actionChatExtras(actor, action),
   });
+}
+
+/**
+ * Roll an action that has no skill: its Attack Roll Macro (e.g. "1d20 +@attributes.agi.total[AGI]")
+ * plus its Modifiers field. There's no skill to set up, so there's no dialog: it rolls right away.
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {Promise<Roll|null>}
+ */
+async function rollActionWithoutSkill(actor, action) {
+  const baseFormula = getAttackFormula(action);
+  if (!baseFormula || !Roll.validate(baseFormula)) {
+    ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidAttack", { name: action.name }));
+    return null;
+  }
+
+  // Add the Modifiers field as a labelled N[Label] term, the same style skill checks use,
+  // so it gets its own row in the chat card's breakdown.
+  const modifier = Number(action.system.modifiers) || 0;
+  const formula = modifier ? `${baseFormula} ${signedTerm(modifier)}[${action.name}]` : baseFormula;
+
+  const roll = await new LOTM_VTTRoll(formula, actor.getRollData()).evaluate();
+
+  const chat = actionChatExtras(actor, action);
+  await roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: Handlebars.escapeExpression(action.name) + chat.footer,
+    flags: chat.flags,
+    rollMode: game.settings.get("core", "rollMode"),
+  });
+  return roll;
 }
 
 /* -------------------------------------------- */

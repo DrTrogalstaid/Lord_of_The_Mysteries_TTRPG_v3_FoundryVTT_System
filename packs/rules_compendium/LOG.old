@@ -1,23 +1,5 @@
-2026/10/18-18:02:25.873369 7f4cf1bff6c0 Recovering log #84
-2026/10/18-18:02:25.880194 7f4cf1bff6c0 Delete type=0 #84
-2026/10/18-18:02:25.880268 7f4cf1bff6c0 Delete type=3 #82
-2026/10/18-18:20:09.397510 7f4c5aff76c0 Level-0 table #88: started
-2026/10/18-18:20:09.397534 7f4c5aff76c0 Level-0 table #88: 0 bytes OK
-2026/10/18-18:20:09.401256 7f4c5aff76c0 Delete type=0 #86
-2026/10/18-18:20:09.410379 7f4c5aff76c0 Manual compaction at level-0 from '!journal!3oVtVXCSpklgNnTh' @ 72057594037927935 : 1 .. '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 0 : 0; will stop at '!journal.pages!kgMK5pvh2RKuMTLn.Tg50j1Toq08877ri' @ 272 : 1
-2026/10/18-18:20:09.410388 7f4c5aff76c0 Compacting 3@0 + 0@1 files
-2026/10/18-18:20:09.412966 7f4c5aff76c0 Generated table #89@0: 29 keys, 17150 bytes
-2026/10/18-18:20:09.412986 7f4c5aff76c0 Compacted 3@0 + 0@1 files => 17150 bytes
-2026/10/18-18:20:09.417165 7f4c5aff76c0 compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/10/18-18:20:09.417223 7f4c5aff76c0 Delete type=2 #77
-2026/10/18-18:20:09.417260 7f4c5aff76c0 Delete type=2 #80
-2026/10/18-18:20:09.417279 7f4c5aff76c0 Delete type=2 #83
-2026/10/18-18:20:09.427414 7f4c5aff76c0 Manual compaction at level-0 from '!journal.pages!kgMK5pvh2RKuMTLn.Tg50j1Toq08877ri' @ 272 : 1 .. '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 0 : 0; will stop at (end)
-2026/10/18-18:20:09.437543 7f4c5aff76c0 Manual compaction at level-1 from '!journal!3oVtVXCSpklgNnTh' @ 72057594037927935 : 1 .. '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 0 : 0; will stop at '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 293 : 1
-2026/10/18-18:20:09.437546 7f4c5aff76c0 Compacting 1@1 + 1@2 files
-2026/10/18-18:20:09.440055 7f4c5aff76c0 Generated table #90@1: 36 keys, 21706 bytes
-2026/10/18-18:20:09.440064 7f4c5aff76c0 Compacted 1@1 + 1@2 files => 21706 bytes
-2026/10/18-18:20:09.443818 7f4c5aff76c0 compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/10/18-18:20:09.443879 7f4c5aff76c0 Delete type=2 #5
-2026/10/18-18:20:09.443924 7f4c5aff76c0 Delete type=2 #89
-2026/10/18-18:20:09.450049 7f4c5aff76c0 Manual compaction at level-1 from '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 293 : 1 .. '!journal.pages!kgMK5pvh2RKuMTLn.tV6oHTSifaFdG8z3' @ 0 : 0; will stop at (end)
+2026/10/18-19:02:21.089024 7f663abfd6c0 Recovering log #92
+2026/10/18-19:02:21.089065 7f663abfd6c0 Level-0 table #94: started
+2026/10/18-19:02:21.091328 7f663abfd6c0 Level-0 table #94: 1240 bytes OK
+2026/10/18-19:02:21.097596 7f663abfd6c0 Delete type=0 #92
+2026/10/18-19:02:21.097625 7f663abfd6c0 Delete type=3 #91
