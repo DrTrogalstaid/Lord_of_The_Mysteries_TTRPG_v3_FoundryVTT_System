@@ -7,6 +7,7 @@ import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionD
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
+import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -326,6 +327,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       deleteSpell: PlayerCharacterSheet.#onDeleteItem,
       addItem: PlayerCharacterSheet.#onAddItem,
       deleteItem: PlayerCharacterSheet.#onDeleteItem,
+      moneyTransaction: PlayerCharacterSheet.#onMoneyTransaction,
     },
   };
 
@@ -441,6 +443,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       case "inventory":
         // One group per coat / bag, plus "Held & worn" (see helpers/inventory.mjs)
         context.inventory = buildInventoryView(context.sections.inventory, this.actor);
+        // Cash in purses, deposits, and total worth (see helpers/currency.mjs)
+        context.money = buildMoneyView(this.actor);
         break;
 
       case "abilities":
@@ -756,6 +760,16 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
       zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
     }
+  }
+
+
+  /**
+   * Money panel buttons: Receive / Pay / Move / Exchange (data-mode). Opens the transaction dialog.
+   * @this {PlayerCharacterSheet}
+   */
+  static async #onMoneyTransaction(event, target) {
+    if (!this.isEditable) return;
+    await openMoneyDialog(this.actor, target.dataset.mode);
   }
 
 

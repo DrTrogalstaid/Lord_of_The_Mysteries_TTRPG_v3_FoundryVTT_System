@@ -22,6 +22,15 @@ export default class LordOfTheMysteriesGear extends LordOfTheMysteriesItemBase {
     // Size decides how many slots it takes and which containers it fits in (see inventory-config.mjs).
     schema.size = new fields.StringField({ required: true, initial: "smallMedium", choices: () => Object.keys(rules().ITEM_SIZES) });
     schema.quantity = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 });
+    // What one of these is worth, in Loen pennies (£1 = 240). Typed and shown as £/s/d; see helpers/currency.mjs.
+    schema.value = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
+
+    // Purses and wallets carry the character's cash: one balance per currency, in that currency's
+    // smallest coin ({ loen: 1250 } = £5 4s 2d). Kept on the Item, so a looted wallet keeps its money.
+    schema.isPurse = new fields.BooleanField({ required: true, initial: false });
+    schema.money = new fields.TypedObjectField(
+      new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 })
+    );
 
     // Where it is: "stowed" (in containerId), "held" or "worn".
     schema.carry = new fields.StringField({ required: true, initial: "stowed", choices: () => Object.keys(rules().CARRY_MODES) });

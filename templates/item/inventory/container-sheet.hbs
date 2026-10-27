@@ -39,6 +39,18 @@
     </div>
   </div>
 
+  {{!-- Value of the coat / bag itself, typed in gold pounds ("£1 10s"); what's inside is totalled below.
+        Saved as pennies by InventoryItemSheet._processFormData (inventory-sheets.mjs). --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Money.Value"}}</label>
+    <div class="form-fields">
+      <input type="text" name="valueText" value="{{valueText}}" placeholder="£0" {{#unless editable}}disabled{{/unless}}>
+      {{#if valueLocal}}<span class="value-local">{{valueLocal}}</span>{{/if}}
+      <i class="fa-solid fa-coins value-other" data-tooltip="{{valueTooltip}}"></i>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.ValueHint"}}</p>
+  </div>
+
   {{!-- The numbers this kind + upgrade work out to (container.mjs prepareDerivedData). --}}
   <dl class="inventory-readout">
     <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Slots"}}</dt>
@@ -73,7 +85,10 @@
 
   {{!-- What's in it, once a character owns it. --}}
   {{#if actor}}
-    <h4>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Contents"}}</h4>
+    <h4>
+      {{localize "LORD_OF_THE_MYSTERIES.Inventory.Contents"}}
+      {{#if contentsWorth}}<span class="hint">· {{localize "LORD_OF_THE_MYSTERIES.Money.ContentsWorth"}} {{contentsWorth}}</span>{{/if}}
+    </h4>
     {{#if contents.length}}
       <ul class="inventory-contents">
         {{#each contents as |thing|}}
@@ -82,6 +97,7 @@
             <span class="name">{{thing.name}}{{#if thing.hidden}} <i class="fa-solid fa-eye-slash"></i>{{/if}}</span>
             <span>×{{thing.quantity}}</span>
             <span>{{thing.slots}}</span>
+            {{#if thing.value}}<span class="contents-value">{{thing.value}}</span>{{/if}}
           </li>
         {{/each}}
       </ul>

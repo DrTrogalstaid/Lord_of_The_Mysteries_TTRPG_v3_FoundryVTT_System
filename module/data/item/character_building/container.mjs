@@ -22,7 +22,8 @@ export default class LordOfTheMysteriesContainer extends LordOfTheMysteriesItemB
     schema.pockets = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 2 });
     // Worn / carried right now. A suitcase left at the inn is unequipped: its contents don't count toward Strength.
     schema.equipped = new fields.BooleanField({ required: true, initial: true });
-
+    // What the coat / bag itself is worth, in Loen pennies (£1 = 240). Its contents are counted separately.
+    schema.value = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
     return schema;
   }
 

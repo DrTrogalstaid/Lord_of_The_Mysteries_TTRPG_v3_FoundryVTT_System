@@ -18,6 +18,50 @@
     <p class="inventory-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{warning}}</p>
   {{/each}}
 
+  {{!-- Money: cash in carried purses, deposits kept elsewhere, and buttons to change them.
+        Built by buildMoneyView() in helpers/currency.mjs; the buttons open its transaction dialog. --}}
+  <section class="money-panel">
+    <header class="money-header">
+      <h3 class="money-title"><i class="fa-solid fa-coins"></i> {{localize "LORD_OF_THE_MYSTERIES.Money.Title"}}</h3>
+      <span class="money-worth" data-tooltip="{{money.worthTooltip}}">
+        {{localize "LORD_OF_THE_MYSTERIES.Money.Worth"}} <strong>{{money.worth}}</strong>
+      </span>
+      {{#if editable}}
+        <div class="money-actions">
+          <button type="button" data-action="moneyTransaction" data-mode="receive"><i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.Money.Modes.receive"}}</button>
+          <button type="button" data-action="moneyTransaction" data-mode="pay"><i class="fa-solid fa-minus"></i> {{localize "LORD_OF_THE_MYSTERIES.Money.Modes.pay"}}</button>
+          <button type="button" data-action="moneyTransaction" data-mode="move"><i class="fa-solid fa-right-left"></i> {{localize "LORD_OF_THE_MYSTERIES.Money.Modes.move"}}</button>
+          <button type="button" data-action="moneyTransaction" data-mode="exchange"><i class="fa-solid fa-scale-balanced"></i> {{localize "LORD_OF_THE_MYSTERIES.Money.Modes.exchange"}}</button>
+        </div>
+      {{/if}}
+    </header>
+
+    <div class="money-columns">
+      <div class="money-box">
+        <span class="money-box-label">{{localize "LORD_OF_THE_MYSTERIES.Money.OnPerson"}}</span>
+        <span class="money-box-value">{{money.onPerson}}</span>
+        {{#if money.noPurse}}
+          <span class="money-box-hint">{{localize "LORD_OF_THE_MYSTERIES.Money.NoPurse"}}</span>
+        {{else}}
+          <ul class="money-purses">
+            {{#each money.purses as |purse|}}
+              <li class="{{#unless purse.carried}}left-behind{{/unless}}">
+                <a data-action="openItem" data-uuid="{{purse.uuid}}">{{purse.name}}</a>
+                {{#unless purse.carried}}<span class="money-tag">{{localize "LORD_OF_THE_MYSTERIES.Money.LeftBehind"}}</span>{{/unless}}
+                <span class="money-purse-balance">{{purse.balance}}</span>
+              </li>
+            {{/each}}
+          </ul>
+        {{/if}}
+      </div>
+      <div class="money-box">
+        <span class="money-box-label">{{localize "LORD_OF_THE_MYSTERIES.Money.Stored"}}</span>
+        <span class="money-box-value">{{money.stored}}</span>
+        <span class="money-box-hint">{{localize "LORD_OF_THE_MYSTERIES.Money.StoredHint"}}</span>
+      </div>
+    </div>
+  </section>
+
   {{!-- One drop section for the whole tab, so drops and the move buttons work like the other tabs.
         Each group inside is its own list; data-inventory-place says where gear dropped on it goes. --}}
   <div class="drop-section inventory-section" data-drop-zone="inventory">
@@ -46,7 +90,7 @@
             <div class="inventory-group-main">
               <a class="drop-entry-name" data-action="openItem" data-uuid="{{group.uuid}}">{{group.name}}</a>
               <span class="drop-entry-detail">
-                {{group.kindLabel}}{{#if group.drawLabel}} · {{group.drawLabel}}{{/if}}{{#if group.leftBehind}} · {{localize "LORD_OF_THE_MYSTERIES.Inventory.LeftBehind"}}{{/if}}
+                {{group.kindLabel}}{{#if group.drawLabel}} · {{group.drawLabel}}{{/if}}{{#if group.valueLabel}} · {{group.valueLabel}}{{/if}}{{#if group.leftBehind}} · {{localize "LORD_OF_THE_MYSTERIES.Inventory.LeftBehind"}}{{/if}}
               </span>
             </div>
             <div class="inventory-group-stats">

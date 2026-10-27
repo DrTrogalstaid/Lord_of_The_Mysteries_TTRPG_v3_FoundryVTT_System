@@ -454,6 +454,94 @@
       }
     },
     
+    "Currency": {
+      "Names": {
+        "loen": "Loen (gold pound)",
+        "intis": "Intis (verl d'or)",
+        "feysac": "Feysac (gold hoorn)"
+      },
+      "Units": {
+        "pound": "£{n}",
+        "soli": "{n}s",
+        "penny": "{n}d",
+        "verl": "{n} verl d'or",
+        "coppet": "{n} coppet",
+        "hoorn": "{n} gold hoorn",
+        "feysilver": "{n} feysilver",
+        "kopek": "{n} kopek"
+      },
+      "LessThan": "< {amount}",
+      "Settings": {
+        "Local": {
+          "Name": "Local Currency",
+          "Hint": "The currency the party is using right now. Item values are entered in gold pounds and shown in this currency; hover a price to see it in the others."
+        },
+        "Fee": {
+          "Name": "Exchange Fee (%)",
+          "Hint": "Taken whenever a character changes money from one currency to another. Moving money between purses and deposits is free."
+        },
+        "Rate": {
+          "intis": "Exchange Rate: Verl d'or per Gold Pound",
+          "feysac": "Exchange Rate: Gold Hoorn per Gold Pound"
+        },
+        "RateGuess": "How many of this currency's main coin buy £1. The rulebook gives no rate, so the default is a placeholder: set it for your table.",
+        "RateWiki": "How many of this currency's main coin buy £1. The default comes from the fan wiki (\"1 Gold pound = 5.5 Gold hoorn\"); the rulebook gives no rate."
+      }
+    },
+
+    "Money": {
+      "Title": "Money",
+      "Worth": "Total cash:",
+      "OnPerson": "On you (purses & wallets)",
+      "Stored": "Deposits",
+      "StoredHint": "Not on you: bank, safe, home.",
+      "DepositsMissing": "Not set up: the system's base-actor.mjs is out of date.",
+      "NoPurse": "No purse or wallet. Cash has to be carried in one: add a gear item and tick \"Holds money\".",
+      "LeftBehind": "left behind",
+      "Empty": "Nothing",
+      "Value": "Value",
+      "ValueHint": "Price of one, in gold pounds: \"£3 10s\", \"1 soli 2d\", \"8d\", or just \"5\" for £5. £1 = 20 soli, 1 soli = 12 pence.",
+      "ContentsWorth": "worth",
+      "Each": "{amount} each",
+      "IsPurse": "Holds money (purse / wallet)",
+      "IsPurseHint": "Cash in a purse goes wherever the purse goes: a pickpocketed or looted wallet takes its money with it.",
+      "Contents": "Cash inside",
+      "PurseTooltip": "Cash inside",
+      "Modes": {
+        "receive": "Receive",
+        "pay": "Pay",
+        "move": "Move",
+        "exchange": "Exchange"
+      },
+      "From": "From",
+      "To": "To",
+      "Where": "Purse / deposits",
+      "Currency": "Currency",
+      "ExchangeFrom": "Change from",
+      "ExchangeTo": "Change into",
+      "Amount": "Amount",
+      "AmountPlaceholder": "e.g. £2 5s 6d",
+      "AmountHint": "Type amounts like \"£2 5s 6d\", \"8d\", \"12 verl d'or 50 coppet\". A plain number counts the main coin (5 = £5).",
+      "Note": "Note",
+      "NotePlaceholder": "Optional, e.g. \"Bought a revolver\"",
+      "FeeLine": "Exchange fee {fee}%",
+      "Errors": {
+        "BadAmount": "Couldn't read the amount \"{text}\".",
+        "ZeroAmount": "Enter an amount above zero.",
+        "NotEnough": "{place} only has {have}, not {need}.",
+        "SamePlace": "Pick two different places to move money between.",
+        "SameCurrency": "Pick two different currencies to exchange.",
+        "TooSmall": "That's too little to exchange: after the fee it's worth less than one coin.",
+        "NoDeposits": "Deposits aren't set up on this character: the system's base-actor.mjs is out of date. Nothing was changed."
+      },
+      "Chat": {
+        "receive": "Received {amount} into {place}.",
+        "pay": "Paid {amount} from {place}.",
+        "move": "Moved {amount} from {from} to {to}.",
+        "exchange": "Exchanged {amount} for {received} in {place} (fee {fee})."
+      }
+    },
+
     "ActionSkill": {
       "Label": "Skill",
       "Hint": "Drop the skill this action rolls with (e.g. Pistol)",

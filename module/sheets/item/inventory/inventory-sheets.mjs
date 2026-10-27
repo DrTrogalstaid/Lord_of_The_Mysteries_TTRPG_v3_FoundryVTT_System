@@ -6,6 +6,9 @@ import {
   ITEM_SIZES, CARRY_MODES, CONTAINER_TYPES, CONTAINER_UPGRADES, DRAW_ACTIONS, ARMOR_TYPES, ARMOR_BREACH, labelMap
 } from "../../../helpers/inventory-config.mjs";
 import { formatSlots } from "../../../helpers/inventory.mjs";
+import {
+  BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
+} from "../../../helpers/currency.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -32,7 +35,43 @@ class InventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.source = this.item.toObject().system;   // what's actually saved -- used for the inputs
     context.editable = this.isEditable;
     context.actor = this.item.actor;                // the owning character, or null
+
+    // Value: typed as £/s/d, shown again in the GM's local currency and (on hover) every other one.
+    const value = context.source.value ?? 0;
+    const local = localCurrency();
+    context.valueText = formatMoney(value, BASE_CURRENCY);
+    context.valueLocal = local === BASE_CURRENCY ? "" : `≈ ${formatValue(value, local)}`;
+    context.valueTooltip = valueTooltip(value, BASE_CURRENCY);
     return context;
+  }
+
+  /**
+   * Money is typed as text ("£3 10s", "8d"). Those inputs are named valueText / moneyText.<currency>,
+   * so they're read here and turned into the whole numbers the data model stores. Text that can't be read
+   * is skipped with a warning, and the sheet re-renders with the old value.
+   * @override
+   */
+  _processFormData(event, form, formData) {
+    const data = super._processFormData(event, form, formData);
+    const warn = (text) => ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Money.Errors.BadAmount", { text }));
+
+    if ("valueText" in data) {
+      const pence = parseMoney(data.valueText, BASE_CURRENCY);
+      if (pence === null) warn(data.valueText);
+      else foundry.utils.setProperty(data, "system.value", pence);
+      delete data.valueText;
+    }
+
+    if (data.moneyText) {
+      for (const [key, text] of Object.entries(data.moneyText)) {
+        if (!(key in CURRENCIES)) continue;
+        const amount = parseMoney(text, key);
+        if (amount === null) warn(text);
+        else foundry.utils.setProperty(data, `system.money.${key}`, amount);
+      }
+      delete data.moneyText;
+    }
+    return data;
   }
 
   /** Open the FilePicker to change the Item's image. */
@@ -97,6 +136,13 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     context.slotsEach = formatSlots(system.unitsEach);
     context.slotsTotal = formatSlots(system.units);
     context.stowed = context.source.carry === "stowed";
+
+    // Purse / wallet: one text box per currency, typed like the value ("£2 5s", "40 verl d'or").
+    context.moneyRows = Object.entries(CURRENCIES).map(([key, currency]) => ({
+      key,
+      label: currency.label,
+      text: formatMoney(context.source.money?.[key] ?? 0, key),
+    }));
 
     // Container choices: the owning character's coats and bags.
     if (context.actor) {
@@ -221,15 +267,19 @@ export class LordOfTheMysteriesContainerSheet extends InventoryItemSheet {
       const info = context.actor.system.carrying?.containers?.[this.item.id];
       context.used = formatSlots(info?.usedUnits ?? 0);
       context.full = info?.full ?? false;
-      context.contents = context.actor.items
-        .filter((item) => item.type === "gear" && item.system.carry === "stowed" && item.system.containerId === this.item.id)
-        .map((item) => ({
-          name: item.name,
-          img: item.img,
-          quantity: item.system.quantity,
-          slots: formatSlots(item.system.units),
-          hidden: item.system.hidden,
-        }));
+      const inside = context.actor.items
+        .filter((item) => item.type === "gear" && item.system.carry === "stowed" && item.system.containerId === this.item.id);
+      context.contents = inside.map((item) => ({
+        name: item.name,
+        img: item.img,
+        quantity: item.system.quantity,
+        slots: formatSlots(item.system.units),
+        hidden: item.system.hidden,
+        value: item.system.value ? formatValue(item.system.value * item.system.quantity) : "",
+      }));
+      // What's inside is worth, apart from the container itself (cash in purses isn't counted here).
+      const contentsPence = inside.reduce((sum, item) => sum + (item.system.value ?? 0) * item.system.quantity, 0);
+      context.contentsWorth = contentsPence ? formatValue(contentsPence) : "";
     }
     return context;
   }

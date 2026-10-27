@@ -54,6 +54,12 @@
     {{#if gear.warning}}
     <span class="gear-warning" data-tooltip="{{gear.warning}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
     {{/if}}
+    {{#if gear.moneyLabel}}
+    <span class="gear-money" data-tooltip="LORD_OF_THE_MYSTERIES.Money.PurseTooltip"><i class="fa-solid fa-coins"></i> {{gear.moneyLabel}}</span>
+    {{/if}}
+    {{#if gear.valueLabel}}
+    <span class="gear-value" data-tooltip="{{gear.valueTooltip}}">{{gear.valueLabel}}</span>
+    {{/if}}
     <span class="gear-slots" data-tooltip="{{gear.sizeLabel}}">{{gear.slotsLabel}}</span>
     {{#if (and owned @root.editable)}}
       <input type="number" class="gear-quantity" min="0" step="1" value="{{gear.quantity}}"

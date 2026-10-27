@@ -20,7 +20,7 @@ export const UNITS_PER_SLOT = 6;
 export const ITEM_SIZES = {
   tiny:        { units: 2,  rank: 1, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.tiny" },        // match box, paper figurine, pen, candle
   small:       { units: 3,  rank: 2, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.small" },       // notebook, tarot deck, charm, necklace
-  smallMedium: { units: 6,  rank: 3, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.smallMedium" }, // knife, potion, purse, revolver
+  smallMedium: { units: 6,  rank: 3, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.smallMedium" }, // knife, potion, purse, revolver (rulebook: a purse takes 1 slot)
   medium:      { units: 12, rank: 4, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.medium" },      // sword, rifle, large bottle of wine
   mediumLarge: { units: 18, rank: 5, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.mediumLarge" }, // steam rifle, longbow, sniper rifle
   large:       { units: 24, rank: 6, label: "LORD_OF_THE_MYSTERIES.Inventory.Sizes.large" },       // giant weapon, full body armor

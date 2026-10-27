@@ -170,7 +170,153 @@
   color: var(--lotm-inventory-over);
 }
 
+/* ---- Money panel (Inventory tab) ---- */
+
+.lotm .money-panel {
+  margin-bottom: 8px;
+  padding: 6px 10px 8px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  background: var(--lotm-inventory-fill);
+}
+
+.lotm .money-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.lotm .money-title {
+  margin: 0;
+  border: none;
+  font-size: 1.1em;
+}
+
+.lotm .money-worth {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.lotm .money-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.lotm .money-actions button {
+  flex: 0 0 auto;
+  width: auto;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 0.85em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lotm .money-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lotm .money-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lotm .money-box-label {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.lotm .money-box-value {
+  font-size: 1.15em;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm .money-box-hint {
+  font-size: 0.8em;
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.lotm .money-purses {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  font-size: 0.9em;
+}
+
+.lotm .money-purses li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lotm .money-purses li.left-behind {
+  opacity: 0.6;
+}
+
+.lotm .money-purse-balance {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.lotm .money-tag {
+  font-size: 0.8em;
+  color: var(--lotm-inventory-warn);
+}
+
+/* Value and purse cash on gear rows */
+.lotm .drop-entry-gear .gear-value,
+.lotm .drop-entry-gear .gear-money {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.lotm .drop-entry-gear .gear-money {
+  color: var(--lotm-inventory-warn);
+}
+
 /* ---- Gear and container sheets ---- */
+
+.lotm.inventory-item .value-local {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.lotm.inventory-item .value-other {
+  flex: 0 0 auto;
+  opacity: 0.6;
+  cursor: help;
+}
+
+.lotm.inventory-item .purse-money {
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  padding: 4px 10px 6px;
+}
+
+.lotm.inventory-item .contents-value {
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+/* Transaction dialog */
+.lotm.money-dialog .hint {
+  margin: 4px 0 0;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
 
 .lotm.inventory-item .inventory-sheet {
   display: flex;

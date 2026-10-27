@@ -70,6 +70,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             return obj;
         }, {}));
 
+        // Money that isn't on the character ("accumulated deposits": a bank account, a safe at home).
+        // One balance per currency, in that currency's smallest coin. Cash on the person is in purse / wallet gear.
+        schema.storedMoney = new fields.TypedObjectField(
+            new fields.NumberField({ ...requiredInteger, min: 0, initial: 0 })
+        );
+
         schema.biography = new fields.StringField({ required: true, blank: true }); // equivalent to passing ({initial: ""}) for StringFields
 
         schema.languages = new fields.SchemaField({
