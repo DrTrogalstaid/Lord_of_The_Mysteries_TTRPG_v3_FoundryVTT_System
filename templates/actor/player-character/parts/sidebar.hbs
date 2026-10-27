@@ -68,6 +68,15 @@
           </a>
         </li>
         {{/each}}
+        {{!-- From the worn armor (base-actor.mjs _prepareDamageReduction). Read-only: take the armor off to remove it. --}}
+        {{#each system.armorReductionList as |row|}}
+        <li class="damage-resistance-row from-armor"
+            data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Inventory.Armor.FromArmor' name=row.source}}">
+          <span class="damage-resistance-type">{{localize row.label}}</span>
+          <span class="damage-resistance-value">{{row.value}}</span>
+          <i class="damage-resistance-source fa-solid fa-shield-halved"></i>
+        </li>
+        {{/each}}
       </ul>
       <button type="button" class="damage-resistance-add-button" data-action="addDamageResistance"
               title="{{localize 'LORD_OF_THE_MYSTERIES.GenericButtons.Add'}}">

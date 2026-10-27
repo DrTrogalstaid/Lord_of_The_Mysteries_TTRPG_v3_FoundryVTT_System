@@ -57,6 +57,85 @@
     {{/if}}
   {{/if}}
 
+  {{!-- Armor. "Not armor" for everything else. The numbers come from ARMOR_TYPES (inventory-config.mjs),
+        worked out in gear.mjs _prepareArmor. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Kind"}}</label>
+    <div class="form-fields">
+      <select name="system.armorKind" {{#unless editable}}disabled{{/unless}}>
+        {{selectOptions armorOptions selected=source.armorKind localize=true}}
+      </select>
+    </div>
+    {{#if system.isArmor}}<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.WornHint"}}</p>{{/if}}
+  </div>
+
+  {{#if system.isArmor}}
+    <dl class="inventory-readout">
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Value"}}</dt>
+      <dd>{{system.armorValue}}</dd>
+
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Reduction"}}</dt>
+      <dd>{{#each system.reductionList as |entry|}}{{localize entry.label}} {{entry.value}}{{#unless @last}}, {{/unless}}{{/each}}</dd>
+
+      {{#if system.agilityPenalty}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Agility"}}</dt>
+        <dd>−{{system.agilityPenalty}}</dd>
+      {{/if}}
+
+      {{#if system.strengthNeeds.cannotWear}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.CannotWear" n=system.strengthNeeds.cannotWear}}</dd>
+      {{/if}}
+      {{#if system.strengthNeeds.halfMove}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.HalfMove" n=system.strengthNeeds.halfMove}}</dd>
+      {{/if}}
+      {{#if system.strengthNeeds.immobile}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Immobile" n=system.strengthNeeds.immobile}}</dd>
+      {{/if}}
+
+      {{#if system.unprotected.length}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Unprotected"}}</dt>
+        <dd>{{#each system.unprotected as |location|}}{{localize (concat "LORD_OF_THE_MYSTERIES.Inventory.Armor.Locations." location)}}{{#unless @last}}, {{/unless}}{{/each}}</dd>
+      {{/if}}
+
+      {{#if system.destroyed}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Condition"}}</dt>
+        <dd class="over">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Destroyed"}}</dd>
+      {{/if}}
+    </dl>
+
+    {{!-- Damage the armor has taken. Edited by hand for now; the damage roll will fill these in later. --}}
+    {{#if system.fireLimit}}
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.FireHits"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.armorState.fireHits" value="{{source.armorState.fireHits}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+          <span>/ {{system.fireLimit}}</span>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.FireHitsHint" n=system.fireLimit}}</p>
+      </div>
+    {{/if}}
+
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Breach"}}</label>
+      <div class="form-fields">
+        <select name="system.armorState.breach" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions breachOptions selected=source.armorState.breach localize=true}}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Expansion"}}</label>
+      <div class="form-fields">
+        <input type="number" name="system.armorState.expansion" value="{{source.armorState.expansion}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+      </div>
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.ExpansionHint"}}</p>
+    </div>
+  {{/if}}
+
   {{!-- What this item grants. Drop abilities / actions from the sidebar or a compendium onto each list.
         The drop handling is in LordOfTheMysteriesGearSheet._onRender. --}}
   {{#each grantLists as |list|}}

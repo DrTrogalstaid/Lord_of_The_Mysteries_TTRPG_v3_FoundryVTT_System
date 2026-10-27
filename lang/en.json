@@ -397,6 +397,42 @@
         "lore": "Lore (+5 slots, +4 hidden)",
         "grandMaster": "Grand Master (+6 slots, +5 hidden)"
       },
+      "Armor": {
+        "Kind": "Armor",
+        "WornHint": "Protects while Carried is set to Worn. Only one suit counts at a time.",
+        "Value": "Armor points",
+        "Reduction": "Damage reduction",
+        "Agility": "Agility while worn",
+        "CannotWear": "Under {n}: can't be worn",
+        "HalfMove": "Under {n}: movement halved",
+        "Immobile": "Under {n}: can't move",
+        "Unprotected": "Not protected",
+        "Condition": "Condition",
+        "Destroyed": "Destroyed by fire",
+        "FireHits": "Fire hits taken",
+        "FireHitsHint": "Destroyed after {n} hits of fire damage.",
+        "Breach": "Gap in the armor",
+        "Expansion": "Wound expansion",
+        "ExpansionHint": "One step per 10 effective damage. Each step lowers the critical-strike penalty against the gap by 2.",
+        "RowLabel": "Armor {armor}",
+        "FromArmor": "From {name} (worn armor)",
+        "Types": {
+          "none": "Not armor",
+          "cottonLeather": "Cotton / leather armor",
+          "chainIron": "Chain / iron armor",
+          "halfBody": "Half body armor",
+          "fullBody": "Full body armor",
+          "enchanted": "Enchanted full body armor"
+        },
+        "BreachLevels": {
+          "intact": "Intact",
+          "penetrated": "Penetrated: critical strikes here ignore armor",
+          "broken": "Broken: critical strikes here ignore armor, +1d6 damage"
+        },
+        "Locations": {
+          "lowerBody": "Lower body"
+        }
+      },
       "Warnings": {
         "Overloaded": "Over the Strength limit by {slots}: Agility −{penalty}",
         "ContainerFull": "Over capacity by {slots}.",
@@ -409,7 +445,12 @@
         "NotAnAction": "{name} is not an action.",
         "AlreadyGranted": "{name} is already on this item.",
         "NotASkill": "{name} is not a skill.",
-        "SkillMissing": "The skill on {name} no longer exists."
+        "SkillMissing": "The skill on {name} no longer exists.",
+        "ArmorDestroyed": "Destroyed: gives no protection.",
+        "TooWeakToWear": "Not strong enough to wear this: gives no protection.",
+        "ExtraArmor": "Only one suit of armor counts, and it isn't this one.",
+        "ArmorHalfMove": "{name}: movement halved (not strong enough).",
+        "ArmorImmobile": "{name}: can't move (not strong enough)."
       }
     },
     

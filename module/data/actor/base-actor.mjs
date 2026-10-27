@@ -1,5 +1,5 @@
 import LordOfTheMysteriesDataModel from "../base-model.mjs";
-import { calculateCarrying } from "../../helpers/inventory.mjs";
+import { calculateCarrying, armoredMovement } from "../../helpers/inventory.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -47,7 +47,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         schema.damage_resistance = new fields.ArrayField(
             new fields.SchemaField({
-                damageType: new fields.StringField({ required: true, initial: CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.Physical }),
+                // A key of CONFIG.LORD_OF_THE_MYSTERIES.damageTypes ("physical", "fire", ...).
+                damageType: new fields.StringField({ required: true, initial: "physical" }),
                 value : new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 })
             })
         );
@@ -105,7 +106,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Strength Bonus Calculation
         const strengthDamageBonusTable = CONFIG.LORD_OF_THE_MYSTERIES.strengthDamageBonus;
         const strength = this.attributes.str.total;
-        const strengthRow = strengthDamageBonusTable.findLast((r) => strength >= r.strength) ?? table[0];
+        const strengthRow = strengthDamageBonusTable.findLast((r) => strength >= r.strength) ?? strengthDamageBonusTable[0];
         this.damageBonus = strengthRow.bonus;
 
         // Inventory: slots carried, and -1 Agility per slot over the Strength limit (see helpers/inventory.mjs).
@@ -114,13 +115,23 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.carrying = calculateCarrying(this.parent?.items ?? [], this.attributes.str.total);   // display only, not in the schema
         this.attributes.agi.total -= this.carrying.penalty;
 
+        // Worn armor's temporary Agility penalty. Shown in the Corruption column for now, so the
+        // breakdown still adds up to the total. Only the prepared value changes; the saved corruption doesn't.
+        const armor = this.carrying.armor;
+        this.attributes.agi.corruption -= armor.agilityPenalty;
+        this.attributes.agi.total -= armor.agilityPenalty;
+
         // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
 
+        // Movement in meters (Strength + Agility), halved (rounded up) or stopped by armor that's too heavy,
+        // then x3 for feet. The armor rule rounds in meters, so it's applied before the conversion.
         //TODO: Change the multiplication here to depend on the system's distance unit.
-        this.movement = (this.attributes.str.total + this.attributes.agi.total) * 3;  // Multiply by 3 to get feet in stead of Meters
+        const meters = this.attributes.str.total + this.attributes.agi.total;
+        this.movement = armoredMovement(meters, armor.movement) * 3;
 
         this._prepareDefenseValues();
+        this._prepareDamageReduction();
 
         // NOTE: THIS NEEDS TO BE CALLED LAST
         this._prepareSequenceCalculations(sequences);
@@ -150,8 +161,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      * Armor, Dodge, Physical, Will, and Physique
      */
     _prepareDefenseValues() {
-        // Armor
-        this.defenses.armor = 0;
+        // Armor: the worn suit's armor points (0 without one). Added to Physical below.
+        this.defenses.armor = this.carrying?.armor.value ?? 0;
         //Dodge
         // Loop through skills and find dodge
         this.defenses.dodge = 0;      
@@ -193,6 +204,39 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique
         this.defenses.physique = (this.attributes.phy.total + 10);
+    }
+
+
+    /**
+     * Damage reduction: the rows typed in on the sheet (damage_resistance) plus the worn armor's.
+     * The saved rows are never changed; the totals are display / roll data only:
+     *   damageReduction       { physical: 7, fire: 5, ... }  what damage should be reduced by, per type.
+     *   armorReductionList    [{ damageType, label, value, source }]  the armor's rows, for a read-only list on the sheet.
+     */
+    _prepareDamageReduction() {
+        const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
+        // Rows should hold a key ("physical"), but accept a label ("LORD_OF_THE_MYSTERIES.DamageTypes.Physical") too.
+        const keyOf = (type) => {
+            if (!type) return null;
+            if (type in damageTypes) return type;
+            return Object.keys(damageTypes).find((key) => damageTypes[key] === type) ?? type;
+        };
+
+        const totals = {};
+        for (const row of this.damage_resistance ?? []) {
+            const key = keyOf(row.damageType);
+            if (!key) continue;
+            totals[key] = (totals[key] ?? 0) + (row.value ?? 0);
+        }
+
+        // Worn armor stacks with what's on the sheet (skin armor, abilities); only one suit counts (see inventory.mjs).
+        const armor = this.carrying?.armor;
+        this.armorReductionList = Object.entries(armor?.reduction ?? {}).map(([key, value]) => {
+            totals[key] = (totals[key] ?? 0) + value;
+            return { damageType: key, label: damageTypes[key] ?? key, value, source: armor.name };
+        });
+
+        this.damageReduction = totals;   // display only, not in the schema
     }
 
 

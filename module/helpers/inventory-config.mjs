@@ -77,6 +77,50 @@ export const CONTAINER_UPGRADES = {
 };
 
 /**
+ * Damage types that count as "external" for enchanted full body armor
+ * (keys of CONFIG.LORD_OF_THE_MYSTERIES.damageTypes). The rules don't list them, so this is a GM call:
+ * edit the list and the enchanted armor follows.
+ */
+export const EXTERNAL_DAMAGE_TYPES = ["physical", "fire", "cold", "lightning"];
+
+/**
+ * Armor. A gear item is armor when its armorKind isn't "none"; it protects while it's worn (carry = "worn").
+ * Only one suit counts at a time ("external armor can only be superimposed with skin armor").
+ *   armor            Armor points.
+ *   reduction        Damage reduction against each type in `reduces`.
+ *   reduces          Damage types (keys of CONFIG.LORD_OF_THE_MYSTERIES.damageTypes) the reduction applies to.
+ *   agility          Temporary Agility penalty while worn.
+ *   halfMoveBelow    Strength below this halves movement (rounded up). null = no limit.
+ *   immobileBelow    Strength below this: can't move at all. null = no limit.
+ *   cannotWearBelow  Strength below this: can't be worn, gives no protection. null = no limit.
+ *   fireLimit        Destroyed after this many hits of fire damage. null = fire doesn't destroy it.
+ *   unprotected      Vital points it doesn't protect.
+ * Suggested item sizes: cotton/leather medium, chain/iron mediumLarge, half / full / enchanted large.
+ */
+export const ARMOR_TYPES = {
+  none:          { armor: 0, reduction: 0, reduces: [],                     agility: 0, halfMoveBelow: null, immobileBelow: null, cannotWearBelow: null, fireLimit: null, unprotected: [],            label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.none" },
+  cottonLeather: { armor: 2, reduction: 2, reduces: ["physical"],           agility: 0, halfMoveBelow: null, immobileBelow: null, cannotWearBelow: null, fireLimit: 2,    unprotected: [],            label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.cottonLeather" },
+  chainIron:     { armor: 4, reduction: 3, reduces: ["physical", "fire"],   agility: 2, halfMoveBelow: null, immobileBelow: null, cannotWearBelow: null, fireLimit: null, unprotected: [],            label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.chainIron" },
+  halfBody:      { armor: 6, reduction: 4, reduces: ["physical", "fire"],   agility: 4, halfMoveBelow: 6,    immobileBelow: 4,    cannotWearBelow: null, fireLimit: null, unprotected: ["lowerBody"], label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.halfBody" },
+  fullBody:      { armor: 8, reduction: 5, reduces: ["physical", "fire"],   agility: 4, halfMoveBelow: 10,   immobileBelow: null, cannotWearBelow: 5,    fireLimit: null, unprotected: [],            label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.fullBody" },
+  enchanted:     { armor: 8, reduction: 5, reduces: EXTERNAL_DAMAGE_TYPES,  agility: 2, halfMoveBelow: 8,    immobileBelow: 4,    cannotWearBelow: null, fireLimit: null, unprotected: [],            label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.Types.enchanted" },
+};
+
+/**
+ * How badly the armor's gap has been opened ("Armor Shattered").
+ *   0  Intact.
+ *   1  Penetrated: a firearm/explosive got past it for under 10 damage. Critical strikes on the gap
+ *      ignore armor and reduction, but get no extra damage.
+ *   2  Broken: 10+ effective damage got through. Critical strikes on the gap ignore armor and reduction, +1d6 damage.
+ * Wound expansion (armorState.expansion) is counted separately: each step lowers the critical-strike penalty by 2.
+ */
+export const ARMOR_BREACH = {
+  0: { label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.BreachLevels.intact" },
+  1: { label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.BreachLevels.penetrated" },
+  2: { label: "LORD_OF_THE_MYSTERIES.Inventory.Armor.BreachLevels.broken" },
+};
+
+/**
  * Turn one of the tables above into { key: label } for a <select> ({{selectOptions ... localize=true}}).
  * @param {Record<string, {label: string}>} table
  * @returns {Record<string, string>}

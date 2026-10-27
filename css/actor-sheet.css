@@ -354,6 +354,30 @@
   color: #d9534f;
 }
 
+/* Rows that come from the worn armor: read-only text laid out like the editable rows above. */
+.lotm.sheet.actor .damage-resistance-row.from-armor {
+  height: 22px;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .damage-resistance-row.from-armor .damage-resistance-type {
+  padding: 0 5px;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lotm.sheet.actor .damage-resistance-row.from-armor .damage-resistance-value {
+  line-height: 22px;
+}
+
+.lotm.sheet.actor .damage-resistance-source {
+  flex: 0 0 14px;
+  text-align: center;
+  font-size: 11px;
+}
+
 .lotm.sheet.actor .damage-resistance-add-button,
 .lotm.sheet.actor .language-add-button {
   width: 100%;

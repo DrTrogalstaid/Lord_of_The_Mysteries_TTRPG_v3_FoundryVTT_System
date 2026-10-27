@@ -1,7 +1,7 @@
 import LordOfTheMysteriesItemBase from "../base-item.mjs";
 
 /**
- * Gear: anything a character carries (matches, a revolver, a sword, a charm).
+ * Gear: anything a character carries (matches, a revolver, a sword, a charm, a suit of armor).
  * Clothing and bags are their own type ("container"); gear points at the container it's in.
  *
  * The rules tables are read from CONFIG.LORD_OF_THE_MYSTERIES.inventory (set in lotm.mjs from
@@ -38,15 +38,58 @@ export default class LordOfTheMysteriesGear extends LordOfTheMysteriesItemBase {
       new fields.DocumentUUIDField({ type: "Item", required: false })
     );
 
+    // Armor. "none" for everything that isn't armor. Its numbers come from ARMOR_TYPES (inventory-config.mjs),
+    // the same way a container's slots come from CONTAINER_TYPES. It protects while carry is "worn".
+    schema.armorKind = new fields.StringField({ required: true, initial: "none", choices: () => Object.keys(rules().ARMOR_TYPES) });
+    // Damage the armor itself has taken. Kept on the Item, so it stays with the armor when it's taken off or handed over.
+    schema.armorState = new fields.SchemaField({
+      // Hits of fire damage taken (cotton / leather is destroyed at its fireLimit).
+      fireHits: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+      // 0 intact, 1 penetrated, 2 broken (see ARMOR_BREACH).
+      breach: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, max: 2, initial: 0 }),
+      // Wound expansion steps (one per 10 effective damage). Each lowers the critical-strike penalty against the gap by 2.
+      expansion: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+    });
+
     return schema;
   }
 
-  /** Room taken, in sixths of a slot (see UNITS_PER_SLOT). */
   prepareDerivedData() {
     super.prepareDerivedData();
+
+    // Room taken, in sixths of a slot (see UNITS_PER_SLOT).
     const sizes = rules().ITEM_SIZES;
     const size = sizes[this.size] ?? sizes.smallMedium;
     this.unitsEach = size.units;                 // one item
     this.units = size.units * this.quantity;     // the whole stack
+
+    this._prepareArmor();
+  }
+
+  /** Copy this armor kind's numbers onto the Item, so the inventory math and sheets can just read them. */
+  _prepareArmor() {
+    const types = rules().ARMOR_TYPES;
+    const type = types[this.armorKind] ?? types.none;
+    const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
+
+    this.isArmor = type !== types.none;
+    this.armorValue = type.armor;
+    // { physical: 5, fire: 5 } for the math, and a list with labels for the sheets.
+    this.reduction = Object.fromEntries(type.reduces.map((damageType) => [damageType, type.reduction]));
+    this.reductionList = type.reduces.map((damageType) => ({
+      damageType,
+      label: damageTypes[damageType] ?? damageType,
+      value: type.reduction,
+    }));
+    this.agilityPenalty = type.agility;
+    this.strengthNeeds = {
+      halfMove: type.halfMoveBelow,
+      immobile: type.immobileBelow,
+      cannotWear: type.cannotWearBelow,
+    };
+    this.unprotected = [...type.unprotected];
+    this.fireLimit = type.fireLimit;
+    this.destroyed = type.fireLimit !== null && this.armorState.fireHits >= type.fireLimit;
+    this.critPenaltyReduction = this.armorState.expansion * 2;
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import {
-  ITEM_SIZES, CARRY_MODES, CONTAINER_TYPES, CONTAINER_UPGRADES, DRAW_ACTIONS, labelMap
+  ITEM_SIZES, CARRY_MODES, CONTAINER_TYPES, CONTAINER_UPGRADES, DRAW_ACTIONS, ARMOR_TYPES, ARMOR_BREACH, labelMap
 } from "../../../helpers/inventory-config.mjs";
 import { formatSlots } from "../../../helpers/inventory.mjs";
 
@@ -70,7 +70,7 @@ const GRANT_LISTS = {
 };
 
 
-/** Gear: size, quantity, (once a character owns it) where it's carried, and the abilities / actions it grants. */
+/** Gear: size, quantity, armor, (once a character owns it) where it's carried, and the abilities / actions it grants. */
 export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
   static DEFAULT_OPTIONS = {
@@ -92,6 +92,8 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
     context.sizeOptions = labelMap(ITEM_SIZES);
     context.carryOptions = labelMap(CARRY_MODES);
+    context.armorOptions = labelMap(ARMOR_TYPES);     // "Not armor", cotton / leather, ...
+    context.breachOptions = labelMap(ARMOR_BREACH);   // intact / penetrated / broken
     context.slotsEach = formatSlots(system.unitsEach);
     context.slotsTotal = formatSlots(system.units);
     context.stowed = context.source.carry === "stowed";

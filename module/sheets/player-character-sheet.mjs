@@ -487,6 +487,23 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
 
   /**
+   * The Agility Corruption box shows the worn armor's Agility penalty mixed in (base-actor.mjs), e.g. -4.
+   * Before the form saves, add the penalty back, so what's stored is the character's own corruption
+   * and the penalty is never saved. Without this, every edit to the sheet would save the reduced number.
+   * @override
+   */
+  _processFormData(event, form, formData) {
+    const data = super._processFormData(event, form, formData);
+    const agi = data.system?.attributes?.agi;
+    if (agi && ("corruption" in agi)) {
+      const penalty = this.actor.system.carrying?.armor?.agilityPenalty ?? 0;
+      agi.corruption = Math.max(0, (Number(agi.corruption) || 0) + penalty);
+    }
+    return data;
+  }
+
+
+  /**
    * Total attribute bonus granted by the actor's owned Sequence items, keyed by attribute key
    * ({ str: 2, agi: 1, ... }). Only owned Sequences count, not ones merely referenced by other Items.
    * @returns {Record<string, number>}
