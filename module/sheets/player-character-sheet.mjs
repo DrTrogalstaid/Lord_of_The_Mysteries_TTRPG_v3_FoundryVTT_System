@@ -5,6 +5,9 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
+import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
+import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
+import { meterPercent, openStudyDialog, openSuccessDialog } from "../apps/study-dialog.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
 import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
@@ -392,6 +395,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
+      studySkill: PlayerCharacterSheet.#onStudySkill,
+      recordSkillSuccess: PlayerCharacterSheet.#onRecordSkillSuccess,
       rollAction: PlayerCharacterSheet.#onRollAction,
       rollDamage: PlayerCharacterSheet.#onRollDamage,
       useAmmo: PlayerCharacterSheet.#onUseAmmo,
@@ -518,7 +523,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       case "character":
         context.tab = context.tabs.character;
         context.attributesList = this._prepareAttributes();
-        context.skillsByCategory = await this._prepareSkillList();
+        // The abilities (owned or granted) are passed in so skills taught by one get a ✋ success button.
+        context.skillsByCategory = await this._prepareSkillList(context.sections?.abilities ?? []);
         context.skillLevelOptions = CONFIG.LORD_OF_THE_MYSTERIES.skillLevels;
         context.grantedSkillTabs = await this._prepareGrantedSkills();
         context.attributeOptions = CONFIG.LORD_OF_THE_MYSTERIES.attributes;
@@ -648,6 +654,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         beyonder_bonus: attr.beyonder_bonus,
         corruption: attr.corruption,
         sequence_bonus: attr.sequence_bonus,   // derived, display only
+        // Education growth (base-actor.mjs): only Education has it. The hover text explains the count.
+        isEducation: key === "edu",
+        growth_bonus: attr.growth_bonus ?? 0,
+        growthTooltip: key === "edu" ? this.#educationGrowthTooltip() : "",
         total: attr.total                       // derived
       };
     });
@@ -655,10 +665,34 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
 
   /**
+   * Hover text for the Education box's growth number, one part per tier, e.g.
+   *   "Education growth: +1 · Mastery: 7 skill(s), +1 (next +1 at 10) · Lore: ..."
+   * @returns {string}
+   */
+  #educationGrowthTooltip() {
+    const growth = this.actor.system.educationGrowth;
+    if (!growth) return "";
+    const format = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.EducationGrowth.${key}`, data);
+    const lines = [format("Total", { bonus: growth.bonus })];
+    for (const tier of growth.tiers) {
+      lines.push(format("Tier", {
+        level: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[tier.level] ?? tier.level),
+        count: tier.count,
+        bonus: tier.bonus,
+        next: (tier.bonus + 1) * tier.per,
+      }));
+    }
+    lines.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.EducationGrowth.Hint"));
+    // Plain text, not HTML, so it shows the same in every Foundry version's tooltips.
+    return lines.join(" · ");
+  }
+
+
+  /**
    * Build the full, per-category skill list from the skills_compendium pack's folder structure
    * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string, attribute: string, flatModifier: number, modifier: number}[]>>}
    */
-  async _prepareSkillList() {
+  async _prepareSkillList(abilityEntries = []) {
     const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
     const skillsByCategory = {};
 
@@ -671,7 +705,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     // Request the two extra system fields the roll dialog needs (the skill's
     // own linked attribute and its flat item modifier) so opening the dialog
     // doesn't need a separate fromUuid() round trip per skill.
-    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier"] });
+    // system.categories (and the old system.category, on skills saved before it existed) feed
+    // related-skill improvement in #applySkillAssociations below.
+    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier", "system.categories", "system.category"] });
 
     for (const [category, folderName] of Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders)) {
       const folder = pack.folders.getName(folderName);
@@ -688,7 +724,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       // One row per skill. `entry` is a compendium index entry or, for skills outside the compendium, the
       // resolved Item: both carry uuid / name / img / system.{skill_attribute, modifier}.
       const toRow = (entry, removable) => {
-        const level = storedByUuid.get(entry.uuid)?.level ?? "untrained";
+        // Skills every character starts with (Dodge) never show below their starting level.
+        const level = atLeastLevel(
+          storedByUuid.get(entry.uuid)?.level ?? "untrained",
+          CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[entry.uuid]
+        );
         // NOTE: the sheet's displayed number still uses the tab/category attribute,
         // same as before this change -- unchanged to avoid shifting every skill's
         // displayed modifier as a side effect of this PR. The roll dialog instead
@@ -706,7 +746,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           uuid: entry.uuid,
           name: entry.name,
           img: entry.img,
+          // The level the player picked: what the dropdown shows and saves.
           level,
+          // The level the skill is rolled at. Same as `level` unless a related skill raises it
+          // (#applySkillAssociations fills these three in once every tab's rows exist).
+          effectiveLevel: level,
+          associated: false,
+          associatedTooltip: "",
+          categories: skillCategoriesOf(entry.system),
+          attributeTotal,
           analysis: storedByUuid.get(entry.uuid)?.analysis ?? 0,
           category,
           attribute: entry.system?.skill_attribute ?? category,
@@ -733,7 +781,119 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       skillsByCategory[category] = rows.sort((a, b) => a.name.localeCompare(b.name));
     }
 
+    // Related categories cross the attribute tabs (Social has Strength, Charisma and Inspiration skills),
+    // so this runs once every tab's rows are built.
+    this.#applySkillAssociations(skillsByCategory);
+    // Study meters count from the level the skill is rolled at, so this comes after the associations.
+    this.#applyStudyProgress(skillsByCategory);
+    await this.#applyFastLearning(skillsByCategory, abilityEntries);
+
     return skillsByCategory;
+  }
+
+
+  /**
+   * Learning by Doing (apps/study-dialog.mjs): which abilities can raise each skill, and its success count.
+   *   row.teachers         uuids of the abilities that teach it, joined with "|" (empty = no ✋ button)
+   *   row.successText      "1/2" when there's at least one success toward the next level
+   *   row.successTooltip   "1 of 2 successes toward Proficient (learning by doing)"
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   * @param {object[]} abilityEntries  The Abilities section's entries (owned and granted), from #prepareSections.
+   */
+  async #applyFastLearning(skillsByCategory, abilityEntries) {
+    // The abilities with Learning by Doing turned on.
+    const docs = await Promise.all(abilityEntries
+      .filter((entry) => !entry.broken)
+      .map((entry) => fromUuid(entry.uuid).catch(() => null)));
+    const teachers = docs.filter((doc) => doc?.system?.fastLearning?.enabled);
+
+    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+
+    for (const row of Object.values(skillsByCategory).flat()) {
+      row.teachers = teachers
+        .filter((ability) => abilityTeaches(ability.system.fastLearning, row)
+          && canTeachTo(row.effectiveLevel, ability.system.fastLearning.maxLevel))
+        .map((ability) => ability.uuid)
+        .join("|");
+
+      const count = successesFor(learning.get(row.uuid), row.effectiveLevel);
+      const next = nextLevel(row.effectiveLevel);
+      row.successText = "";
+      row.successTooltip = "";
+      if (count > 0 && next) {
+        const needed = successesNeeded(row.effectiveLevel);
+        row.successText = `${count}/${needed}`;
+        row.successTooltip = game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.Fast.ProgressTooltip", {
+          count, needed, next: levelLabel(next),
+        });
+      }
+    }
+  }
+
+
+  /**
+   * Each skill row's study meter (apps/study-dialog.mjs): the "46%" next to the book button.
+   *   row.canStudy       false at Grand Master (nothing left to learn)
+   *   row.studyPercent   0 when there's no study toward the next level yet
+   *   row.studyTooltip   "46% of the way to Proficient through study"
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   */
+  #applyStudyProgress(skillsByCategory) {
+    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+
+    for (const row of Object.values(skillsByCategory).flat()) {
+      const next = nextLevel(row.effectiveLevel);
+      row.canStudy = !!next;
+      row.studyPercent = next ? meterPercent(studyProgressFor(learning.get(row.uuid), row.effectiveLevel)) : 0;
+      row.studyTooltip = row.studyPercent
+        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.ProgressTooltip", {
+            percent: row.studyPercent,
+            next: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[next] ?? next),
+          })
+        : "";
+    }
+  }
+
+
+  /**
+   * Related-skill improvement: raise skills whose related skill is Advanced or better (helpers/skill-associations.mjs).
+   * Only the rolled level and the shown modifier change; the dropdown keeps the player's own pick.
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   */
+  #applySkillAssociations(skillsByCategory) {
+    const rows = Object.values(skillsByCategory).flat();
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+
+    // First the character's Sequences raise their skills (base-actor.mjs sequenceSkillSteps), then related
+    // skills raise each other from those levels: a Sequence that makes Sword Advanced also lifts Melee.
+    const sequenceSteps = this.actor.system.sequenceSkillSteps ?? {};
+    const raised = rows.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
+    const results = computeAssociatedLevels(raised);
+
+    for (const row of rows) {
+      const steps = sequenceSteps[row.uuid] ?? 0;
+      const result = results.get(row.uuid);
+      const effective = result?.level ?? row.level;
+      if (effective === row.level) continue;   // nothing raised it: no badge
+
+      row.effectiveLevel = effective;
+      row.associated = true;
+      row.modifier = PlayerCharacterSheet._calculateSkillModifier(effective, row.attributeTotal);
+
+      // Hover text: why it's higher than the dropdown says. Either reason, or both.
+      const reasons = [];
+      if (steps > 0) {
+        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
+      }
+      if (result?.raised) {
+        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
+          level: levelLabel(result.level),
+          sources: result.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
+        }));
+      }
+      row.associatedTooltip = reasons.join(" · ");
+    }
   }
 
   
@@ -1256,7 +1416,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    */
   async #dropSkill(item) {
     const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-    const category = [item.system.category, item.system.skill_attribute].find((key) => key && key in folders);
+    // Skills are filed under their linked attribute's tab. (This used to check system.category first, but
+    // those are related-skill categories like "fighting", never a tab, and the field is now system.categories.)
+    const category = [item.system.skill_attribute].find((key) => key && key in folders);
     if (!category) {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.NoSkillCategory", { name: item.name }));
       return null;
@@ -1490,6 +1652,39 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       level: row.dataset.level,
       flatModifier: Number(row.dataset.flatModifier) || 0
     });
+  }
+
+
+  /**
+   * The book button on a skill row: open the Study dialog (apps/study-dialog.mjs).
+   * data-level on the row is the level the skill is rolled at, so study carries on from a related skill's raise.
+   */
+  static async #onStudySkill(event, target) {
+    if (!this.isEditable) return;
+    const row = target.closest("[data-skill-uuid]");
+    if (!row) return;
+    await openStudyDialog(this.actor, {
+      uuid: row.dataset.skillUuid,
+      name: row.dataset.skillName,
+      level: row.dataset.level,
+    });
+  }
+
+
+  /**
+   * The ✋ button on a skill row: record a success with an ability that teaches the skill (apps/study-dialog.mjs).
+   * data-teachers on the row lists those abilities' uuids, separated by "|".
+   */
+  static async #onRecordSkillSuccess(event, target) {
+    if (!this.isEditable) return;
+    const row = target.closest("[data-skill-uuid]");
+    const teachers = row?.dataset.teachers?.split("|").filter(Boolean) ?? [];
+    if (!teachers.length) return;
+    await openSuccessDialog(this.actor, {
+      uuid: row.dataset.skillUuid,
+      name: row.dataset.skillName,
+      level: row.dataset.level,
+    }, teachers);
   }
 
 

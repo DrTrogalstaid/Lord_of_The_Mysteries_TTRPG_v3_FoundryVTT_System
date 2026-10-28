@@ -1,5 +1,8 @@
 import LordOfTheMysteriesDataModel from "../base-model.mjs";
 import { calculateCarrying, armoredMovement } from "../../helpers/inventory.mjs";
+import { calculateSkillModifier } from "../../helpers/skill-modifiers.mjs";
+import { atLeastLevel, raiseLevel } from "../../helpers/skill-associations.mjs";
+import { educationGrowth } from "../../helpers/skill-learning.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -64,11 +67,45 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                     }),
                     // Abilities analyzed toward this skill (Extraordinary Knowledge). Only Education
                     // skills count here -- other skills' analyses go to a copy on the ability.
-                    analysis: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 })
+                    analysis: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+                    // Learning this skill over time (helpers/skill-study.mjs).
+                    study: new fields.SchemaField({
+                        // Study days a week (one 2-hour session a day). 0 = not studying it.
+                        days: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, max: 7, initial: 0 }),
+                        // "teacher" = taught (normal speed), "self" = studying alone (twice as long).
+                        method: new fields.StringField({ required: true, blank: false, initial: "teacher", choices: ["teacher", "self"] }),
+                        // How far toward the next level, 0 to 1 (0.25 = a quarter of the way).
+                        progress: new fields.NumberField({ required: true, nullable: false, min: 0, max: 1, initial: 0 }),
+                        // Levels gained by studying, not at character creation. For the Education growth rule later.
+                        studiedLevels: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 })
+                    })
                 })
             );
             return obj;
         }, {}));
+
+        // Learning progress, one entry per skill being learned (helpers/skill-learning.mjs, apps/study-dialog.mjs).
+        // Kept apart from `skills` on purpose: the Character tab saves the whole `skills` lists from its form,
+        // and these values aren't in that form, so a form save would wipe them if they lived there.
+        const levelChoices = () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels);
+        schema.learning = new fields.ArrayField(
+            new fields.SchemaField({
+                skill: new fields.DocumentUUIDField({ type: "Item", required: true }),
+                // Study meter (slow growth): 0 to 1 of the way to the next level, counted from studyFrom.
+                study: new fields.NumberField({ required: true, nullable: false, min: 0, max: 1, initial: 0 }),
+                studyFrom: new fields.StringField({ required: true, blank: true, initial: "" }),
+                // Sequence ability successes (fast growth), counted from successesFrom. Counted separately from study.
+                successes: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+                successesFrom: new fields.StringField({ required: true, blank: true, initial: "" }),
+                // Every level gained after character creation, and how. For the Education growth rule.
+                gained: new fields.ArrayField(new fields.SchemaField({
+                    from: new fields.StringField({ required: true, choices: levelChoices }),
+                    to: new fields.StringField({ required: true, choices: levelChoices }),
+                    source: new fields.StringField({ required: true, initial: "study", choices: ["study", "ability"] }),
+                    detail: new fields.StringField({ required: true, blank: true, initial: "" })   // e.g. the ability's name
+                }))
+            })
+        );
 
         // Money that isn't on the character ("accumulated deposits": a bank account, a safe at home).
         // One balance per currency, in that currency's smallest coin. Cash on the person is in purse / wallet gear.
@@ -98,6 +135,37 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     prepareDerivedData() {
         const sequences = this.parent?.items.filter(i => i.type === "sequence") ?? [];
 
+        // Sequence skill increases: how many levels each owned Sequence raises a skill (its skill_increase rows).
+        // Like attribute_gain, it's worked out fresh every time, so removing the Sequence takes the raise away,
+        // and the player's own pick in the skill dropdown is never changed.
+        // Display only, not in the schema: { [skill uuid]: levels }. Read with sequenceSkillSteps[uuid] ?? 0.
+        this.sequenceSkillSteps = {};
+        for (const sequence of sequences) {
+            for (const { skill_uuid, value } of sequence.system.skill_increase ?? []) {
+                if (!skill_uuid) continue;
+                this.sequenceSkillSteps[skill_uuid] = (this.sequenceSkillSteps[skill_uuid] ?? 0) + (value ?? 0);
+            }
+        }
+
+        // Education growth: +1 Education per 5 skills learned to Mastery, 3 to Lore, 2 to Grand Master
+        // (helpers/skill-learning.mjs). Display only, not in the schema: { bonus, tiers: [...] }.
+        const minimums = CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels ?? {};
+        const skillLevels = new Map();   // skill uuid -> { own, raised }
+        for (const list of Object.values(this.skills ?? {})) {
+            for (const entry of list ?? []) {
+                if (!entry?.skill) continue;
+                const own = atLeastLevel(entry.level, minimums[entry.skill]);
+                skillLevels.set(entry.skill, { own, raised: raiseLevel(own, this.sequenceSkillSteps[entry.skill]) });
+            }
+        }
+        // A Sequence can raise a skill the character has never touched (no level saved yet).
+        for (const uuid of Object.keys(this.sequenceSkillSteps)) {
+            if (skillLevels.has(uuid)) continue;
+            const own = atLeastLevel("untrained", minimums[uuid]);
+            skillLevels.set(uuid, { own, raised: raiseLevel(own, this.sequenceSkillSteps[uuid]) });
+        }
+        this.educationGrowth = educationGrowth(this.learning ?? [], skillLevels);
+
         // Attribute Bonus Calculation
         // Including sequence gains so resource calculations are correct.
         for (const [key, attr] of Object.entries(this.attributes)) {
@@ -105,8 +173,9 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 sum + (seq.system.attribute_gain ?? [])
                     .filter(g => g.attribute_name === key)
                     .reduce((s, g) => s + (g.value ?? 0), 0), 0);   // display only, not in the schema
+            attr.growth_bonus = key === "edu" ? this.educationGrowth.bonus : 0;   // display only, not in the schema
             attr.total = (attr.base ?? 0) + (attr.beyonder_bonus ?? 0)
-                    + (attr.corruption ?? 0) + attr.sequence_bonus;
+                    + (attr.corruption ?? 0) + attr.sequence_bonus + attr.growth_bonus;
         }
 
         // Strength Bonus Calculation
@@ -169,41 +238,16 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     _prepareDefenseValues() {
         // Armor: the worn suit's armor points (0 without one). Added to Physical below.
         this.defenses.armor = this.carrying?.armor.value ?? 0;
-        //Dodge
-        // Loop through skills and find dodge
-        this.defenses.dodge = 0;      
-        for (var i in this.skills.agi){
-            var skill = this.skills.agi[i];
-            
-            if (skill.skill == "Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ")
-            {
-                //TODO: Make this better by storing modifier in skill item??
-                switch(skill.level)
-                {
-                case "untrained":
-                    this.defenses.dodge -= 4;
-                    break;
-                case "trained":
-                    this.defenses.dodge += 2;
-                    break;
-                case "proficient":
-                    this.defenses.dodge += 4;
-                    break;
-                case "advanced":
-                    this.defenses.dodge += 5;
-                    break;
-                case "mastery":
-                    this.defenses.dodge += 6;
-                    break;
-                case "lore":
-                    this.defenses.dodge += 7;
-                    break;
-                case "grandMaster":
-                    this.defenses.dodge += 8;
-                    break;
-                }
-            }
-        }
+        // Dodge: the Dodge skill's level bonus (+2 Trained, +4 Proficient, ...), the same table as every other skill.
+        // Every character has Dodge at Trained or better (CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels), so
+        // a character who has never touched it gets +2. (Before, that case gave 0, and a saved "untrained" gave -4.)
+        const dodgeUuid = CONFIG.LORD_OF_THE_MYSTERIES.dodgeSkillUuid;
+        const dodgeEntry = (this.skills.agi ?? []).find((entry) => entry.skill === dodgeUuid);
+        const dodgeLevel = raiseLevel(
+            atLeastLevel(dodgeEntry?.level ?? "untrained", CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[dodgeUuid]),
+            this.sequenceSkillSteps?.[dodgeUuid] ?? 0   // a Sequence that raises Dodge raises the defense too
+        );
+        this.defenses.dodge = calculateSkillModifier(dodgeLevel, 0);
         // Physical
         this.defenses.physical = (this.attributes.agi.total + this.defenses.armor + this.defenses.dodge + 10);
         // Will

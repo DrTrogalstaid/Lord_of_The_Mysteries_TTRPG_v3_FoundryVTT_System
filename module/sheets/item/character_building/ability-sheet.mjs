@@ -31,6 +31,9 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
       deleteAction: LordOfTheMysteriesAbilitySheet.#onDeleteAction,
       deleteSkillOption: LordOfTheMysteriesAbilitySheet.#onDeleteSkillOption,
+      addFastCategory: LordOfTheMysteriesAbilitySheet.#onAddFastCategory,
+      removeFastCategory: LordOfTheMysteriesAbilitySheet.#onRemoveFastCategory,
+      deleteFastSkill: LordOfTheMysteriesAbilitySheet.#onDeleteFastSkill,
     },
   };
 
@@ -129,6 +132,22 @@ export class LordOfTheMysteriesAbilitySheet extends HandlebarsApplicationMixin(I
       })
     );
 
+    // Learning by Doing: dropdown choices, and the single skills it teaches with their name/img.
+    context.skillCategoryChoices = CONFIG.LORD_OF_THE_MYSTERIES.skillCategories;
+    context.skillLevelChoices = CONFIG.LORD_OF_THE_MYSTERIES.skillLevels;
+    context.fastSkillRows = await Promise.all(
+      (context.system.fastLearning?.skills ?? []).map(async (uuid, index) => {
+        const skillItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: skillItem?.name ?? "Unknown Item",
+          img: skillItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !skillItem,
+        };
+      })
+    );
+
     return context;
   }
 
@@ -197,6 +216,21 @@ async _onDropDocument(event, document) {
       return document;
     }
 
+    // Learning by Doing: a single skill this ability teaches.
+    if (dropZone === "fastLearningSkills") {
+      if (document.type !== "skill") {
+        ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Learning.Fast.NotASkill"));
+        return null;
+      }
+      const current = this.item.system.fastLearning?.skills ?? [];
+      if (current.includes(document.uuid)) {
+        ui.notifications.warn(`${document.name} is already taught by this ability.`);
+        return null;
+      }
+      await this.item.update({ "system.fastLearning.skills": [...current, document.uuid] });
+      return document;
+    }
+
     return document;
 }
 
@@ -242,6 +276,32 @@ async _onDropDocument(event, document) {
     const current = this.item.system.skillOptions ?? [];
     await this.item.update({
       "system.skillOptions": current.filter((_, i) => i !== index),
+    });
+  }
+
+  /** Learning by Doing: add a category (the first one not already listed; change it in the dropdown). */
+  static async #onAddFastCategory(event, target) {
+    const current = this.item.system.fastLearning?.categories ?? [];
+    const next = Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories).find((key) => !current.includes(key));
+    if (!next) return;
+    await this.item.update({ "system.fastLearning.categories": [...current, next] });
+  }
+
+  /** Learning by Doing: remove a category by index. */
+  static async #onRemoveFastCategory(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.fastLearning?.categories ?? [];
+    await this.item.update({
+      "system.fastLearning.categories": current.filter((_, i) => i !== index),
+    });
+  }
+
+  /** Learning by Doing: remove a single skill by index. */
+  static async #onDeleteFastSkill(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.fastLearning?.skills ?? [];
+    await this.item.update({
+      "system.fastLearning.skills": current.filter((_, i) => i !== index),
     });
   }
 

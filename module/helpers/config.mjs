@@ -75,6 +75,13 @@ LORD_OF_THE_MYSTERIES.skillCategories = {
     extraordinaryKnowledge: 'LORD_OF_THE_MYSTERIES.Skill_Categories.ExtraordinaryKnowledge'
 };
 
+/** How a skill takes part in one of its related-skill categories (see helpers/skill-associations.mjs). */
+LORD_OF_THE_MYSTERIES.skillCategoryModes = {
+    both: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.both',
+    gives: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.gives',
+    receives: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.receives',
+};
+
 LORD_OF_THE_MYSTERIES.skillAttributes = {
     str: 'LORD_OF_THE_MYSTERIES.Attributes.Str.long',
     agi: 'LORD_OF_THE_MYSTERIES.Attributes.Agi.long',
@@ -94,6 +101,17 @@ LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
 };
 
 LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
+
+/** The Dodge skill in the Skills compendium (its defense bonus is worked out in base-actor.mjs). */
+LORD_OF_THE_MYSTERIES.dodgeSkillUuid = 'Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ';
+
+/**
+ * Skills every character has at least this level in, keyed by skill UUID.
+ * Rulebook: "Your dodge skill is trained by default." Picking Proficient (with Education) still works.
+ */
+LORD_OF_THE_MYSTERIES.defaultSkillLevels = {
+    [LORD_OF_THE_MYSTERIES.dodgeSkillUuid]: 'trained',
+};
 
 LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
     str: 'Strength',

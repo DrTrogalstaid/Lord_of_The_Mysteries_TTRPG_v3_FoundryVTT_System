@@ -245,6 +245,93 @@
       "ExtraordinaryKnowledge": "Extraordinary Knowledge"
     },
 
+    "Learning": {
+      "Study": "Study",
+      "StudyTooltip": "Log study time",
+      "Title": "Study {skill}",
+      "Current": "Now {level}, {percent}% of the way to {next} through study.",
+      "Weeks": "Weeks of study",
+      "Schedule": "How often",
+      "ScheduleHint": "Each day counts as at least 2 hours of new, useful lessons or research. Only one session a day counts.",
+      "Schedules": {
+        "daily": "6–7 days a week",
+        "often": "3–5 days a week",
+        "weekly": "1–2 days a week"
+      },
+      "SelfStudy": "Self-study",
+      "SelfStudyShort": "self-study",
+      "SelfStudyHint": "Learning alone, with no mentor, takes twice as long.",
+      "InspirationBoost": "Inspiration {inspiration}: studies {steps} schedule(s) faster than chosen.",
+      "PreviewStep": "{from} → {to} takes {time} at this pace.",
+      "PreviewProgress": "These weeks bring it to {percent}% of the way to {next}.",
+      "PreviewLevelUp": "These weeks raise it to {level}.",
+      "Log": "Log Study",
+      "Cancel": "Cancel",
+      "AtMax": "{skill} is already at the highest level.",
+      "NoLearningField": "Learning progress can't be saved: this character has no 'learning' field. The system's base-actor.mjs is out of date.",
+      "ProgressTooltip": "{percent}% of the way to {next} through study",
+      "Duration": {
+        "Weeks": "{n} weeks",
+        "Months": "{n} months",
+        "Years": "{n} years"
+      },
+      "Chat": {
+        "Studied": "Studied {skill} for {weeks} week(s) ({how}).",
+        "LevelUp": "{skill} went up to {level}!",
+        "Progress": "{percent}% of the way to {next}."
+      },
+      "Fast": {
+        "Title": "Learning by Doing",
+        "EnabledHint": "This ability teaches skills through use. Characters with it get a ✋ button on the skills below to record each success. The next level needs 1 success to reach Trained, 2 for Proficient, 3 for Advanced, 4 for Mastery, and so on.",
+        "Condition": "What counts as a success",
+        "ConditionPlaceholder": "e.g. A challenging, non-repetitive theft of something valuable to its owner",
+        "ConditionShown": "{ability}: {condition}",
+        "MaxLevel": "Highest level it can teach",
+        "Categories": "Skill categories it teaches",
+        "AddCategory": "Add a category",
+        "RemoveCategory": "Remove this category",
+        "Skills": "Other single skills it teaches",
+        "NotASkill": "Only Skills can be added here.",
+        "Ability": "From which ability",
+        "Record": "Record Success",
+        "RecordTooltip": "Record a success (learning by doing)",
+        "DialogTitle": "{skill}: Learning by Doing",
+        "Progress": "{count} of {needed} successes toward {next}.",
+        "PreviewProgress": "After this one: {count} of {needed}.",
+        "PreviewLevelUp": "This one raises it to {level}!",
+        "ProgressTooltip": "{count} of {needed} successes toward {next} (learning by doing)",
+        "AtAbilityMax": "{ability} can't raise {skill} past {level}.",
+        "Chat": {
+          "Success": "Recorded a success for {skill} with {ability}.",
+          "Maxed": "{ability} can't teach it past {level}."
+        }
+      }
+    },
+
+    "EducationGrowth": {
+      "Total": "Education growth: +{bonus}",
+      "Tier": "{level}: {count} skill(s), +{bonus} (next +1 at {next})",
+      "Hint": "Counts skills raised to these levels by study or Learning by Doing, not levels picked at creation or set by hand.",
+      "Chat": "Education growth: Education +{gain} (now +{total} in total)."
+    },
+
+    "SkillAssociation": {
+      "Categories": "Related Skill Categories",
+      "CategoriesHint": "When a skill in a category reaches Advanced, the others in it go up one level (two at Mastery), but not above Proficient.",
+      "ModeHint": "One-way links: \"Only raises others\" for Singing in Music, \"Only raised by others\" for Biology in Medical.",
+      "Add": "Add a category",
+      "Remove": "Remove this category",
+      "None": "Not in any category.",
+      "AllUsed": "This skill is already in every category.",
+      "RaisedBy": "Rolled at {level}, raised by {sources}",
+      "RaisedBySequence": "Sequence: +{steps} level(s)",
+      "Modes": {
+        "both": "Raises and is raised",
+        "gives": "Only raises others",
+        "receives": "Only raised by others"
+      }
+    },
+
     "Drop": {
       "Sections": {
         "skills": "Granted Skills",

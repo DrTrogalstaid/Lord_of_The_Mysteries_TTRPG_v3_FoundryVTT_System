@@ -617,6 +617,15 @@
   width: 110px;
 }
 
+/* "🔗 Trained" next to a skill raised by a related skill (Advanced Sword raising Melee). */
+.lotm.sheet.actor .skill-associated {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+  white-space: nowrap;
+  cursor: help;
+}
+
 /* -------------------------------------------------------------------- */
 /* Biography tab content                                                */
 /* -------------------------------------------------------------------- */

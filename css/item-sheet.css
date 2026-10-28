@@ -59,3 +59,39 @@
 .lotm.sheet.item input.blend-input::placeholder {
   color: var(--psx-text-dim);
 }
+
+/* Related-skill categories box on the skill sheet (parts/skill-categories.hbs) */
+.lotm.sheet.item .skill-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lotm.sheet.item .skill-categories .hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.item .skill-category-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.sheet.item .skill-category-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.lotm.sheet.item .skill-category-remove {
+  flex: 0 0 14px;
+  text-align: center;
+  color: var(--psx-text-dim);
+}
+
+/* Learning by Doing box on the ability sheet (ability.hbs). Its category rows reuse the skill-category-row styles above. */
+.lotm.sheet.item .fast-learning > label:not(.flexrow) {
+  margin-top: 4px;
+  font-weight: bold;
+}

@@ -20,7 +20,7 @@
   "version": "0.0.1",
   "compatibility": {
     "minimum": 14,
-    "verified": "14.368"
+    "verified": "14.369"
   },
   "esmodules": ["module/lotm.mjs"],
   "styles": [
@@ -45,11 +45,11 @@
       "type": "Item",
       "banner": "systems/lotm/assets/compendium_packs/Ingredient_-_Real_Ancient_Historical_Records.webp",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "sequence_compendium",
@@ -58,11 +58,11 @@
       "type": "Item",
       "banner": "systems/lotm/assets/compendium_packs/Path_of_the_Divine.webp",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "ability_compendium",
@@ -71,11 +71,11 @@
       "type": "Item",
       "banner": "systems/lotm/assets/compendium_packs/Ingredient_-_Astronomical,_Geographical,_and_Folkloric_Knowledge_of_Three_Galaxies.webp",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "action_compendium",
@@ -83,11 +83,11 @@
       "path": "packs/action_compendium",
       "type": "Item",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "rules_compendium",
@@ -95,11 +95,11 @@
       "path": "packs/rules_compendium",
       "type": "JournalEntry",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "containers_and_gear_compendium",
@@ -107,11 +107,11 @@
       "path": "packs/containers_and_gear_compendium",
       "type": "Item",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     },
     {
       "name": "spell_and_rituals_compendium",
@@ -119,11 +119,11 @@
       "path": "packs/spell_and_rituals_compendium",
       "type": "Item",
       "system": "lotm",
-      "ownershop": {
+      "ownership": {
         "PLAYER": "OBSERVER",
         "ASSISTANT": "OWNER"
       },
-      "flats": {}
+      "flags": {}
     }
   ],
   "packFolders": [],

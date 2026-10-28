@@ -33,13 +33,8 @@
         </select>
       </fieldset>
 
-      <!--Category-->
-      <fieldset class="category flexrow">
-        <legend>Category</legend>
-          <select name="system.category" {{#unless editable}}disabled{{/unless}}>
-            {{selectOptions config.skillCategories selected=system.category localize=true blank=""}}
-          </select>
-      </fieldset>
+      <!--Related-skill categories. The partial has its own box (fieldset), so it isn't wrapped in anything here.-->
+      {{> "systems/lotm/templates/item/character_building/parts/skill-categories.hbs"}}
 
     </div>
 

@@ -1,0 +1,33 @@
+{{!-- Related-skill categories (helpers/skill-associations.mjs). Put this in skill.hbs where the old
+      single "category" dropdown was:
+        {{> "systems/lotm/templates/item/character_building/parts/skill-categories.hbs"}} --}}
+<fieldset class="skill-categories">
+  <legend>{{localize "LORD_OF_THE_MYSTERIES.SkillAssociation.Categories"}}</legend>
+  <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillAssociation.CategoriesHint"}}</p>
+
+  {{#each system.categories as |row|}}
+  <div class="skill-category-row">
+    <select name="system.categories.{{@index}}.category" {{#unless @root.editable}}disabled{{/unless}}>
+      {{selectOptions @root.categoryChoices selected=row.category localize=true}}
+    </select>
+    <select name="system.categories.{{@index}}.mode" {{#unless @root.editable}}disabled{{/unless}}
+            data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillAssociation.ModeHint'}}">
+      {{selectOptions @root.categoryModes selected=row.mode localize=true}}
+    </select>
+    {{#if @root.editable}}
+    <a class="skill-category-remove" data-action="removeCategory" data-index="{{@index}}"
+       data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillAssociation.Remove'}}">
+      <i class="fa-solid fa-trash"></i>
+    </a>
+    {{/if}}
+  </div>
+  {{else}}
+  <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillAssociation.None"}}</p>
+  {{/each}}
+
+  {{#if @root.editable}}
+  <button type="button" class="skill-category-add" data-action="addCategory">
+    <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.SkillAssociation.Add"}}
+  </button>
+  {{/if}}
+</fieldset>

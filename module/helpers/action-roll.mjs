@@ -1,6 +1,7 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
+import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 import { canFire, fireGun, gunFor } from "./firearms.mjs";
 
@@ -41,7 +42,9 @@ export function findSkillEntry(actor, skill, skillUuid) {
     if (entry) return { uuid: entry.skill, category, level: entry.level };
   }
   const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-  const category = [skill.system.category, skill.system.skill_attribute].find((key) => key && key in folders)
+  // (system.category used to be checked first here, but those are related-skill categories like "fighting",
+  // never a tab, and the field is now system.categories.)
+  const category = [skill.system.skill_attribute].find((key) => key && key in folders)
     ?? skill.system.skill_attribute;
   return { uuid: skillUuid, category, level: "untrained" };
 }
@@ -61,7 +64,10 @@ async function resolveActionSkill(actor, action) {
   const skill = await fromUuid(skillUuid).catch(() => null);
   if (!skill) return null;
 
-  const { uuid, category, level } = findSkillEntry(actor, skill, skillUuid);
+  const { uuid, category } = findSkillEntry(actor, skill, skillUuid);
+  // The level it's rolled at: the character's own, or higher if a related skill raises it
+  // (Advanced Sword makes Melee Trained) or it has a starting level (Dodge). Same as the Character tab shows.
+  const level = await effectiveSkillLevel(actor, uuid);
   return {
     skill,
     uuid,

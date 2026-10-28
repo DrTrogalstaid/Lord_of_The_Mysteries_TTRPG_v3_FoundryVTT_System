@@ -183,6 +183,64 @@
         </ol>
       </fieldset>
 
+      <!--Learning by Doing (helpers/skill-learning.mjs)-->
+      <fieldset class="fast-learning skill-categories">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.Title"}}</legend>
+        <label class="flexrow">
+          <input type="checkbox" name="system.fastLearning.enabled" {{checked system.fastLearning.enabled}} {{#unless editable}}disabled{{/unless}} />
+          {{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.EnabledHint"}}
+        </label>
+
+        {{#if system.fastLearning.enabled}}
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.Condition"}}</label>
+        <input type="text" class="blend-input" name="system.fastLearning.condition" value="{{system.fastLearning.condition}}"
+               placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Learning.Fast.ConditionPlaceholder'}}" {{#unless editable}}disabled{{/unless}} />
+
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.MaxLevel"}}</label>
+        <select name="system.fastLearning.maxLevel" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.skillLevels selected=system.fastLearning.maxLevel localize=true}}
+        </select>
+
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.Categories"}}</label>
+        {{#each system.fastLearning.categories as |category|}}
+        <div class="skill-category-row">
+          <select name="system.fastLearning.categories.{{@index}}" {{#unless @root.editable}}disabled{{/unless}}>
+            {{selectOptions @root.config.skillCategories selected=category localize=true}}
+          </select>
+          {{#if @root.editable}}
+          <a class="skill-category-remove" data-action="removeFastCategory" data-index="{{@index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Learning.Fast.RemoveCategory'}}"><i class="fa-solid fa-trash"></i></a>
+          {{/if}}
+        </div>
+        {{/each}}
+        {{#if editable}}
+        <a class="item-control add-row" data-action="addFastCategory">
+          <i class="fas fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.AddCategory"}}
+        </a>
+        {{/if}}
+
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Learning.Fast.Skills"}}</label>
+        <ol class="items-list" data-drop-zone="fastLearningSkills">
+          {{#each fastSkillRows as |row|}}
+          <li class="item flexrow" data-uuid="{{row.uuid}}">
+            <div class="item-name">
+              <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
+              <h4>{{row.name}}</h4>
+            </div>
+            <div class="item-controls">
+              <a class="item-control" data-action="deleteFastSkill" data-index="{{row.index}}" title="Delete">
+                <i class="fas fa-trash"></i>
+              </a>
+            </div>
+          </li>
+          {{/each}}
+          {{#unless fastSkillRows.length}}
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.DropHint"}}</li>
+          {{/unless}}
+        </ol>
+        {{/if}}
+      </fieldset>
+
       <!--Can Be Stolen-->
       <fieldset>
         <legend>Can Be Stolen/Recorded</legend>

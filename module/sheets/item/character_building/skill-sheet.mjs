@@ -7,6 +7,9 @@ import {
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+/** The related-skill categories box. Include it in skill.hbs with {{> "systems/lotm/templates/item/character_building/parts/skill-categories.hbs"}} */
+const SKILL_CATEGORIES_PARTIAL = "systems/lotm/templates/item/character_building/parts/skill-categories.hbs";
+
 
 export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   /** @override */
@@ -25,17 +28,20 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
       resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.Skill"
     },
-    
+    actions: {
+      addCategory: LordOfTheMysteriesSkillSheet.#onAddCategory,
+      removeCategory: LordOfTheMysteriesSkillSheet.#onRemoveCategory,
+    },
   };
 
-  
+
   /** @override */
   // Placeholder path — the real per-type template is resolved in
   // _configureRenderParts() below, the V2 replacement for the old
   // `get template()` getter.
   static PARTS = {
     header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
-    form: { template: 'systems/lotm/templates/item/character_building/skill-sheet.hbs'},
+    form: { template: 'systems/lotm/templates/item/character_building/skill-sheet.hbs', templates: [SKILL_CATEGORIES_PARTIAL] },
   };
 
 
@@ -61,9 +67,9 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
   /** @override */
   _configureRenderParts(options) {
     const parts = super._configureRenderParts(options);
-    
+
     parts.form.template = `systems/lotm/templates/item/character_building/skill.hbs`;
-                           
+
 
     return parts;
   }
@@ -97,6 +103,10 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
     // Adding a pointer to CONFIG.LORD_OF_THE_MYSTERIES
     context.config = CONFIG.LORD_OF_THE_MYSTERIES;
 
+    // Dropdown choices for the related-skill categories box.
+    context.categoryChoices = CONFIG.LORD_OF_THE_MYSTERIES.skillCategories;
+    context.categoryModes = CONFIG.LORD_OF_THE_MYSTERIES.skillCategoryModes;
+
     // Prepare active effects for easier access
     context.effects = prepareActiveEffectCategories(this.item.effects);
 
@@ -117,6 +127,33 @@ export class LordOfTheMysteriesSkillSheet extends HandlebarsApplicationMixin(Ite
     this.element.querySelectorAll('.effect-control').forEach((el) => {
       el.addEventListener('click', (ev) => onManageActiveEffect(ev, this.item));
     });
+  }
+
+
+  /**
+   * Add a category to this skill. It starts as the first category the skill isn't in yet, with mode "both";
+   * change both in the dropdowns.
+   */
+  static async #onAddCategory(event, target) {
+    if (!this.isEditable) return;
+    const current = this.item.toObject().system.categories ?? [];
+    const used = new Set(current.map((entry) => entry.category));
+    const next = Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories).find((key) => !used.has(key));
+    if (!next) {
+      ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillAssociation.AllUsed"));
+      return;
+    }
+    await this.item.update({ "system.categories": [...current, { category: next, mode: "both" }] });
+  }
+
+
+  /** Remove one category from this skill (data-index = its position in the list). */
+  static async #onRemoveCategory(event, target) {
+    if (!this.isEditable) return;
+    const index = Number(target.dataset.index);
+    const current = this.item.toObject().system.categories ?? [];
+    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    await this.item.update({ "system.categories": current.filter((_, i) => i !== index) });
   }
 
 }
