@@ -1756,7 +1756,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
   }
 
-  // Skills and inventory Items come from compendiums / the sidebar, so those buttons just point at drag and drop.
+  // Skills come from compendiums / the sidebar, so that button just points at drag and drop.
   static async #onAddSkill(event, target) {
     ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintSkills"));
   }
@@ -1777,8 +1777,30 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     return createBlankItem(this, "spell");
   }
 
+  /**
+   * The Inventory tab's "+" button: ask whether to make gear or a piece of clothing / a bag, create a blank one,
+   * and open its sheet. New gear goes in the first pocket or bag with room, the same as a dropped item.
+   */
   static async #onAddItem(event, target) {
-    ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintInventory"));
+    if (!this.isEditable) return;
+
+    // Closing the dialog gives null (rejectClose: false), so nothing is made.
+    const type = await foundry.applications.api.DialogV2.wait({
+      window: { title: "LORD_OF_THE_MYSTERIES.Inventory.Add.Title" },
+      content: `<p>${game.i18n.localize("LORD_OF_THE_MYSTERIES.Inventory.Add.Prompt")}</p>`,
+      buttons: [
+        { action: "gear", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Gear", icon: "fa-solid fa-toolbox", default: true },
+        { action: "container", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Container", icon: "fa-solid fa-shirt" },
+      ],
+      rejectClose: false,
+    });
+    if (type !== "gear" && type !== "container") return;
+
+    const data = { name: Item.implementation.defaultName({ type, parent: this.actor }), type };
+    if (type === "gear") foundry.utils.mergeObject(data, foundry.utils.expandObject(autoPlacement(this.actor, data)));
+
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
+    created?.sheet?.render({ force: true });
   }
 
 

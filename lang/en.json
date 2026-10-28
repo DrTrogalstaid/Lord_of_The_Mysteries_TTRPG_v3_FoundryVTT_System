@@ -320,6 +320,12 @@
     },
     
     "Inventory": {
+      "Add": {
+        "Title": "Add an item",
+        "Prompt": "What kind of item?",
+        "Gear": "Gear",
+        "Container": "Clothing / Bag"
+      },
       "Carrying": "Carrying",
       "StrengthLimit": "Strength limit (Strength × 2)",
       "Stowed": "Pockets & bags",

@@ -69,6 +69,10 @@
       <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"}}</h3>
       {{#if editable}}
         <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.DropHint"}}</span>
+        {{!-- New blank gear or clothing / bag (PlayerCharacterSheet.#onAddItem). --}}
+        <button type="button" class="drop-section-add" data-action="addItem" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Add.Title" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Inventory.Add.Title'}}">
+          <i class="fa-solid fa-plus"></i>
+        </button>
       {{/if}}
     </header>
 
