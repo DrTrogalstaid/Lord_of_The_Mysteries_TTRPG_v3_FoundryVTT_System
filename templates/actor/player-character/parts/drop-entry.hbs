@@ -3,7 +3,7 @@
   Extra value passed in by the caller:
     deleteAction  the sheet action for the remove button, e.g. "deleteSpell"
 --}}
-<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"{{#if id}} data-item-id="{{id}}"{{/if}}>
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if spellActions.length}} has-actions{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"{{#if id}} data-item-id="{{id}}"{{/if}}>
 
   {{!-- Image. Click posts the Item to chat. Broken references get a plain image. --}}
   {{#if broken}}
@@ -115,5 +115,16 @@
   </button>
   {{else}}
   <span class="drop-entry-spacer"></span>
+  {{/if}}
+
+  {{!-- Spells tab: the actions this spell grants, on their own lines under it, with roll buttons and the
+        Favorites star. They're on the Actions tab only once favorited (groupActions in player-character-sheet.mjs).
+        This list isn't a .drop-section-list, so the move buttons above ignore these rows. --}}
+  {{#if spellActions.length}}
+  <ol class="spell-actions">
+    {{#each spellActions as |action|}}
+      {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" action remove="deleteAction" favorites=true}}
+    {{/each}}
+  </ol>
   {{/if}}
 </li>

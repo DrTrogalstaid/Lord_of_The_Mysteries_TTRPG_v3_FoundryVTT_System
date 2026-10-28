@@ -19,6 +19,9 @@ const DROP_SECTION_PARTIAL = "systems/lotm/templates/actor/player-character/part
 /** One entry row (icon, name, stats, move / remove buttons). Used by the Spells tab's grouped lists. */
 const DROP_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs";
 
+/** One row of a drop section, with the action buttons. Used by drop-section.hbs and the grouped Actions tab. */
+const SECTION_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/section-entry.hbs";
+
 /* -------------------------------------------- */
 /*  Drop section configuration                   */
 /* -------------------------------------------- */
@@ -151,6 +154,12 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     ammoButtons: [],     // action rows: Reload / Chamber / Unload buttons ({ use, label, disabled })
     firearm: item.type === "gear" && system.isFirearm ? firearmStatus(item) : null,   // inventory row of a gun
     ammoBox: item.type === "gear" && system.isAmmo ? ammoBoxStatus(item) : null,     // inventory row of ammo
+    // Spells: the actions this spell grants, shown under it on the Spells tab (filled in by #prepareSections).
+    spellActions: [],
+    // Actions: where they were granted from. spellOnly = only spells grant it, so it stays off the Actions tab.
+    fromSpell: false,
+    fromOther: false,
+    spellOnly: false,
   };
 }
 
@@ -235,6 +244,80 @@ function groupSpellLists(entries, listNames = []) {
   }
 
   return lists;
+}
+
+/* -------------------------------------------- */
+/*  Actions tab: Favorites and type sections     */
+/* -------------------------------------------- */
+
+/** The type sections on the Actions tab, top to bottom. Actions of any other type go in "Other" at the end. */
+const ACTION_GROUP_ORDER = ["attack", "move", "quick", "free", "full"];
+
+/** The character's favorite actions: entry keys, in the order shown in Favorites. Shared by everyone who sees the sheet. */
+const FAVORITES_FLAG = "flags.lotm.favoriteActions";
+
+/**
+ * Which Actions tab sections each player has collapsed. Saved on the player's own User, not the character,
+ * so it's different for every player: { [actor id]: [section key, ...] }. Read with game.user.getFlag("lotm", ...).
+ */
+const COLLAPSED_FLAG = "collapsedActionGroups";
+
+/**
+ * Split the Actions section into collapsible groups: Favorites first, then one per action type.
+ *
+ * A favorite is shown twice: in Favorites and in its type section (except an action only spells grant,
+ * which is only in Favorites; it's also under its spell on the Spells tab). The Favorites copy is a separate object
+ * so it can have its own move buttons (its order is the favorites list itself, see #onMoveEntry).
+ * Type sections with no actions aren't shown. Entries keep the saved manual order inside each section.
+ *
+ * @param {object[]} entries        context.sections.actions (already sorted).
+ * @param {string[]} favoriteKeys   Entry keys of the favorites, in order (FAVORITES_FLAG).
+ * @param {string[]} collapsedKeys  Section keys this player has collapsed (COLLAPSED_FLAG).
+ * @returns {{key: string, label: string, favorites: boolean, collapsed: boolean, emptyText: string, entries: object[]}[]}
+ *   An empty list when the character has no actions at all.
+ */
+function groupActions(entries, favoriteKeys, collapsedKeys) {
+  if (!entries.length) return [];
+  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.ActionGroups.${key}`);
+
+  // Every favorite gets a filled star, wherever it's listed.
+  const favoriteSet = new Set(favoriteKeys);
+  for (const entry of entries) entry.favorite = favoriteSet.has(entry.key);
+
+  // Favorites, in the saved order. Keys of actions the character no longer has are skipped.
+  const byKey = new Map(entries.map((entry) => [entry.key, entry]));
+  const favorites = {
+    key: "favorites",
+    favorites: true,
+    label: localize("Favorites"),
+    emptyText: localize("FavoritesEmpty"),
+    entries: favoriteKeys.filter((key) => byKey.has(key)).map((key) => ({ ...byKey.get(key) })),
+  };
+
+  // One section per action type. Actions only spells grant are left out: they're listed under their spell
+  // on the Spells tab, and only come here through Favorites.
+  const byType = new Map();   // type key -> group
+  for (const entry of entries) {
+    if (entry.spellOnly) continue;
+    const type = ACTION_GROUP_ORDER.includes(entry.actionType) ? entry.actionType : "other";
+    if (!byType.has(type)) {
+      byType.set(type, { key: type, favorites: false, label: localize(`Types.${type}`), emptyText: "", entries: [] });
+    }
+    byType.get(type).entries.push(entry);
+  }
+  const typeGroups = [...ACTION_GROUP_ORDER, "other"].filter((type) => byType.has(type)).map((type) => byType.get(type));
+
+  const groups = [favorites, ...typeGroups];
+  for (const group of groups) {
+    group.collapsed = collapsedKeys.includes(group.key);
+    // Move buttons only move an entry within its own section (same as the Spells tab).
+    group.entries.forEach((entry, index) => {
+      entry.canMove = group.entries.length > 1;
+      entry.canMoveUp = index > 0;
+      entry.canMoveDown = index < group.entries.length - 1;
+    });
+  }
+  return groups;
 }
 
 /** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
@@ -322,6 +405,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       openItem: PlayerCharacterSheet.#onOpenItem,
       sendToChat: PlayerCharacterSheet.#onSendToChat,
       moveEntry: PlayerCharacterSheet.#onMoveEntry,
+      toggleFavorite: PlayerCharacterSheet.#onToggleFavorite,
 
       addSkill: PlayerCharacterSheet.#onAddSkill,
       deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
@@ -345,12 +429,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
-    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
-    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
-    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL], scrollable: [""] },
+    sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL], scrollable: [""] },
+    actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL], scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
+    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL, SECTION_ENTRY_PARTIAL], scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
     backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
@@ -443,10 +527,28 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.languageMysticalChoices = this._prepareMysticalLanguages();
         break;
 
-      case "spells":
+      case "actions":
+        // Favorites, then one collapsible section per action type (attack, move, ...).
+        context.actionGroups = groupActions(
+          context.sections.actions,
+          foundry.utils.getProperty(this.actor, FAVORITES_FLAG) ?? [],
+          game.user.getFlag("lotm", `${COLLAPSED_FLAG}.${this.actor.id}`) ?? []
+        );
+        break;
+
+      case "spells": {
+        // Each spell's actions, shown under it. Copies, so they get the star but no move buttons
+        // (they keep the spell's own order), and don't change the Actions tab's rows.
+        const favorites = new Set(foundry.utils.getProperty(this.actor, FAVORITES_FLAG) ?? []);
+        for (const spell of context.sections.spells) {
+          spell.spellActions = spell.spellActions.map((action) => ({
+            ...action, favorite: favorites.has(action.key), canMove: false,
+          }));
+        }
         // One group per Spell List name
         context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
         break;
+      }
 
       case "inventory":
         // One group per coat / bag, plus "Held & worn" (see helpers/inventory.mjs)
@@ -758,6 +860,13 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     }
 
+    // Actions tab sections: when a player opens or closes one, remember it for them (see #saveCollapsedGroups).
+    for (const details of this.element.querySelectorAll("details[data-action-group]")) {
+      if (details.dataset.bound) continue;
+      details.dataset.bound = "1";
+      details.addEventListener("toggle", () => this.#saveCollapsedGroups());
+    }
+
     // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
     for (const zone of this.element.querySelectorAll(".drop-section")) {
       if (zone.dataset.dropBound) continue;
@@ -768,6 +877,41 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
       zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
     }
+  }
+
+
+  /**
+   * Save which Actions tab sections this player has collapsed, on their own User (COLLAPSED_FLAG), so the
+   * sheet opens the same way next time and other players aren't affected.
+   * Sections not on the sheet right now (a type with no actions) keep whatever was saved for them.
+   * Nothing is saved when nothing changed: the browser also fires "toggle" when the sheet is drawn.
+   */
+  async #saveCollapsedGroups() {
+    const sections = [...this.element.querySelectorAll("details[data-action-group]")];
+    const shown = new Set(sections.map((details) => details.dataset.actionGroup));
+    const key = `${COLLAPSED_FLAG}.${this.actor.id}`;
+    const saved = game.user.getFlag("lotm", key) ?? [];
+
+    const collapsed = [
+      ...saved.filter((group) => !shown.has(group)),
+      ...sections.filter((details) => !details.open).map((details) => details.dataset.actionGroup),
+    ];
+
+    const same = collapsed.length === saved.length && collapsed.every((group) => saved.includes(group));
+    if (!same) await game.user.setFlag("lotm", key, collapsed);
+  }
+
+
+  /**
+   * The star on an action row: add the action to Favorites, or take it out (data-key = the entry key).
+   * Saved on the character (FAVORITES_FLAG); new favorites go at the bottom of the list.
+   */
+  static async #onToggleFavorite(event, target) {
+    if (!this.isEditable) return;
+    const key = target.dataset.key;
+    const current = foundry.utils.getProperty(this.actor, FAVORITES_FLAG) ?? [];
+    const updated = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    await this.actor.update({ [FAVORITES_FLAG]: updated });
   }
 
 
@@ -818,6 +962,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const ignored = new Set();      // source uuids of unsupported types
     const abilityByName = new Map(); // lower-case ability name -> entry: a character has each ability once
     const queue = [];
+    const entryByUuid = new Map();  // Item uuid -> its entry, so a spell's actions can be listed under the spell
     const actionRows = [];          // [entry, action Item] pairs: their roll buttons are filled in at the end
     this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
@@ -831,6 +976,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       const entry = buildEntry(item, { section, owned: true, key });
       sections[section].push(entry);
       bySource.set(key, entry);
+      entryByUuid.set(item.uuid, entry);
       if (item.type === "action") actionRows.push([entry, item]);
       if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
@@ -844,6 +990,19 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (parent.type === "ability" && !hasDefaultSpellListName(parent)) {
         this.#namedSpellLists.push(spellListName(parent));
       }
+
+      // Remember where each action came from. An action from a spell is listed under that spell on the
+      // Spells tab; if only spells grant it, it stays off the Actions tab unless it's a favorite (spellOnly below).
+      const noteGrant = (entry) => {
+        if (entry.section !== "actions") return;
+        if (parent.type !== "spell") {
+          entry.fromOther = true;
+          return;
+        }
+        entry.fromSpell = true;
+        const spellEntry = entryByUuid.get(parent.uuid);
+        if (spellEntry && !spellEntry.spellActions.includes(entry)) spellEntry.spellActions.push(entry);
+      };
 
       for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
         const raw = foundry.utils.getProperty(parent.system ?? {}, path);
@@ -865,6 +1024,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           const existing = bySource.get(key);
           if (existing) {
             addGrantedBy(existing, parent.name);
+            noteGrant(existing);
             // An owned spell that is also in a Spell List is shown in that list. A spell in two
             // differently-named lists stays in the first one found (each spell is shown once).
             if (listName && !existing.spellList) existing.spellList = listName;
@@ -881,9 +1041,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
               actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
               hasStats: false, rank: null, detail: "",
               grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
+              spellActions: [], fromSpell: false, fromOther: false, spellOnly: false,
             };
             bySource.set(key, broken);
             sections[fallbackSection].push(broken);
+            noteGrant(broken);
             continue;
           }
 
@@ -908,13 +1070,21 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           // An action from a gun's own list fires / reloads that gun.
           if (gearAction) entry.gunId = parent.id;
           bySource.set(key, entry);
+          entryByUuid.set(doc.uuid, entry);
           sections[section].push(entry);
+          noteGrant(entry);
           if (doc.type === "action") actionRows.push([entry, doc]);
           if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
           // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
           if (!gearAction) queue.push(doc);
         }
       }
+    }
+
+    // Actions only spells grant (not owned, and not granted by anything else) stay on the Spells tab.
+    // groupActions leaves them out of the Actions tab's type sections; they still show in Favorites.
+    for (const entry of sections.actions) {
+      entry.spellOnly = !entry.owned && entry.fromSpell && !entry.fromOther;
     }
 
     // Order each section: the saved manual order first, then anything not in it (new entries land at the
@@ -1525,18 +1695,33 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     const section = zone?.dataset.dropZone;
     if (!section) return;
 
-    // Every entry in the whole section, top to bottom. This full list is what gets saved.
-    const keys = [...zone.querySelectorAll(".drop-section-list > .drop-entry")].map((li) => li.dataset.key);
+    const list = target.closest(".drop-section-list");
+    const up = target.dataset.direction === "up";
+
+    // Actions tab Favorites: their order is the favorites list itself (FAVORITES_FLAG), separate from the
+    // section's order, so moving a favorite doesn't move it in its type section.
+    if (list?.hasAttribute("data-favorites")) {
+      const order = [...list.children].filter((li) => li.matches(".drop-entry")).map((li) => li.dataset.key);
+      const from = order.indexOf(target.dataset.key);
+      const to = from + (up ? -1 : 1);
+      if (from < 0 || to < 0 || to >= order.length) return;
+      [order[from], order[to]] = [order[to], order[from]];
+      await this.actor.update({ [FAVORITES_FLAG]: order });
+      return;
+    }
+
+    // Every entry in the whole section, top to bottom (not counting the Favorites copies). This full list is what gets saved.
+    const keys = [...zone.querySelectorAll(".drop-section-list:not([data-favorites]) > .drop-entry")].map((li) => li.dataset.key);
 
     // The entries in the same list as the clicked one. Most sections have one list, so this is the same as
-    // `keys`; on the Spells tab each Spell List group is its own list, and an entry only moves inside its group.
-    const list = target.closest(".drop-section-list");
+    // `keys`; on the Spells tab each Spell List group is its own list, and on the Actions tab each action type
+    // section is; an entry only moves inside its group.
     const siblings = list
       ? [...list.children].filter((li) => li.matches(".drop-entry")).map((li) => li.dataset.key)
       : keys;
 
     const from = siblings.indexOf(target.dataset.key);
-    const to = from + (target.dataset.direction === "up" ? -1 : 1);
+    const to = from + (up ? -1 : 1);
     if (from < 0 || to < 0 || to >= siblings.length) return;
 
     // Swap the two neighbours' places in the full list.

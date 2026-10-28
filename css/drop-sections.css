@@ -428,3 +428,86 @@
   box-shadow: none;
   cursor: default;
 }
+
+/* ---- Actions tab: Favorites and one collapsible section per action type (actions.hbs) ---- */
+
+.lotm.sheet.player-character .action-group + .action-group {
+  margin-top: 0.5rem;
+}
+
+/* The clickable header. list-style / ::-webkit-details-marker hide the browser's own triangle; the chevron replaces it. */
+.lotm.sheet.player-character .action-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.25rem;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #999);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lotm.sheet.player-character .action-group-header::-webkit-details-marker {
+  display: none;
+}
+
+.lotm.sheet.player-character .action-group-header:hover {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+/* Points right when closed, down when open. */
+.lotm.sheet.player-character .action-group-chevron {
+  width: 0.8em;
+  font-size: 0.7em;
+  transition: transform 0.12s;
+}
+
+.lotm.sheet.player-character .action-group[open] > .action-group-header .action-group-chevron {
+  transform: rotate(90deg);
+}
+
+.lotm.sheet.player-character .action-group-count {
+  font-size: var(--font-size-11, 0.7rem);
+  font-weight: normal;
+  opacity: 0.6;
+}
+
+.lotm.sheet.player-character .action-group > .drop-section-list,
+.lotm.sheet.player-character .action-group > .drop-section-empty {
+  margin-top: 0.3rem;
+}
+
+/* Gold star: on the Favorites header, and on favorited actions. */
+.lotm.sheet.player-character .action-group-star,
+.lotm.sheet.player-character .drop-entry-favorite.active {
+  color: #d9a93a;
+}
+
+/* The star button next to an action's name. Plain icon, no button box. */
+.lotm.sheet.player-character .drop-entry-favorite {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.1rem;
+  border: none;
+  background: none;
+  box-shadow: none;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+.lotm.sheet.player-character .drop-entry-favorite:hover,
+.lotm.sheet.player-character .drop-entry-favorite:focus-visible,
+.lotm.sheet.player-character .drop-entry-favorite.active {
+  opacity: 1;
+}
+
+/* A filled star on a read-only sheet isn't a button. */
+.lotm.sheet.player-character i.drop-entry-favorite {
+  cursor: default;
+}

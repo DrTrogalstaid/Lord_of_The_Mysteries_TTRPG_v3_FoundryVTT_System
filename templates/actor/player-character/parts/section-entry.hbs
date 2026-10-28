@@ -1,0 +1,166 @@
+{{!--
+  One row of a drop section (icon, name, roll buttons, stats, move / remove buttons).
+  The context is one entry built by buildEntry() in player-character-sheet.mjs.
+
+  Used by drop-section.hbs (every tab's list) and actions.hbs (the grouped Actions tab):
+    {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" entry remove="deleteAction" favorites=true}}
+
+  remove     data-action for the delete button (owned entries only).
+  favorites  true on the Actions tab: shows the star that adds / removes the action from Favorites.
+--}}
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if isAction}} action{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}" data-item-id="{{id}}">
+  {{#if broken}}
+    <span class="drop-entry-icon">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+    </span>
+  {{else}}
+    <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+      <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+    </button>
+  {{/if}}
+
+  <div class="drop-entry-main">
+    <div class="drop-entry-title-row">
+      {{#if broken}}
+        <span class="drop-entry-name">{{name}}</span>
+      {{else}}
+        <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
+      {{/if}}
+      {{!-- Actions tab: the star adds / removes this action from Favorites (PlayerCharacterSheet.#onToggleFavorite).
+            Players who can't edit the sheet just see a filled star on favorites. --}}
+      {{#if favorites}}
+        {{#if @root.editable}}
+          <button type="button" class="drop-entry-favorite{{#if favorite}} active{{/if}}" data-action="toggleFavorite" data-key="{{key}}"
+                  data-tooltip="{{#if favorite}}LORD_OF_THE_MYSTERIES.ActionGroups.Unfavorite{{else}}LORD_OF_THE_MYSTERIES.ActionGroups.Favorite{{/if}}"
+                  aria-pressed="{{#if favorite}}true{{else}}false{{/if}}">
+            <i class="{{#if favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star"></i>
+          </button>
+        {{else if favorite}}
+          <i class="fa-solid fa-star drop-entry-favorite active"></i>
+        {{/if}}
+      {{/if}}
+      {{#if grantedByLabel}}
+        <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{grantedByLabel}}</span>
+      {{/if}}
+    </div>
+    {{#if detail}}
+      <span class="drop-entry-detail">{{detail}}</span>
+    {{/if}}
+
+    {{!-- Action buttons, pf2e style: [d20 Pistol +5] [Damage]. Hidden on broken entries. --}}
+    {{#unless broken}}
+      {{#if isAction}}
+        {{#if hasRolls}}
+          <div class="drop-entry-rolls">
+            {{#if attack}}
+              {{!-- Opens the skill check dialog (PlayerCharacterSheet.#onRollAction). --}}
+              <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{uuid}}"
+                      data-gun-id="{{gunId}}" data-tooltip="{{attack.tooltip}}">
+                <i class="fa-solid fa-dice-d20"></i>
+                <span class="drop-entry-roll-label">{{attack.label}}</span>
+                <span class="drop-entry-roll-bonus">{{attack.bonusLabel}}</span>
+              </button>
+            {{/if}}
+            {{#if damage}}
+              {{!-- Hover shows what will be rolled, e.g. "2d6+1 Piercing" (getDamageTooltip in action-roll.mjs). --}}
+              <button type="button" class="drop-entry-roll-btn damage" data-action="rollDamage" data-uuid="{{uuid}}"
+                      data-tooltip="{{damage.tooltip}}">
+                {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
+              </button>
+            {{/if}}
+            {{!-- Reload / Chamber / Unload (PlayerCharacterSheet.#onUseAmmo -> useAmmoAction in helpers/firearms.mjs).
+                  A reload action gets two: Reload and Unload. --}}
+            {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
+            {{#each ammoButtons as |button|}}
+              <button type="button" class="drop-entry-roll-btn ammo" data-action="useAmmo" data-uuid="{{../uuid}}"
+                      data-gun-id="{{../gunId}}" data-ammo-use="{{button.use}}"{{#if button.disabled}} disabled{{/if}}>
+                <i class="fa-solid {{#if (eq button.use 'unload')}}fa-eject{{else}}fa-gun{{/if}}"></i>
+                <span class="drop-entry-roll-label">{{button.label}}</span>
+              </button>
+            {{/each}}
+            {{#if gunStatus}}
+              {{!-- Rounds in the magazine, and (for guns with one) a filled / hollow dot for the chamber. Hover for what's loaded. --}}
+              <span class="drop-entry-gun-status{{#if gunStatus.empty}} empty{{/if}}" data-tooltip="{{gunStatus.tooltip}}">
+                <i class="fa-solid fa-gun"></i> {{gunStatus.label}}
+                {{#if gunStatus.hasChamber}}
+                  <i class="{{#if gunStatus.chambered}}fa-solid{{else}}fa-regular{{/if}} fa-circle chamber-dot"></i>
+                {{/if}}
+              </span>
+            {{/if}}
+          </div>
+        {{/if}}
+      {{/if}}
+    {{/unless}}
+  </div>
+
+  {{!-- Stats on the right. Actions always show all three, so the columns line up row to row. --}}
+  {{#if isAction}}
+    <div class="drop-entry-stats">
+      <div class="drop-entry-stat drop-entry-action-type">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+        <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+      </div>
+      <div class="drop-entry-stat drop-entry-cost">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+        <span class="drop-entry-stat-value">{{cost}}</span>
+      </div>
+      <div class="drop-entry-stat drop-entry-range">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Range"}}</span>
+        <span class="drop-entry-stat-value">{{rangeLabel}}</span>
+      </div>
+    </div>
+  {{else if hasStats}}
+    <div class="drop-entry-stats">
+      {{#if actionTypeLabel}}
+        <div class="drop-entry-stat drop-entry-action-type">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+          <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+        </div>
+      {{/if}}
+      {{#if hasCost}}
+        <div class="drop-entry-stat drop-entry-cost">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+          <span class="drop-entry-stat-value">{{cost}}</span>
+        </div>
+      {{/if}}
+      {{#if hasDigestion}}
+        <div class="drop-entry-stat drop-entry-digestion-stat">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Digestion"}}</span>
+          {{#if @root.editable}}
+            {{#if owned}}
+              <input type="number" class="drop-entry-digestion" min="1" max="20" step="1"
+                     value="{{digestion}}" data-digestion-input data-item-id="{{id}}"
+                     data-tooltip="LORD_OF_THE_MYSTERIES.Drop.DigestionHint">
+            {{else}}
+              <span class="drop-entry-stat-value">{{digestion}}</span>
+            {{/if}}
+          {{else}}
+            <span class="drop-entry-stat-value">{{digestion}}</span>
+          {{/if}}
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{#if @root.editable}}
+    {{#if canMove}}
+      <div class="drop-entry-move">
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{key}}"{{#unless canMoveUp}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{key}}"{{#unless canMoveDown}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    {{/if}}
+    {{#if owned}}
+      <button type="button" class="drop-entry-remove" data-action="{{remove}}" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    {{else}}
+      {{!-- Granted entries can't be removed here; keep the remove button's column so the move buttons line up across rows. --}}
+      <span class="drop-entry-spacer" aria-hidden="true"></span>
+    {{/if}}
+  {{/if}}
+</li>

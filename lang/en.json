@@ -559,6 +559,21 @@
       "InvalidAttack": "{name} has no valid attack formula."
     },
 
+    "ActionGroups": {
+      "Favorites": "Favorites",
+      "FavoritesEmpty": "Click the star next to an action's name to pin it here.",
+      "Favorite": "Add to Favorites",
+      "Unfavorite": "Remove from Favorites",
+      "Types": {
+        "attack": "Attack Actions",
+        "move": "Move Actions",
+        "quick": "Quick Actions",
+        "free": "Free Actions",
+        "full": "Full Actions",
+        "other": "Other Actions"
+      }
+    },
+
     "Firearm": {
       "IsFirearm": "Firearm",
       "IsFirearmHint": "Holds rounds. Its actions can fire, reload, chamber and unload it.",
