@@ -557,6 +557,74 @@
       "NoActor": "{name} needs a character to roll.",
       "Gone": "That action or character no longer exists.",
       "InvalidAttack": "{name} has no valid attack formula."
+    },
+
+    "Firearm": {
+      "IsFirearm": "Firearm",
+      "IsFirearmHint": "Holds rounds. Its actions can fire, reload, chamber and unload it.",
+      "Caliber": "Caliber",
+      "AnyCaliber": "any",
+      "CaliberHint": "Only ammunition with the same caliber loads into it. Leave blank to take any ammunition.",
+      "Capacity": "Capacity",
+      "CapacityHint": "Rounds the magazine or cylinder holds, not counting the chamber.",
+      "HasChamber": "Has a chamber",
+      "HasChamberHint": "Fires from a chamber that has to be loaded first (rack the slide, work the bolt). Leave off for revolvers.",
+      "SelfLoading": "Self-loading",
+      "SelfLoadingHint": "After a shot, the next round goes into the chamber by itself. Leave off for bolt and lever actions.",
+      "Loaded": "Loaded",
+      "Chamber": "Chamber",
+      "Next": "Next shot",
+      "Empty": "Empty",
+      "NeedsChambering": "None: chamber a round first",
+      "Round": "Round",
+      "LooseRounds": "Loose rounds",
+      "Rounds": "{n} rounds",
+      "BoxTooltip": "{boxes} boxes of {perBox}, {open} left in the open one",
+      "IsAmmo": "Ammunition",
+      "IsAmmoHint": "Rounds a firearm can be loaded with. The item's name is what the rounds are called once loaded.",
+      "PerBox": "Rounds per box",
+      "PerBoxHint": "Quantity is the number of boxes. Set this to 1 for loose rounds.",
+      "OpenBox": "Rounds in the open box",
+      "Total": "Total rounds",
+      "PickAmmo": "Load which ammunition?",
+      "PickAmmoTitle": "Reload {gun}",
+      "AmmoAmount": "Rounds per use",
+      "AmmoAmountHint": "Fire: rounds used each time (0 = 1). Reload: rounds loaded each time (0 = fill it up).",
+      "AmmoUse": {
+        "Label": "Uses ammo",
+        "Hint": "What this action does to the gun it comes from (or, if the character owns it directly, the gun they're holding).",
+        "none": "No",
+        "fire": "Fires rounds",
+        "reload": "Reloads",
+        "chamber": "Chambers a round",
+        "unload": "Unloads"
+      },
+      "Buttons": {
+        "fire": "Fire",
+        "reload": "Reload",
+        "chamber": "Chamber",
+        "unload": "Unload"
+      },
+      "Warnings": {
+        "NoGun": "No firearm to use. Hold one, or use the action listed under the gun.",
+        "WhichGun": "More than one firearm is held. Use the action listed under the gun you want.",
+        "NotAFirearm": "{name} isn't a firearm.",
+        "Empty": "Click. {gun} is empty.",
+        "NotChambered": "Click. {gun} has no round in the chamber.",
+        "NotEnough": "{gun} only has {n} ready to fire.",
+        "Full": "{gun} is already full.",
+        "NoAmmo": "No ammunition for {gun} on hand (caliber: {caliber}).",
+        "NoChamber": "{gun} has no chamber to load.",
+        "AlreadyChambered": "{gun} already has a round chambered.",
+        "NothingToChamber": "{gun} has no rounds left to chamber.",
+        "NothingToUnload": "{gun} is already empty."
+      },
+      "Chat": {
+        "fire": "Fired {n} from {gun} ({rounds}).",
+        "reload": "Loaded {n} × {ammo} into {gun} ({loaded}/{capacity}).",
+        "chamber": "Chambered a round in {gun} ({round}).",
+        "unload": "Unloaded {n} rounds from {gun}."
+      }
     }
   },
 

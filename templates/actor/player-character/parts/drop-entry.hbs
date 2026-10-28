@@ -23,6 +23,21 @@
     <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
     {{/if}}
     {{#if detail}}<span class="drop-entry-detail">{{detail}}</span>{{/if}}
+    {{!-- Guns: rounds loaded and the chamber. Ammo: rounds left. Built by firearmStatus / ammoBoxStatus (helpers/firearms.mjs). --}}
+    {{#if firearm}}
+    <span class="drop-entry-detail drop-entry-gun-status{{#if firearm.empty}} empty{{/if}}" data-tooltip="{{firearm.tooltip}}">
+      <i class="fa-solid fa-gun"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Loaded"}} {{firearm.label}}
+      {{#if firearm.hasChamber}}
+        · {{localize "LORD_OF_THE_MYSTERIES.Firearm.Chamber"}}
+        <i class="{{#if firearm.chambered}}fa-solid{{else}}fa-regular{{/if}} fa-circle chamber-dot"></i>
+      {{/if}}
+    </span>
+    {{/if}}
+    {{#if ammoBox}}
+    <span class="drop-entry-detail drop-entry-ammo-status{{#if ammoBox.empty}} empty{{/if}}" data-tooltip="{{ammoBox.tooltip}}">
+      <i class="fa-solid fa-box"></i> {{ammoBox.label}}
+    </span>
+    {{/if}}
     {{#if grantedByLabel}}
     <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}}: {{grantedByLabel}}</span>
     {{/if}}

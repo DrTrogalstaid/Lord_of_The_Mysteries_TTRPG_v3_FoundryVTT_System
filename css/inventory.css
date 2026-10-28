@@ -430,3 +430,49 @@
   width: auto;
   line-height: 1;
 }
+
+/* ---- Firearm and ammunition settings on the gear sheet ---- */
+
+.lotm.inventory-item .firearm-settings,
+.lotm.inventory-item .ammo-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--lotm-inventory-line);
+  border-radius: 4px;
+  padding: 4px 10px 8px;
+}
+
+.lotm.inventory-item .firearm-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.lotm.inventory-item .firearm-buttons button {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* Chat line for reload / chamber / unload */
+.lotm.chat-ammo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lotm.chat-ammo img {
+  flex: 0 0 28px;
+  border: none;
+}
+
+/* ---- Let gear and container sheets scroll ----
+   item-sheet.css sets overflow: hidden on every item sheet (.lotm.sheet.item .window-content), which cut
+   off the bottom of these sheets once the firearm / ammo settings were added. This selector is one class
+   more specific, so it wins whichever file loads first. The max-height keeps the window on the screen. */
+.lotm.sheet.item.inventory-item {
+  max-height: 100vh;
+}
+
+.lotm.sheet.item.inventory-item .window-content {
+  overflow-y: auto;
+}

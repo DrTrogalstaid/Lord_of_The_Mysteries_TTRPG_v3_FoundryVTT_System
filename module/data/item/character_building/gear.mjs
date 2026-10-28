@@ -60,6 +60,46 @@ export default class LordOfTheMysteriesGear extends LordOfTheMysteriesItemBase {
       expansion: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
     });
 
+    // ---- Firearms ----
+    // One round inside a gun. It remembers what it is (name, image) and which ammo Item it came out of,
+    // so a silver bullet stays a silver bullet, and unloading puts it back in the right box.
+    // (A function, so the magazine and the chamber each get their own copy of these fields.)
+    const roundFields = () => ({
+      name: new fields.StringField({ required: true, blank: true, initial: "" }),
+      img: new fields.StringField({ required: true, blank: true, initial: "" }),
+      ammoId: new fields.StringField({ required: true, blank: true, initial: "" }),
+    });
+
+    // A gun. The rounds are stored on the gun itself, so a dropped or looted gun is still loaded.
+    // All the loading / firing is in helpers/firearms.mjs.
+    schema.isFirearm = new fields.BooleanField({ required: true, initial: false });
+    schema.firearm = new fields.SchemaField({
+      // Only ammo with the same caliber loads into it. Blank = any ammo.
+      caliber: new fields.StringField({ required: true, blank: true, initial: "" }),
+      // Rounds the magazine / cylinder holds (the chamber is extra).
+      capacity: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 6 }),
+      // Fires from a chamber that has to be loaded first (pistols with a slide, rifles with a bolt).
+      // Off for revolvers: they fire straight from the cylinder.
+      hasChamber: new fields.BooleanField({ required: true, initial: false }),
+      // After a shot the next round goes into the chamber by itself (semi-automatic).
+      selfLoading: new fields.BooleanField({ required: true, initial: false }),
+      // The rounds in the magazine, in the order they were loaded. The first one is fired first.
+      magazine: new fields.ArrayField(new fields.SchemaField(roundFields())),
+      // The round in the chamber, or null when it's empty.
+      chamber: new fields.SchemaField(roundFields(), { required: true, nullable: true, initial: null }),
+    });
+
+    // ---- Ammunition ----
+    // A box of rounds. Quantity = how many boxes. Every box is full except the open one on top.
+    // Loose rounds: set perBox to 1, then quantity is just the number of rounds.
+    schema.isAmmo = new fields.BooleanField({ required: true, initial: false });
+    schema.ammo = new fields.SchemaField({
+      caliber: new fields.StringField({ required: true, blank: true, initial: "" }),
+      perBox: new fields.NumberField({ required: true, nullable: false, integer: true, min: 1, initial: 1 }),
+      // Rounds left in the open box.
+      rounds: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 }),
+    });
+
     return schema;
   }
 
@@ -73,6 +113,11 @@ export default class LordOfTheMysteriesGear extends LordOfTheMysteriesItemBase {
     this.units = size.units * this.quantity;     // the whole stack
 
     this._prepareArmor();
+
+    // Ammo: rounds in the whole stack (the open box plus the full ones under it).
+    this.ammoTotal = this.quantity > 0
+      ? Math.min(this.ammo.rounds, this.ammo.perBox) + (this.quantity - 1) * this.ammo.perBox
+      : 0;
   }
 
   /** Copy this armor kind's numbers onto the Item, so the inventory math and sheets can just read them. */

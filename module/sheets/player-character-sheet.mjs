@@ -8,6 +8,7 @@ import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
 import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
+import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -144,6 +145,12 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     attack: null,
     damage: null,
     hasRolls: false,
+    // Guns and ammo (helpers/firearms.mjs). gunId is set on actions that come from a gun's own action list.
+    gunId: "",
+    gunStatus: null,     // action rows: how loaded their gun is
+    ammoButtons: [],     // action rows: Reload / Chamber / Unload buttons ({ use, label, disabled })
+    firearm: item.type === "gear" && system.isFirearm ? firearmStatus(item) : null,   // inventory row of a gun
+    ammoBox: item.type === "gear" && system.isAmmo ? ammoBoxStatus(item) : null,     // inventory row of ammo
   };
 }
 
@@ -304,6 +311,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       rollSkill: PlayerCharacterSheet._onRollSkill,
       rollAction: PlayerCharacterSheet.#onRollAction,
       rollDamage: PlayerCharacterSheet.#onRollDamage,
+      useAmmo: PlayerCharacterSheet.#onUseAmmo,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
       addGrantedCustom: PlayerCharacterSheet._onAddGrantedCustom,
       addGrantedAnalysis: PlayerCharacterSheet._onAddGrantedAnalysis,
@@ -897,6 +905,8 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           }
 
           const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
+          // An action from a gun's own list fires / reloads that gun.
+          if (gearAction) entry.gunId = parent.id;
           bySource.set(key, entry);
           sections[section].push(entry);
           if (doc.type === "action") actionRows.push([entry, doc]);
@@ -954,7 +964,30 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     entry.attack = await getActionAttackSummary(this.actor, action);
     const damageTooltip = getDamageTooltip(this.actor, action);
     entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
-    entry.hasRolls = !!(entry.attack || entry.damage);
+
+    // Actions that use ammo show their gun's rounds ("5/6"). A fire action spends them through its attack button;
+    // the others (and a fire action with no attack roll) get a button of their own.
+    // A reload action also gets an Unload button, so a gun doesn't need a separate unload action.
+    const use = action.system.ammoUse ?? "none";
+    entry.ammoButtons = [];
+    if (use !== "none") {
+      const gun = gunFor(this.actor, entry.gunId, { quiet: true });
+      entry.gunStatus = gun ? firearmStatus(gun) : null;
+
+      const button = (buttonUse, disabled = false) => ({
+        use: buttonUse,
+        label: game.i18n.localize(`LORD_OF_THE_MYSTERIES.Firearm.Buttons.${buttonUse}`),
+        disabled,
+      });
+      if (use !== "fire" || !entry.attack) entry.ammoButtons.push(button(use));
+      if (use === "reload") {
+        // Greyed out while there's nothing in the gun to take out.
+        const loaded = entry.gunStatus && (entry.gunStatus.loaded > 0 || entry.gunStatus.chambered);
+        entry.ammoButtons.push(button("unload", !loaded));
+      }
+    }
+
+    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus);
   }
 
   /* -------------------------------------------- */
@@ -1297,7 +1330,19 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
    */
   static async #onRollAction(event, target) {
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
-    if (action) await rollActionAttack(this.actor, action);
+    // gunId: for actions listed under a gun, that gun. rollActionAttack spends the rounds for "Fires rounds" actions.
+    if (action) await rollActionAttack(this.actor, action, { gunId: target.dataset.gunId });
+  }
+
+
+  /**
+   * A Reload / Chamber / Unload button on an action row (data-uuid = the action, data-gun-id = its gun,
+   * data-ammo-use = what the button does, e.g. "unload" on a reload action). See useAmmoAction in helpers/firearms.mjs.
+   */
+  static async #onUseAmmo(event, target) {
+    if (!this.isEditable) return;
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await useAmmoAction(this.actor, action, target.dataset.gunId, target.dataset.ammoUse);
   }
 
 

@@ -12,7 +12,9 @@
 .lotm.sheet.actor .window-content {
   display: grid;
   grid-template-columns: 190px 1fr;
-  grid-template-rows: auto auto 1fr;
+  /* minmax(0, 1fr): the tab row stays the height of the window. A plain 1fr grows to fit a long tab,
+     which pushes the bottom of the tab out of the window where it can't be scrolled to. */
+  grid-template-rows: auto auto minmax(0, 1fr);
   grid-template-areas:
     "header header"
     "sidebar tabnav"
@@ -75,6 +77,15 @@
 }
 .lotm.sheet.actor .tab.active {
   display: block;
+}
+
+/* Every page of the sheet (Character Info, Sequences, Actions, Inventory, Spells, ...) sits in the
+   "content" area and scrolls on its own. These are the tab parts themselves (direct children of the
+   window), so the skill sub-tabs inside the Character page aren't affected. New tabs get this for free. */
+.lotm.sheet.actor .window-content > .tab {
+  grid-area: content;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* -------------------------------------------------------------------- */

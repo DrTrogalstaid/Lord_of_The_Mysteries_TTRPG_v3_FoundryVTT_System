@@ -387,3 +387,44 @@
   margin: 2px 0 0;
   opacity: 0.65;
 }
+/* ---- Guns and ammo on the Actions and Inventory tabs (helpers/firearms.mjs) ---- */
+
+/* Reload / Chamber / Unload: grey-green, so it doesn't look like an attack or damage roll. */
+.lotm.sheet.player-character .drop-entry-roll-btn.ammo {
+  background: #3d5a40;
+  border-color: #283c2a;
+}
+
+/* "5/6 ●": rounds in the magazine, and the chamber (filled dot = round chambered). */
+.lotm.sheet.player-character .drop-entry-gun-status,
+.lotm.sheet.player-character .drop-entry-ammo-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+
+.lotm.sheet.player-character .drop-entry-rolls .drop-entry-gun-status {
+  font-size: var(--font-size-12, 0.75rem);
+  font-weight: 600;
+}
+
+.lotm.sheet.player-character .drop-entry-gun-status .chamber-dot {
+  font-size: 0.6em;
+}
+
+/* Nothing ready to fire / box empty. */
+.lotm.sheet.player-character .drop-entry-gun-status.empty,
+.lotm.sheet.player-character .drop-entry-ammo-status.empty {
+  color: var(--lotm-inventory-over, #b3261e);
+}
+
+/* Unload while the gun is empty. */
+.lotm.sheet.player-character .drop-entry-roll-btn.ammo:disabled {
+  opacity: 0.4;
+  filter: none;
+  box-shadow: none;
+  cursor: default;
+}

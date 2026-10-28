@@ -36,6 +36,17 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     // dialog: the Attack Roll Macro is rolled, plus the character's bonuses in this skill.
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
 
+    // What this action does to a gun (see helpers/firearms.mjs). The keys match AMMO_USES there.
+    //   none     nothing
+    //   fire     the attack button uses up rounds
+    //   reload   moves rounds from an ammo box into the gun
+    //   chamber  moves the next round into the chamber
+    //   unload   puts the rounds back in their boxes
+    schema.ammoUse = new fields.StringField({ required: true, initial: "none", choices: ["none", "fire", "reload", "chamber", "unload"] });
+    // Rounds per use. Fire: 0 counts as 1 (2 for a double-barrel blast). Reload: 0 fills the gun up,
+    // a number loads that many (1 for a revolver loaded one round at a time).
+    schema.ammoAmount = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
+
     //DC_Results
     schema.dcResults = new fields.StringField({ required: true, initial: "Results" });
 
@@ -67,9 +78,10 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
    * Roll this action's attack. "this.parent" is the action Item that owns this data.
    * @param {object} [options]
    * @param {Actor} [options.actor]  Who's rolling. Defaults to the character that owns the action.
+   * @param {string} [options.gunId] For "Fires rounds" actions: the gun to fire. Default: the gun in hand.
    */
-  async rollAttack({ actor = this.parent.actor } = {}) {
-    return rollActionAttack(actor, this.parent);
+  async rollAttack({ actor = this.parent.actor, gunId } = {}) {
+    return rollActionAttack(actor, this.parent, { gunId });
   }
 
   /**

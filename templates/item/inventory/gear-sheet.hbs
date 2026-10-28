@@ -171,6 +171,123 @@
     </div>
   {{/if}}
 
+  {{!-- Firearm: holds rounds. The loading / firing is in helpers/firearms.mjs; the rounds are saved on this Item. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearm"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.isFirearm" {{checked source.isFirearm}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearmHint"}}</p>
+  </div>
+
+  {{#if source.isFirearm}}
+    <fieldset class="firearm-settings">
+      <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearm"}}</legend>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Caliber"}}</label>
+        <div class="form-fields">
+          <input type="text" name="system.firearm.caliber" value="{{source.firearm.caliber}}"
+                 placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Firearm.AnyCaliber'}}" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.CaliberHint"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Capacity"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.firearm.capacity" value="{{source.firearm.capacity}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.CapacityHint"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.HasChamber"}}</label>
+        <div class="form-fields">
+          <input type="checkbox" name="system.firearm.hasChamber" {{checked source.firearm.hasChamber}} {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.HasChamberHint"}}</p>
+      </div>
+
+      {{#if source.firearm.hasChamber}}
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.SelfLoading"}}</label>
+          <div class="form-fields">
+            <input type="checkbox" name="system.firearm.selfLoading" {{checked source.firearm.selfLoading}} {{#unless editable}}disabled{{/unless}}>
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.SelfLoadingHint"}}</p>
+        </div>
+      {{/if}}
+
+      {{!-- What's in it right now (firearmStatus in helpers/firearms.mjs). --}}
+      <dl class="inventory-readout">
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Loaded"}}</dt>
+        <dd class="{{#if firearm.empty}}over{{/if}}">{{firearm.label}} · {{firearm.contents}}</dd>
+        {{#if firearm.hasChamber}}
+          <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Chamber"}}</dt>
+          <dd>{{firearm.chamberName}}</dd>
+        {{/if}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Next"}}</dt>
+        <dd>{{firearm.nextName}}</dd>
+      </dl>
+
+      {{!-- Handy for guns with no reload actions, and for the GM. Only once a character owns the gun. --}}
+      {{#if actor}}{{#if editable}}
+        <div class="firearm-buttons">
+          <button type="button" data-action="gunReload"><i class="fa-solid fa-box-open"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.reload"}}</button>
+          {{#if firearm.hasChamber}}
+            <button type="button" data-action="gunChamber"><i class="fa-solid fa-circle-dot"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.chamber"}}</button>
+          {{/if}}
+          <button type="button" data-action="gunUnload"><i class="fa-solid fa-eject"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.unload"}}</button>
+        </div>
+      {{/if}}{{/if}}
+    </fieldset>
+  {{/if}}
+
+  {{!-- Ammunition: a box of rounds guns are loaded from. Quantity (above) is the number of boxes. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmo"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.isAmmo" {{checked source.isAmmo}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmoHint"}}</p>
+  </div>
+
+  {{#if source.isAmmo}}
+    <fieldset class="ammo-settings">
+      <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmo"}}</legend>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Caliber"}}</label>
+        <div class="form-fields">
+          <input type="text" name="system.ammo.caliber" value="{{source.ammo.caliber}}" {{#unless editable}}disabled{{/unless}}>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.PerBox"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.ammo.perBox" value="{{source.ammo.perBox}}" min="1" step="1" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.PerBoxHint"}}</p>
+      </div>
+
+      {{#if (gt source.ammo.perBox 1)}}
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.OpenBox"}}</label>
+          <div class="form-fields">
+            <input type="number" name="system.ammo.rounds" value="{{source.ammo.rounds}}" min="0" max="{{source.ammo.perBox}}" step="1" {{#unless editable}}disabled{{/unless}}>
+          </div>
+        </div>
+      {{/if}}
+
+      <dl class="inventory-readout">
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Total"}}</dt>
+        <dd class="{{#if ammoBox.empty}}over{{/if}}">{{ammoBox.label}}</dd>
+      </dl>
+    </fieldset>
+  {{/if}}
+
   {{!-- What this item grants. Drop abilities / actions from the sidebar or a compendium onto each list.
         The drop handling is in LordOfTheMysteriesGearSheet._onRender. --}}
   {{#each grantLists as |list|}}

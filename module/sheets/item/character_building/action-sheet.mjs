@@ -8,6 +8,7 @@ import {
   onManageActiveEffect,
   prepareActiveEffectCategories,
 } from "../../../helpers/effects.mjs";
+import { AMMO_USES } from "../../../helpers/firearms.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -111,6 +112,9 @@ export class LordOfTheMysteriesActionSheet extends HandlebarsApplicationMixin(It
     context.effects = prepareActiveEffectCategories(this.item.effects);
 
     context.actionSkill = await prepareSkillSlot(this.item);
+
+    // "Uses ammo" dropdown: none / fire / reload / chamber / unload (helpers/firearms.mjs).
+    context.ammoUseOptions = AMMO_USES;
 
     return context;
   }

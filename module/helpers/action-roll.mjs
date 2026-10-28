@@ -2,6 +2,7 @@ import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
+import { canFire, fireGun, gunFor } from "./firearms.mjs";
 
 /**
  * Action rolls
@@ -179,16 +180,43 @@ function actionChatExtras(actor, action) {
  * Roll an action's attack. With a skill: opens SkillCheckDialog, which adds the action's
  * Attack Roll Macro, its Modifiers field, and the "Roll Damage" button. Without a skill:
  * rolls the Attack Roll Macro straight away (rollActionWithoutSkill below).
+ *
+ * Actions set to "Fires rounds" (system.ammoUse, see helpers/firearms.mjs) also use up ammo:
+ *   - before rolling, the gun must have the rounds ready, otherwise nothing is rolled ("Click. Revolver is empty.")
+ *   - the rounds are only taken out once the attack is actually rolled, so closing the dialog costs nothing.
  * @param {Actor} actor   The character rolling.
  * @param {Item} action   The action item.
+ * @param {object} [options]
+ * @param {string} [options.gunId]  The gun the action came from (set by the character sheet for actions listed
+ *                                  under a gun). Without it, the gun in the character's hand is used.
  * @returns {Promise<Roll|null>}  The roll, or null if it was cancelled or couldn't happen.
  */
-export async function rollActionAttack(actor, action) {
+export async function rollActionAttack(actor, action, { gunId } = {}) {
   if (!actor) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.NoActor", { name: action.name }));
     return null;
   }
 
+  // Not a gun shot: just roll.
+  if (action.system.ammoUse !== "fire") return rollAttackDice(actor, action);
+
+  // A gun shot. No rounds ready = no roll.
+  const gun = gunFor(actor, gunId);
+  const amount = Math.max(1, action.system.ammoAmount ?? 0);
+  if (!gun || !canFire(gun, amount)) return null;
+
+  const roll = await rollAttackDice(actor, action);
+  if (roll) await fireGun(actor, gun, { amount });   // null = the dialog was closed, so nothing was fired
+  return roll;
+}
+
+/**
+ * The attack roll itself, with or without a skill (no ammo handling: that's in rollActionAttack above).
+ * @param {Actor} actor
+ * @param {Item} action
+ * @returns {Promise<Roll|null>}
+ */
+async function rollAttackDice(actor, action) {
   if (!action.system.skill) return rollActionWithoutSkill(actor, action);
 
   const info = await resolveActionSkill(actor, action);

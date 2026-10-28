@@ -9,6 +9,7 @@ import { formatSlots } from "../../../helpers/inventory.mjs";
 import {
   BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
 } from "../../../helpers/currency.mjs";
+import { ammoBoxStatus, chamberRound, firearmStatus, reloadGun, unloadGun } from "../../../helpers/firearms.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -114,9 +115,15 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
   static DEFAULT_OPTIONS = {
     classes: ["gear"],
+    // A fixed starting height instead of "auto": with a gun's settings the sheet is taller than most screens.
+    // The rest scrolls (inventory.css), and the window can still be resized.
+    position: { height: 720 },
     actions: {
       openGrant: LordOfTheMysteriesGearSheet.#onOpenGrant,
       removeGrant: LordOfTheMysteriesGearSheet.#onRemoveGrant,
+      gunReload: LordOfTheMysteriesGearSheet.#onGunReload,
+      gunChamber: LordOfTheMysteriesGearSheet.#onGunChamber,
+      gunUnload: LordOfTheMysteriesGearSheet.#onGunUnload,
     },
   };
 
@@ -136,6 +143,10 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     context.slotsEach = formatSlots(system.unitsEach);
     context.slotsTotal = formatSlots(system.units);
     context.stowed = context.source.carry === "stowed";
+
+    // Guns and ammo: what's loaded / how many rounds are left (helpers/firearms.mjs).
+    context.firearm = system.isFirearm ? firearmStatus(this.item) : null;
+    context.ammoBox = system.isAmmo ? ammoBoxStatus(this.item) : null;
 
     // Purse / wallet: one text box per currency, typed like the value ("£2 5s", "40 verl d'or").
     context.moneyRows = Object.entries(CURRENCIES).map(([key, currency]) => ({
@@ -220,6 +231,19 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
   static async #onOpenGrant(event, target) {
     const doc = await fromUuid(target.dataset.uuid);
     doc?.sheet?.render({ force: true });
+  }
+
+  /** The gun buttons: Reload (fill it), Chamber, Unload. They need the character who owns the gun. */
+  static async #onGunReload(event, target) {
+    if (this.isEditable && this.item.actor) await reloadGun(this.item.actor, this.item);
+  }
+
+  static async #onGunChamber(event, target) {
+    if (this.isEditable && this.item.actor) await chamberRound(this.item.actor, this.item);
+  }
+
+  static async #onGunUnload(event, target) {
+    if (this.isEditable && this.item.actor) await unloadGun(this.item.actor, this.item);
   }
 
   /** Remove an ability / action from its list (data-list = list key, data-uuid = the entry). */

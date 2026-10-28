@@ -70,7 +70,7 @@
                     {{#if entry.attack}}
                       {{!-- Opens the skill check dialog (PlayerCharacterSheet.#onRollAction). --}}
                       <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{entry.uuid}}"
-                              data-tooltip="{{entry.attack.tooltip}}">
+                              data-gun-id="{{entry.gunId}}" data-tooltip="{{entry.attack.tooltip}}">
                         <i class="fa-solid fa-dice-d20"></i>
                         <span class="drop-entry-roll-label">{{entry.attack.label}}</span>
                         <span class="drop-entry-roll-bonus">{{entry.attack.bonusLabel}}</span>
@@ -82,6 +82,24 @@
                               data-tooltip="{{entry.damage.tooltip}}">
                         {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
                       </button>
+                    {{/if}}
+                    {{!-- Reload / Chamber / Unload (PlayerCharacterSheet.#onUseAmmo -> useAmmoAction in helpers/firearms.mjs).
+                          A reload action gets two: Reload and Unload. --}}
+                    {{#each entry.ammoButtons as |button|}}
+                      <button type="button" class="drop-entry-roll-btn ammo" data-action="useAmmo" data-uuid="{{entry.uuid}}"
+                              data-gun-id="{{entry.gunId}}" data-ammo-use="{{button.use}}"{{#if button.disabled}} disabled{{/if}}>
+                        <i class="fa-solid {{#if (eq button.use 'unload')}}fa-eject{{else}}fa-gun{{/if}}"></i>
+                        <span class="drop-entry-roll-label">{{button.label}}</span>
+                      </button>
+                    {{/each}}
+                    {{#if entry.gunStatus}}
+                      {{!-- Rounds in the magazine, and (for guns with one) a filled / hollow dot for the chamber. Hover for what's loaded. --}}
+                      <span class="drop-entry-gun-status{{#if entry.gunStatus.empty}} empty{{/if}}" data-tooltip="{{entry.gunStatus.tooltip}}">
+                        <i class="fa-solid fa-gun"></i> {{entry.gunStatus.label}}
+                        {{#if entry.gunStatus.hasChamber}}
+                          <i class="{{#if entry.gunStatus.chambered}}fa-solid{{else}}fa-regular{{/if}} fa-circle chamber-dot"></i>
+                        {{/if}}
+                      </span>
                     {{/if}}
                   </div>
                 {{/if}}
