@@ -57,21 +57,23 @@ export function nextLevel(level) {
 /**
  * How many weeks of study the next step up takes.
  *
- * Inspiration: each 6 moves the schedule one row faster. Past the fastest row, it's half the 6-7 days time,
- * and that's as fast as it gets.
+ * Inspiration: each 6 moves the schedule one row faster. A Sequence's Knowledge and Training bonus
+ * (its trainingBonus list) moves it one more row for those skills. Past the fastest row, it's half the
+ * 6-7 days time, and that's as fast as it gets.
  *
  * @param {string} level  The level the character is at now.
  * @param {object} options
- * @param {string}  options.schedule     A key of STUDY_WEEKS.
- * @param {boolean} [options.selfStudy]  No mentor: twice as long.
+ * @param {string}  options.schedule      A key of STUDY_WEEKS.
+ * @param {boolean} [options.selfStudy]   No mentor: twice as long.
  * @param {number}  [options.inspiration] The character's Inspiration total.
+ * @param {number}  [options.extraSteps]  More rows faster, e.g. 1 for each Sequence with this skill in its trainingBonus.
  * @returns {number}  Weeks. Infinity at Grand Master (nothing left to learn).
  */
-export function studyWeeksNeeded(level, { schedule, selfStudy = false, inspiration = 0 }) {
+export function studyWeeksNeeded(level, { schedule, selfStudy = false, inspiration = 0, extraSteps = 0 }) {
   const step = levelIndex(level);
   if (!nextLevel(level)) return Infinity;
 
-  const boost = Math.floor(Math.max(0, inspiration) / INSPIRATION_PER_STEP);
+  const boost = Math.floor(Math.max(0, inspiration) / INSPIRATION_PER_STEP) + Math.max(0, extraSteps);
   const row = Math.max(0, STUDY_SCHEDULES.indexOf(schedule)) + boost;
 
   const weeks = row < STUDY_SCHEDULES.length
@@ -115,17 +117,18 @@ export function studyProgressFor(entry, level) {
  * @param {string}  params.schedule
  * @param {boolean} [params.selfStudy]
  * @param {number}  [params.inspiration]
+ * @param {number}  [params.extraSteps]  See studyWeeksNeeded.
  * @returns {{level: string, progress: number, gained: {from: string, to: string}[]}}
  *   The new level and meter, and each level-up on the way.
  */
-export function applyStudyWeeks({ level, progress = 0, weeks, schedule, selfStudy = false, inspiration = 0 }) {
+export function applyStudyWeeks({ level, progress = 0, weeks, schedule, selfStudy = false, inspiration = 0, extraSteps = 0 }) {
   let current = level;
   let meter = progress;
   let weeksLeft = Math.max(0, weeks);
   const gained = [];
 
   while (weeksLeft > EPSILON && nextLevel(current)) {
-    const needed = studyWeeksNeeded(current, { schedule, selfStudy, inspiration });
+    const needed = studyWeeksNeeded(current, { schedule, selfStudy, inspiration, extraSteps });
     const toFinish = (1 - meter) * needed;   // weeks still missing for this step
 
     if (weeksLeft + EPSILON >= toFinish) {

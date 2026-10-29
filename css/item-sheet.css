@@ -95,3 +95,10 @@
   margin-top: 4px;
   font-weight: bold;
 }
+
+/* Knowledge and Training list on the Sequence sheet (sequence.hbs) */
+.lotm.sheet.item .training-bonus .hint {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+}

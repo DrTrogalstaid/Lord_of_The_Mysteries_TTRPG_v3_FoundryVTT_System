@@ -113,6 +113,36 @@
         </ol>
       </fieldset>
 
+      <!--Knowledge and Training: skills this Sequence makes one study schedule faster (helpers/skill-learning.mjs)-->
+      <fieldset class="training-bonus" data-drop-zone="trainingBonus">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Learning.TrainingBonus.Title"}}</legend>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Learning.TrainingBonus.Hint"}}</p>
+        <ol class="items-list">
+          <li class="items-header flexrow">
+            <div class="item-name">Skill</div>
+            <div class="item-controls"></div>
+          </li>
+          {{#each trainingBonus as |row|}}
+          <li class="item flexrow" data-uuid="{{row.uuid}}">
+            <div class="item-name">
+              <img class="item-image" src="{{row.img}}" alt="{{row.name}}"/>
+              <h4>{{row.name}}</h4>
+            </div>
+            <div class="item-controls">
+              {{#if @root.editable}}
+              <a class="item-control" data-action="deleteTrainingBonus" data-index="{{row.index}}" title="Delete">
+                <i class="fas fa-trash"></i>
+              </a>
+              {{/if}}
+            </div>
+          </li>
+          {{/each}}
+          {{#unless trainingBonus.length}}
+          <li class="item flexrow drop-hint">Drag a Skill</li>
+          {{/unless}}
+        </ol>
+      </fieldset>
+
       <!--Abilities Gained -->
       <fieldset class="abilities-gained" data-drop-zone="abilities_gained">
         <legend>Abilities Gained</legend>

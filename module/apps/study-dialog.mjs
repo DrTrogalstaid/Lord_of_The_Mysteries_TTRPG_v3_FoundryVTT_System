@@ -144,6 +144,8 @@ export async function openStudyDialog(actor, skill) {
   }
 
   const inspiration = actor.system.attributes.ins?.total ?? 0;
+  // Sequences with this skill in their Knowledge and Training list: one schedule faster each (base-actor.mjs).
+  const extraSteps = actor.system.sequenceTrainingSteps?.[skill.uuid] ?? 0;
   const entry = (actor.system.learning ?? []).find((e) => e.skill === skill.uuid);
   const progress = studyProgressFor(entry, skill.level);
 
@@ -172,6 +174,7 @@ export async function openStudyDialog(actor, skill) {
       <p class="hint">${L("SelfStudyHint")}</p>
     </div>
     ${boost ? `<p class="hint">${L("InspirationBoost", { inspiration, steps: boost })}</p>` : ""}
+    ${extraSteps ? `<p class="hint">${L("SequenceBoost", { steps: extraSteps })}</p>` : ""}
     <p class="study-preview"></p>`;
 
   /** What the form currently says, cleaned up. */
@@ -184,8 +187,8 @@ export async function openStudyDialog(actor, skill) {
   /** The line at the bottom: how long this step takes, and where these weeks would get the character. */
   const updatePreview = (form) => {
     const choice = readForm(form);
-    const full = studyWeeksNeeded(skill.level, { ...choice, inspiration });
-    const result = applyStudyWeeks({ level: skill.level, progress, inspiration, ...choice });
+    const full = studyWeeksNeeded(skill.level, { ...choice, inspiration, extraSteps });
+    const result = applyStudyWeeks({ level: skill.level, progress, inspiration, extraSteps, ...choice });
     const outcome = result.gained.length
       ? L("PreviewLevelUp", { level: levelLabel(result.level) })
       : L("PreviewProgress", { percent: meterPercent(result.progress), next: levelLabel(next) });
@@ -232,12 +235,13 @@ export async function openStudyDialog(actor, skill) {
  */
 export async function logStudy(actor, skill, { weeks, schedule, selfStudy }) {
   const inspiration = actor.system.attributes.ins?.total ?? 0;
+  const extraSteps = actor.system.sequenceTrainingSteps?.[skill.uuid] ?? 0;
   const { learning, entry } = learningData(actor, skill.uuid);
 
   const result = applyStudyWeeks({
     level: skill.level,
     progress: studyProgressFor(entry, skill.level),
-    weeks, schedule, selfStudy, inspiration,
+    weeks, schedule, selfStudy, inspiration, extraSteps,
   });
 
   entry.study = result.progress;

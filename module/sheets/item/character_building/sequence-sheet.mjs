@@ -34,6 +34,7 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
       deleteAttributeGain: LordOfTheMysteriesSequenceSheet.#onDeleteAttributeGain,
       deleteSkillIncrease: LordOfTheMysteriesSequenceSheet.#onDeleteSkillIncrease,
       deleteAbilityGained: LordOfTheMysteriesSequenceSheet.#onDeleteAbilityGained,
+      deleteTrainingBonus: LordOfTheMysteriesSequenceSheet.#onDeleteTrainingBonus,
     }
   };
 
@@ -158,6 +159,21 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
       })
     );
 
+    // Knowledge and Training bonus: skills this Sequence makes faster to study (helpers/skill-learning.mjs).
+    // A flat array of skill UUIDs — resolve name/img for display.
+    context.trainingBonus = await Promise.all(
+      (context.system.trainingBonus ?? []).map(async (uuid, index) => {
+        const skillItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
+        return {
+          index,
+          uuid,
+          name: skillItem?.name ?? "Unknown Item",
+          img: skillItem?.img ?? "icons/svg/hazard.svg",
+          broken: !!uuid && !skillItem,
+        };
+      })
+    );
+
     return context;
   }
 
@@ -192,6 +208,23 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
 
     const dropZone = event.target.closest("[data-drop-zone]")?.dataset.dropZone;
     if (!dropZone) return null;
+
+    if (dropZone === "trainingBonus") {
+      if (document.type !== "skill") {
+        ui.notifications.warn(`${document.name} is not a skill.`);
+        return null;
+      }
+      // A copy of a compendium skill (e.g. dragged from the Items sidebar) is saved as the compendium original,
+      // because that's the UUID characters store their skills under. Otherwise the speed-up would never match.
+      const uuid = document._stats?.compendiumSource || document.uuid;
+      const current = this.item.system.trainingBonus ?? [];
+      if (current.includes(uuid)) {
+        ui.notifications.warn(`${document.name} is already in Knowledge and Training.`);
+        return null;
+      }
+      await this.item.update({ "system.trainingBonus": [...current, uuid] });
+      return document;
+    }
 
     if (dropZone === "skill_increase") {
       const current = this.item.system.skill_increase ?? [];
@@ -250,6 +283,15 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
     const current = this.item.system.skill_increase ?? [];
     await this.item.update({
       "system.skill_increase": current.filter((_, i) => i !== index),
+    });
+  }
+
+  /** Remove a Knowledge and Training entry by index. */
+  static async #onDeleteTrainingBonus(event, target) {
+    const index = Number(target.dataset.index);
+    const current = this.item.system.trainingBonus ?? [];
+    await this.item.update({
+      "system.trainingBonus": current.filter((_, i) => i !== index),
     });
   }
 

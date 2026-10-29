@@ -262,6 +262,11 @@
       "SelfStudyShort": "self-study",
       "SelfStudyHint": "Learning alone, with no mentor, takes twice as long.",
       "InspirationBoost": "Inspiration {inspiration}: studies {steps} schedule(s) faster than chosen.",
+      "SequenceBoost": "Sequence Knowledge and Training bonus: {steps} more schedule(s) faster for this skill.",
+      "TrainingBonus": {
+        "Title": "Knowledge and Training",
+        "Hint": "Characters with this Sequence study these skills one schedule faster (1–2 days a week counts as 3–5, and so on)."
+      },
       "PreviewStep": "{from} → {to} takes {time} at this pace.",
       "PreviewProgress": "These weeks bring it to {percent}% of the way to {next}.",
       "PreviewLevelUp": "These weeks raise it to {level}.",

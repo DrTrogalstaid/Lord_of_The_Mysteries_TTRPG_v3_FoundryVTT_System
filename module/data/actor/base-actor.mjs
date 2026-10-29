@@ -147,6 +147,17 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             }
         }
 
+        // Sequence Knowledge and Training bonus: skills in a Sequence's trainingBonus list study one schedule
+        // faster (helpers/skill-learning.mjs), one step per owned Sequence that lists the skill.
+        // Display only, not in the schema: { [skill uuid]: steps }. Read with sequenceTrainingSteps[uuid] ?? 0.
+        this.sequenceTrainingSteps = {};
+        for (const sequence of sequences) {
+            for (const uuid of sequence.system.trainingBonus ?? []) {
+                if (!uuid) continue;
+                this.sequenceTrainingSteps[uuid] = (this.sequenceTrainingSteps[uuid] ?? 0) + 1;
+            }
+        }
+
         // Education growth: +1 Education per 5 skills learned to Mastery, 3 to Lore, 2 to Grand Master
         // (helpers/skill-learning.mjs). Display only, not in the schema: { bonus, tiers: [...] }.
         const minimums = CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels ?? {};
