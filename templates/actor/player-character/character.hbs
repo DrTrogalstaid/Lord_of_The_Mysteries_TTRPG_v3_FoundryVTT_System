@@ -6,7 +6,7 @@
       {{#each attributesList}}
       <div class="attribute-cell">
         <div class="attribute-label ">{{localize this.label}}</div>
-        <a class="attribute-total rollable-number">{{this.total}}</a>
+        <a class="attribute-total modifier rollable-number" data-action="rollAttribute" data-attribute="{{this.key}}">{{this.total}}</a>
         <div class="attribute-breakdown">
           <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
           <span>+</span>

@@ -254,9 +254,9 @@
       "Schedule": "How often",
       "ScheduleHint": "Each day counts as at least 2 hours of new, useful lessons or research. Only one session a day counts.",
       "Schedules": {
-        "daily": "6–7 days a week",
-        "often": "3–5 days a week",
-        "weekly": "1–2 days a week"
+        "daily": "6-7 days a week",
+        "often": "3-5 days a week",
+        "weekly": "1-2 days a week"
       },
       "SelfStudy": "Self-study",
       "SelfStudyShort": "self-study",
@@ -265,7 +265,7 @@
       "SequenceBoost": "Sequence Knowledge and Training bonus: {steps} more schedule(s) faster for this skill.",
       "TrainingBonus": {
         "Title": "Knowledge and Training",
-        "Hint": "Characters with this Sequence study these skills one schedule faster (1–2 days a week counts as 3–5, and so on)."
+        "Hint": "Characters with this Sequence study these skills one schedule faster (1-2 days a week counts as 3-5, and so on)."
       },
       "PreviewStep": "{from} → {to} takes {time} at this pace.",
       "PreviewProgress": "These weeks bring it to {percent}% of the way to {next}.",
@@ -354,7 +354,7 @@
       "Cost": "Spirituality Cost",
       "ActionType": "Action Type",
       "Digestion": "Digestion",
-      "DigestionHint": "How much of this Sequence's potion has been digested (1–20).",
+      "DigestionHint": "How much of this Sequence's potion has been digested (1-20).",
       "GrantedBy": "Granted by",
       "Missing": "Missing item",
       "Duplicate": "{name} is already on this character.",

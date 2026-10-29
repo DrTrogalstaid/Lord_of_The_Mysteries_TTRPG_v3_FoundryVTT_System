@@ -12,6 +12,7 @@ import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrant
 import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
 import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
 import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
+import { rollCheck } from "../helpers/check-roll.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -395,6 +396,7 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
       rollSkill: PlayerCharacterSheet._onRollSkill,
+      rollAttribute: PlayerCharacterSheet.#onRollAttribute,
       studySkill: PlayerCharacterSheet.#onStudySkill,
       recordSkillSuccess: PlayerCharacterSheet.#onRecordSkillSuccess,
       rollAction: PlayerCharacterSheet.#onRollAction,
@@ -1652,6 +1654,25 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       level: row.dataset.level,
       flatModifier: Number(row.dataset.flatModifier) || 0
     });
+  }
+
+
+  /**
+   * Click an attribute's total on the Character tab (data-attribute = the attribute key): roll 1d20 plus that
+   * total, e.g. "1d20 +3[STR]". A plain check through helpers/check-roll.mjs, not the skill check dialog.
+   */
+  static async #onRollAttribute(event, target) {
+    const key = target.dataset.attribute;
+    const attribute = this.actor.system.attributes?.[key];
+    if (!attribute) return;
+
+    const name = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[key]);
+    const abbr = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations[key]).toUpperCase();
+    // Falls back to plain text until the key is added to the language file.
+    const flavorKey = "LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor";
+    const flavor = game.i18n.has(flavorKey) ? game.i18n.format(flavorKey, { attribute: name }) : `${name} check`;
+
+    await rollCheck(this.actor, { modifier: attribute.total ?? 0, label: abbr, flavor });
   }
 
 
