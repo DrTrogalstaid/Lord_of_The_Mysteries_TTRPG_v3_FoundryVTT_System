@@ -3,8 +3,9 @@ import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
 
 // Import sheet classes.
+// Both actor sheets extend LordOfTheMysteriesActorSheetBase (sheets/base-actor-sheet.mjs).
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
-import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
+import { NpcSheet } from "./sheets/npc-sheet.mjs";
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
 import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_building/sequence-sheet.mjs';
 import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/skill-sheet.mjs';
@@ -108,10 +109,10 @@ Hooks.once('init', function () {
 
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
-  foundry.documents.collections.Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
+  foundry.documents.collections.Actors.registerSheet('lotm', NpcSheet, {
     types: ['npc'],
     makeDefault: true,
-    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
+    label: 'LORD_OF_THE_MYSTERIES.SheetTitles.NPC',
   });
   foundry.documents.collections.Actors.registerSheet('lotm', PlayerCharacterSheet, {
     types: ['character'], // whatever `type` PlayerCharacterData is registered under

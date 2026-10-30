@@ -1,0 +1,105 @@
+{{!-- NPC sidebar: resources, defenses, damage resistance and movement.
+      The maximums and defenses are worked out like a player character's (base-actor.mjs), so they're read-only. --}}
+<aside class="sheet-sidebar npc-sidebar">
+
+  <div class="pool-container">
+    <div class="pool-row">
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Resources.Health"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.hp.value" value="{{system.resources.hp.value}}" min="0" />
+          <span class="pool-sep">/</span>
+          <input type="number" value="{{system.resources.hp.max}}" readonly tabindex="-1" />
+        </div>
+      </div>
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Resources.Rationality"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.rp.value" value="{{system.resources.rp.value}}" min="0" />
+          <span class="pool-sep">/</span>
+          <input type="number" value="{{system.resources.rp.max}}" readonly tabindex="-1" />
+        </div>
+      </div>
+    </div>
+    <div class="pool-row">
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Resources.Spirituality"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.spp.value" value="{{system.resources.spp.value}}" min="0" />
+          <span class="pool-sep">/</span>
+          <input type="number" value="{{system.resources.spp.max}}" readonly tabindex="-1" />
+        </div>
+        {{#if editable}}
+        <button type="button" class="spend-btn" data-action="spendSpirituality">{{localize "LORD_OF_THE_MYSTERIES.Spirituality.Spend"}}</button>
+        {{/if}}
+      </div>
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Resources.Luck"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.lp.value" value="{{system.resources.lp.value}}" min="0" />
+          <span class="pool-sep">/</span>
+          <input type="number" value="{{system.resources.lp.max}}" readonly tabindex="-1" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="defense-box">
+    <div class="stat-box full-width">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Defenses.Physical"}}</label>
+      <input type="number" value="{{system.defenses.physical}}" readonly tabindex="-1" />
+    </div>
+    <div class="pool-row">
+      <div class="stat-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Defenses.Physique"}}</label>
+        <input type="number" value="{{system.defenses.physique}}" readonly tabindex="-1" />
+      </div>
+      <div class="stat-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Defenses.Will"}}</label>
+        <input type="number" value="{{system.defenses.will}}" readonly tabindex="-1" />
+      </div>
+    </div>
+
+    {{!-- Same rows as the player sidebar: typed-in rows, then the worn armor's (read-only). --}}
+    <div class="stat-box full-width damage-resistance-box">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.DamageResistance"}}</label>
+      <ul class="damage-resistance-list">
+        {{#each system.damage_resistance as |row|}}
+        <li class="damage-resistance-row">
+          <select class="damage-resistance-type" name="system.damage_resistance.{{@index}}.damageType">
+            {{selectOptions @root.damageTypeChoices selected=row.damageType}}
+          </select>
+          <input type="number" class="damage-resistance-value" name="system.damage_resistance.{{@index}}.value" value="{{row.value}}" min="0" />
+          {{#if @root.editable}}
+          <a class="damage-resistance-remove" data-action="removeDamageResistance" data-index="{{@index}}"
+             data-tooltip="LORD_OF_THE_MYSTERIES.GenericButtons.Remove">
+            <i class="fas fa-trash"></i>
+          </a>
+          {{/if}}
+        </li>
+        {{/each}}
+        {{#each system.armorReductionList as |row|}}
+        <li class="damage-resistance-row from-armor"
+            data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Inventory.Armor.FromArmor' name=row.source}}">
+          <span class="damage-resistance-type">{{localize row.label}}</span>
+          <span class="damage-resistance-value">{{row.value}}</span>
+          <i class="damage-resistance-source fa-solid fa-shield-halved"></i>
+        </li>
+        {{/each}}
+      </ul>
+      {{#if editable}}
+      <button type="button" class="damage-resistance-add-button" data-action="addDamageResistance">
+        <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.GenericButtons.Add"}}
+      </button>
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="speed-container">
+    <div class="speed-box full-width">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Movement"}}</label>
+      <input type="number" value="{{system.movement}}" readonly tabindex="-1" />
+    </div>
+  </div>
+
+</aside>

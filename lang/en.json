@@ -39,6 +39,7 @@
 
     "SheetTitles": {
         "PlayerCharacter": "Player Character",
+        "NPC": "NPC",
         "Sequence": "Sequence",
         "Skill": "Skill",
         "Ability": "Ability",
@@ -114,7 +115,9 @@
         "Spells": "Spells",
         "Actions": "Actions",
         "Inventory": "Inventory",
-        "Effects": "Effects"
+        "Effects": "Effects",
+        "Main": "Main",
+        "Notes": "Notes"
     },
 
     "Action_Type": {
@@ -371,7 +374,61 @@
       "Roll": "Roll",
       "Damage": "Damage",
       "Range": "Range",
-      "RangeFeet": "{range} ft"
+      "RangeFeet": "{range} ft",
+      "Hide": "Hide on this NPC",
+      "HiddenTitle": "Hidden ({count})",
+      "HiddenHint": "Hidden on this NPC only. The Item that grants it isn't changed.",
+      "Restore": "Restore",
+      "RestoreHint": "Show this on the NPC again"
+    },
+
+    "Spirituality": {
+      "SpendTitle": "Spend Spirituality",
+      "Spend": "Spend",
+      "Current": "Spirituality: <strong>{value}</strong> / {max}",
+      "Amount": "Amount",
+      "Reason": "What for",
+      "ReasonPlaceholder": "Optional, e.g. a ritual",
+      "InvalidAmount": "Enter an amount of 1 or more.",
+      "NotEnough": "{name} has only {value} Spirituality ({cost} needed). Nothing was spent.",
+      "Chat": "{name} spends {amount} Spirituality{reason}: {before} → {after}",
+      "ChatReason": " on {reason}",
+      "RollNote": "−{amount} Spirituality ({after} left)",
+      "ActionCheckbox": "Spend {cost} Spirituality (has {value})",
+      "ActionNotEnough": "Not enough Spirituality ({value} of {cost}). It will roll without spending any.",
+      "UseButton": "Spend {cost}",
+      "UseTooltip": "Spend this action's Spirituality Cost"
+    },
+
+    "NPC": {
+      "Name": "Name",
+      "Organization": "Organization",
+      "OrganizationPlaceholder": "Who they belong to",
+      "NoSequence": "No Sequence",
+      "SequenceLine": "Sequence {number} · {name} ({pathway})",
+      "SequenceLineNoPathway": "Sequence {number} · {name}",
+      "SequenceLineHint": "The NPC's strongest Sequence. Add or remove Sequences on the Sequences tab.",
+      "Attributes": "Attributes",
+      "Base": "Base",
+      "AttributeTooltip": "{name}: base {base}, Sequence {sequence}, other {other} (corruption, armor, Education growth)",
+      "Skills": "Skills",
+      "SkillsHint": "Drop skills here",
+      "SkillsEmpty": "No skills yet. Drag skills here from the Skills compendium or the sidebar.",
+      "RaisedBy": "Raised by {names}",
+      "AddGear": "Create blank gear",
+      "Resources": {
+        "Health": "Health",
+        "Rationality": "Rationality",
+        "Spirituality": "Spirituality",
+        "Luck": "Luck"
+      },
+      "Defenses": {
+        "Physical": "Physical",
+        "Physique": "Physique",
+        "Will": "Will"
+      },
+      "DamageResistance": "Damage Resistance",
+      "Movement": "Movement Speed"
     },
 
     "DamageTypes": {

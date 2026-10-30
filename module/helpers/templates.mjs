@@ -16,6 +16,13 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/sidebar.hbs',
     'systems/lotm/templates/actor/player-character/parts/tab-nav.hbs',
 
+    // Partials shared by the player and NPC sheets (see SHARED_PARTIALS in sheets/base-actor-sheet.mjs).
+    'systems/lotm/templates/actor/player-character/parts/drop-section.hbs',
+    'systems/lotm/templates/actor/player-character/parts/drop-entry.hbs',
+    'systems/lotm/templates/actor/player-character/parts/section-entry.hbs',
+    'systems/lotm/templates/actor/player-character/parts/action-groups.hbs',
+    'systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs',
+
     // App partials
     'systems/lotm/templates/apps/skill-check-dialog.hbs',
 

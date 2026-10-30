@@ -1,4 +1,4 @@
-.lotm.sheet.player-character .drop-section {
+.lotm.sheet.actor .drop-section {
   border: 1px solid var(--color-border-light-tertiary, #999);
   border-radius: 6px;
   padding: 0.5rem 0.75rem 0.75rem;
@@ -8,33 +8,33 @@
 }
 
 /* The section under the cursor while an Item is being dragged over it. */
-.lotm.sheet.player-character .drop-section.drag-over {
+.lotm.sheet.actor .drop-section.drag-over {
   border-color: var(--color-border-highlight, #ff6400);
   background: color-mix(in srgb, var(--color-border-highlight, #ff6400) 10%, transparent);
   box-shadow: 0 0 0 1px var(--color-border-highlight, #ff6400);
 }
 
-.lotm.sheet.player-character .drop-section-header {
+.lotm.sheet.actor .drop-section-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.4rem;
 }
 
-.lotm.sheet.player-character .drop-section-title {
+.lotm.sheet.actor .drop-section-title {
   flex: 0 0 auto;
   margin: 0;
   border: none;
   font-size: var(--font-size-16, 1rem);
 }
 
-.lotm.sheet.player-character .drop-section-hint {
+.lotm.sheet.actor .drop-section-hint {
   flex: 1;
   font-size: var(--font-size-11, 0.7rem);
   opacity: 0.6;
 }
 
-.lotm.sheet.player-character .drop-section-add {
+.lotm.sheet.actor .drop-section-add {
   flex: 0 0 auto;
   width: 1.75rem;
   height: 1.75rem;
@@ -43,7 +43,7 @@
   line-height: 1;
 }
 
-.lotm.sheet.player-character .drop-section-list {
+.lotm.sheet.actor .drop-section-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -52,7 +52,7 @@
   gap: 0.25rem;
 }
 
-.lotm.sheet.player-character .drop-entry {
+.lotm.sheet.actor .drop-entry {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -62,12 +62,12 @@
 }
 
 /* Entries that come from another Item rather than being owned directly. */
-.lotm.sheet.player-character .drop-entry.granted {
+.lotm.sheet.actor .drop-entry.granted {
   border-left: 3px solid var(--color-border-highlight, #ff6400);
   background: color-mix(in srgb, currentColor 2%, transparent);
 }
 
-.lotm.sheet.player-character .drop-entry.broken {
+.lotm.sheet.actor .drop-entry.broken {
   border-left-color: var(--color-level-error, #c33);
   opacity: 0.7;
 }
@@ -76,7 +76,7 @@
    ::before / ::after never render on an <img> (a replaced element), so the image sits inside a wrapper
    and the bubble is a real element laid over it. The wrapper is a button (data-action="sendToChat"), so it
    is keyboard-focusable; broken entries get a plain <span> wrapper with no bubble. */
-.lotm.sheet.player-character .drop-entry-icon {
+.lotm.sheet.actor .drop-entry-icon {
   position: relative;
   flex: 0 0 auto;
   display: block;
@@ -93,11 +93,11 @@
   overflow: hidden;
 }
 
-.lotm.sheet.player-character button.drop-entry-icon {
+.lotm.sheet.actor button.drop-entry-icon {
   cursor: pointer;
 }
 
-.lotm.sheet.player-character .drop-entry-img {
+.lotm.sheet.actor .drop-entry-img {
   display: block;
   width: 100%;
   height: 100%;
@@ -106,7 +106,7 @@
   object-fit: cover;
 }
 
-.lotm.sheet.player-character .drop-entry-icon-overlay {
+.lotm.sheet.actor .drop-entry-icon-overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -121,33 +121,33 @@
   pointer-events: none;
 }
 
-.lotm.sheet.player-character .drop-entry-icon:hover .drop-entry-icon-overlay,
-.lotm.sheet.player-character .drop-entry-icon:focus-visible .drop-entry-icon-overlay {
+.lotm.sheet.actor .drop-entry-icon:hover .drop-entry-icon-overlay,
+.lotm.sheet.actor .drop-entry-icon:focus-visible .drop-entry-icon-overlay {
   opacity: 1;
 }
 
-.lotm.sheet.player-character .drop-entry-main {
+.lotm.sheet.actor .drop-entry-main {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.lotm.sheet.player-character .drop-entry-name {
+.lotm.sheet.actor .drop-entry-name {
   font-weight: 600;
   cursor: pointer;
 }
 
-.lotm.sheet.player-character .drop-entry.broken .drop-entry-name {
+.lotm.sheet.actor .drop-entry.broken .drop-entry-name {
   cursor: default;
 }
 
-.lotm.sheet.player-character .drop-entry-detail {
+.lotm.sheet.actor .drop-entry-detail {
   font-size: var(--font-size-12, 0.75rem);
   opacity: 0.8;
 }
 
-.lotm.sheet.player-character .drop-entry-source {
+.lotm.sheet.actor .drop-entry-source {
   font-size: var(--font-size-11, 0.7rem);
   opacity: 0.65;
   white-space: nowrap;
@@ -156,21 +156,21 @@
 }
 
 /* Labeled stats (Action Type, Spirituality Cost) on the right of a row: small label over the value. */
-.lotm.sheet.player-character .drop-entry-stats {
+.lotm.sheet.actor .drop-entry-stats {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.9rem;
 }
 
-.lotm.sheet.player-character .drop-entry-stat {
+.lotm.sheet.actor .drop-entry-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
   line-height: 1.2;
 }
 
-.lotm.sheet.player-character .drop-entry-stat-label {
+.lotm.sheet.actor .drop-entry-stat-label {
   font-size: var(--font-size-10, 0.625rem);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -178,21 +178,21 @@
   white-space: nowrap;
 }
 
-.lotm.sheet.player-character .drop-entry-stat-value {
+.lotm.sheet.actor .drop-entry-stat-value {
   font-size: var(--font-size-13, 0.8rem);
   font-weight: 600;
   white-space: nowrap;
 }
 
 /* Move up / down: two small stacked buttons to the left of the remove button. */
-.lotm.sheet.player-character .drop-entry-move {
+.lotm.sheet.actor .drop-entry-move {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.lotm.sheet.player-character .drop-entry-move-btn {
+.lotm.sheet.actor .drop-entry-move-btn {
   flex: none;
   width: 1.4rem;
   height: 0.95rem;
@@ -204,17 +204,17 @@
   opacity: 0.6;
 }
 
-.lotm.sheet.player-character .drop-entry-move-btn:hover:not(:disabled),
-.lotm.sheet.player-character .drop-entry-move-btn:focus-visible {
+.lotm.sheet.actor .drop-entry-move-btn:hover:not(:disabled),
+.lotm.sheet.actor .drop-entry-move-btn:focus-visible {
   opacity: 1;
 }
 
-.lotm.sheet.player-character .drop-entry-move-btn:disabled {
+.lotm.sheet.actor .drop-entry-move-btn:disabled {
   opacity: 0.2;
   cursor: default;
 }
 
-.lotm.sheet.player-character .drop-entry-remove {
+.lotm.sheet.actor .drop-entry-remove {
   flex: 0 0 auto;
   width: 1.5rem;
   height: 1.5rem;
@@ -224,7 +224,7 @@
 }
 
 /* Remove button on a skill row in the Character tab's skill list (only skills that aren't from the compendium). */
-.lotm.sheet.player-character .skill-remove {
+.lotm.sheet.actor .skill-remove {
   flex: 0 0 auto;
   width: 1.5rem;
   height: 1.5rem;
@@ -235,35 +235,35 @@
   opacity: 0.6;
 }
 
-.lotm.sheet.player-character .skill-remove:hover {
+.lotm.sheet.actor .skill-remove:hover {
   opacity: 1;
 }
 
 /* Same width as .drop-entry-remove, so rows without a remove button keep their columns aligned. */
-.lotm.sheet.player-character .drop-entry-spacer {
+.lotm.sheet.actor .drop-entry-spacer {
   flex: 0 0 1.5rem;
 }
 
-.lotm.sheet.player-character .drop-entry-remove:hover {
+.lotm.sheet.actor .drop-entry-remove:hover {
   opacity: 1;
 }
 
-.lotm.sheet.player-character .drop-section-empty {
+.lotm.sheet.actor .drop-section-empty {
   margin: 0.25rem 0 0;
   font-style: italic;
   opacity: 0.55;
 }
 
-.lotm.sheet.player-character .spells-tab {
+.lotm.sheet.actor .spells-tab {
   grid-area: content;
   overflow-y: auto;
 }
 
-.lotm.sheet.player-character .spell-list + .spell-list {
+.lotm.sheet.actor .spell-list + .spell-list {
   margin-top: 0.75rem;
 }
 
-.lotm.sheet.player-character .spell-list-title {
+.lotm.sheet.actor .spell-list-title {
   display: flex;
   align-items: baseline;
   gap: 0.4rem;
@@ -273,41 +273,41 @@
   font-weight: 600;
 }
 
-.lotm.sheet.player-character .spell-list-count {
+.lotm.sheet.actor .spell-list-count {
   font-size: var(--font-size-11, 0.875rem);
   font-weight: normal;
   opacity: 0.6;
 }
 
-.lotm.sheet.player-character .spell-list-empty {
+.lotm.sheet.actor .spell-list-empty {
   margin: 0.15rem 0 0;
   font-size: var(--font-size-12, 0.75rem);
 }
 
-.lotm.sheet.player-character .drop-entry-title-row {
+.lotm.sheet.actor .drop-entry-title-row {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
   min-width: 0;
 }
 
-.lotm.sheet.player-character .drop-entry-title-row .drop-entry-source {
+.lotm.sheet.actor .drop-entry-title-row .drop-entry-source {
   min-width: 0;
 }
 
-.lotm.sheet.player-character .drop-entry.action {
+.lotm.sheet.actor .drop-entry.action {
   padding-top: 0.3rem;
   padding-bottom: 0.3rem;
 }
 
-.lotm.sheet.player-character .drop-entry-rolls {
+.lotm.sheet.actor .drop-entry-rolls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
   margin-top: 0.2rem;
 }
 
-.lotm.sheet.player-character .drop-entry-roll-btn {
+.lotm.sheet.actor .drop-entry-roll-btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -330,36 +330,36 @@
   transition: filter 0.12s, box-shadow 0.12s;
 }
 
-.lotm.sheet.player-character .drop-entry-roll-btn:hover,
-.lotm.sheet.player-character .drop-entry-roll-btn:focus-visible {
+.lotm.sheet.actor .drop-entry-roll-btn:hover,
+.lotm.sheet.actor .drop-entry-roll-btn:focus-visible {
   filter: brightness(1.2);
   box-shadow: 0 0 4px var(--color-border-highlight, #ff6400);
 }
 
 /* Attack: blue, like pf2e's Strike button. */
-.lotm.sheet.player-character .drop-entry-roll-btn.attack {
+.lotm.sheet.actor .drop-entry-roll-btn.attack {
   background: #2c3f7c;
   border-color: #1c2a57;
 }
 
 /* Damage: dark red. */
-.lotm.sheet.player-character .drop-entry-roll-btn.damage {
+.lotm.sheet.actor .drop-entry-roll-btn.damage {
   background: #7d1f1f;
   border-color: #561414;
 }
 
 /* The "+5" part of the attack button. */
-.lotm.sheet.player-character .drop-entry-roll-bonus {
+.lotm.sheet.actor .drop-entry-roll-bonus {
   padding-left: 0.3rem;
   border-left: 1px solid rgba(255, 255, 255, 0.35);
   font-variant-numeric: tabular-nums;
 }
 
-.lotm.sheet.player-character .drop-entry.action .drop-entry-action-type { width: 4.75rem; }
-.lotm.sheet.player-character .drop-entry.action .drop-entry-cost        { width: 7.5rem; }
-.lotm.sheet.player-character .drop-entry.action .drop-entry-range       { width: 3.25rem; }
+.lotm.sheet.actor .drop-entry.action .drop-entry-action-type { width: 4.75rem; }
+.lotm.sheet.actor .drop-entry.action .drop-entry-cost        { width: 7.5rem; }
+.lotm.sheet.actor .drop-entry.action .drop-entry-range       { width: 3.25rem; }
 
-.lotm.sheet.player-character .drop-entry-stat-value:empty::before {
+.lotm.sheet.actor .drop-entry-stat-value:empty::before {
   content: "\00a0";
 }
 
@@ -390,14 +390,20 @@
 /* ---- Guns and ammo on the Actions and Inventory tabs (helpers/firearms.mjs) ---- */
 
 /* Reload / Chamber / Unload: grey-green, so it doesn't look like an attack or damage roll. */
-.lotm.sheet.player-character .drop-entry-roll-btn.ammo {
+.lotm.sheet.actor .drop-entry-roll-btn.ammo {
   background: #3d5a40;
   border-color: #283c2a;
 }
 
+/* "Spend 2": an action's Spirituality Cost, for actions with nothing to roll. */
+.lotm.sheet.actor .drop-entry-roll-btn.spirit {
+  background: #2f4a6b;
+  border-color: #1f3350;
+}
+
 /* "5/6 ●": rounds in the magazine, and the chamber (filled dot = round chambered). */
-.lotm.sheet.player-character .drop-entry-gun-status,
-.lotm.sheet.player-character .drop-entry-ammo-status {
+.lotm.sheet.actor .drop-entry-gun-status,
+.lotm.sheet.actor .drop-entry-ammo-status {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -406,23 +412,23 @@
   cursor: help;
 }
 
-.lotm.sheet.player-character .drop-entry-rolls .drop-entry-gun-status {
+.lotm.sheet.actor .drop-entry-rolls .drop-entry-gun-status {
   font-size: var(--font-size-12, 0.75rem);
   font-weight: 600;
 }
 
-.lotm.sheet.player-character .drop-entry-gun-status .chamber-dot {
+.lotm.sheet.actor .drop-entry-gun-status .chamber-dot {
   font-size: 0.6em;
 }
 
 /* Nothing ready to fire / box empty. */
-.lotm.sheet.player-character .drop-entry-gun-status.empty,
-.lotm.sheet.player-character .drop-entry-ammo-status.empty {
+.lotm.sheet.actor .drop-entry-gun-status.empty,
+.lotm.sheet.actor .drop-entry-ammo-status.empty {
   color: var(--lotm-inventory-over, #b3261e);
 }
 
 /* Unload while the gun is empty. */
-.lotm.sheet.player-character .drop-entry-roll-btn.ammo:disabled {
+.lotm.sheet.actor .drop-entry-roll-btn.ammo:disabled {
   opacity: 0.4;
   filter: none;
   box-shadow: none;
@@ -431,12 +437,12 @@
 
 /* ---- Actions tab: Favorites and one collapsible section per action type (actions.hbs) ---- */
 
-.lotm.sheet.player-character .action-group + .action-group {
+.lotm.sheet.actor .action-group + .action-group {
   margin-top: 0.5rem;
 }
 
 /* The clickable header. list-style / ::-webkit-details-marker hide the browser's own triangle; the chevron replaces it. */
-.lotm.sheet.player-character .action-group-header {
+.lotm.sheet.actor .action-group-header {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -448,44 +454,44 @@
   user-select: none;
 }
 
-.lotm.sheet.player-character .action-group-header::-webkit-details-marker {
+.lotm.sheet.actor .action-group-header::-webkit-details-marker {
   display: none;
 }
 
-.lotm.sheet.player-character .action-group-header:hover {
+.lotm.sheet.actor .action-group-header:hover {
   background: color-mix(in srgb, currentColor 6%, transparent);
 }
 
 /* Points right when closed, down when open. */
-.lotm.sheet.player-character .action-group-chevron {
+.lotm.sheet.actor .action-group-chevron {
   width: 0.8em;
   font-size: 0.7em;
   transition: transform 0.12s;
 }
 
-.lotm.sheet.player-character .action-group[open] > .action-group-header .action-group-chevron {
+.lotm.sheet.actor .action-group[open] > .action-group-header .action-group-chevron {
   transform: rotate(90deg);
 }
 
-.lotm.sheet.player-character .action-group-count {
+.lotm.sheet.actor .action-group-count {
   font-size: var(--font-size-11, 0.7rem);
   font-weight: normal;
   opacity: 0.6;
 }
 
-.lotm.sheet.player-character .action-group > .drop-section-list,
-.lotm.sheet.player-character .action-group > .drop-section-empty {
+.lotm.sheet.actor .action-group > .drop-section-list,
+.lotm.sheet.actor .action-group > .drop-section-empty {
   margin-top: 0.3rem;
 }
 
 /* Gold star: on the Favorites header, and on favorited actions. */
-.lotm.sheet.player-character .action-group-star,
-.lotm.sheet.player-character .drop-entry-favorite.active {
+.lotm.sheet.actor .action-group-star,
+.lotm.sheet.actor .drop-entry-favorite.active {
   color: #d9a93a;
 }
 
 /* The star button next to an action's name. Plain icon, no button box. */
-.lotm.sheet.player-character .drop-entry-favorite {
+.lotm.sheet.actor .drop-entry-favorite {
   flex: 0 0 auto;
   width: auto;
   height: auto;
@@ -501,13 +507,116 @@
   cursor: pointer;
 }
 
-.lotm.sheet.player-character .drop-entry-favorite:hover,
-.lotm.sheet.player-character .drop-entry-favorite:focus-visible,
-.lotm.sheet.player-character .drop-entry-favorite.active {
+.lotm.sheet.actor .drop-entry-favorite:hover,
+.lotm.sheet.actor .drop-entry-favorite:focus-visible,
+.lotm.sheet.actor .drop-entry-favorite.active {
   opacity: 1;
 }
 
 /* A filled star on a read-only sheet isn't a button. */
-.lotm.sheet.player-character i.drop-entry-favorite {
+.lotm.sheet.actor i.drop-entry-favorite {
   cursor: default;
+}
+
+/* ---- Hiding granted entries (NPC sheet): the eye-slash button and the "Hidden (n)" lists (hidden-grants.hbs) ---- */
+
+/* Same size and place as the trash can on owned rows, so the columns line up. */
+.lotm.sheet.actor .drop-entry-hide {
+  opacity: 0.45;
+}
+
+.lotm.sheet.actor .hidden-grants {
+  margin-top: 0.5rem;
+  border-top: 1px dashed var(--color-border-light-tertiary, #999);
+  padding-top: 0.25rem;
+}
+
+.lotm.sheet.actor .hidden-grants-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.25rem;
+  font-size: var(--font-size-12, 0.75rem);
+  opacity: 0.75;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lotm.sheet.actor .hidden-grants-header::-webkit-details-marker {
+  display: none;
+}
+
+.lotm.sheet.actor .hidden-grants-header:hover {
+  opacity: 1;
+}
+
+.lotm.sheet.actor .hidden-grants-chevron {
+  width: 0.8em;
+  font-size: 0.7em;
+  transition: transform 0.12s;
+}
+
+.lotm.sheet.actor .hidden-grants[open] > .hidden-grants-header .hidden-grants-chevron {
+  transform: rotate(90deg);
+}
+
+.lotm.sheet.actor .hidden-grants-title {
+  font-weight: 600;
+}
+
+.lotm.sheet.actor .hidden-grants-hint {
+  font-size: var(--font-size-11, 0.7rem);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lotm.sheet.actor .hidden-grants-list {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.lotm.sheet.actor .hidden-grant {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  opacity: 0.7;
+}
+
+.lotm.sheet.actor .hidden-grant-img {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: none;
+  object-fit: cover;
+}
+
+.lotm.sheet.actor .hidden-grant-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lotm.sheet.actor .hidden-grant .drop-entry-source {
+  flex: 1;
+  min-width: 0;
+}
+
+.lotm.sheet.actor .hidden-grant-restore {
+  flex: 0 0 auto;
+  width: auto;
+  height: 1.4rem;
+  margin-left: auto;
+  padding: 0 0.5rem;
+  font-size: var(--font-size-11, 0.7rem);
+  line-height: 1;
 }

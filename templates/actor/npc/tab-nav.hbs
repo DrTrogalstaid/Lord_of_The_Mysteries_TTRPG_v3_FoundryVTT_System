@@ -1,0 +1,8 @@
+{{!-- The page selector. One link per tab in NpcSheet.TABS.sheet, in that order. --}}
+<nav class="sheet-page-tabs tabs" data-group="sheet">
+  {{#each tabs as |tab|}}
+  <a class="page-tab {{tab.cssClass}}" data-action="tab" data-group="sheet" data-tab="{{tab.id}}">
+    {{localize tab.label}}
+  </a>
+  {{/each}}
+</nav>

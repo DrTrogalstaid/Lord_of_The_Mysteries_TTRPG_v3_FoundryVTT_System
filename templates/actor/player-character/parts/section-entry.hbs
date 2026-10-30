@@ -1,12 +1,16 @@
 {{!--
   One row of a drop section (icon, name, roll buttons, stats, move / remove buttons).
-  The context is one entry built by buildEntry() in player-character-sheet.mjs.
+  The context is one entry built by buildEntry() in base-actor-sheet.mjs.
 
-  Used by drop-section.hbs (every tab's list) and actions.hbs (the grouped Actions tab):
-    {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" entry remove="deleteAction" favorites=true}}
+  Used by drop-section.hbs (every tab's list) and action-groups.hbs (the grouped action sections):
+    {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" entry remove="deleteAction" favorites=@root.showFavorites}}
 
   remove     data-action for the delete button (owned entries only).
-  favorites  true on the Actions tab: shows the star that adds / removes the action from Favorites.
+  favorites  true in the action sections of sheets that have Favorites (the player sheet): shows the star
+             that adds / removes the action from Favorites.
+
+  Granted entries (not owned) get an eye-slash button instead of the trash can on sheets that can hide them
+  (@root.canHideGrants, NPCs). It hides the entry on this actor only; the Item that grants it isn't changed.
 --}}
 <li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if isAction}} action{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}" data-item-id="{{id}}">
   {{#if broken}}
@@ -27,7 +31,7 @@
       {{else}}
         <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
       {{/if}}
-      {{!-- Actions tab: the star adds / removes this action from Favorites (PlayerCharacterSheet.#onToggleFavorite).
+      {{!-- Action sections: the star adds / removes this action from Favorites (#onToggleFavorite in base-actor-sheet.mjs).
             Players who can't edit the sheet just see a filled star on favorites. --}}
       {{#if favorites}}
         {{#if @root.editable}}
@@ -54,7 +58,7 @@
         {{#if hasRolls}}
           <div class="drop-entry-rolls">
             {{#if attack}}
-              {{!-- Opens the skill check dialog (PlayerCharacterSheet.#onRollAction). --}}
+              {{!-- Opens the skill check dialog (#onRollAction in base-actor-sheet.mjs). --}}
               <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{uuid}}"
                       data-gun-id="{{gunId}}" data-tooltip="{{attack.tooltip}}">
                 <i class="fa-solid fa-dice-d20"></i>
@@ -69,7 +73,7 @@
                 {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
               </button>
             {{/if}}
-            {{!-- Reload / Chamber / Unload (PlayerCharacterSheet.#onUseAmmo -> useAmmoAction in helpers/firearms.mjs).
+            {{!-- Reload / Chamber / Unload (#onUseAmmo in base-actor-sheet.mjs -> useAmmoAction in helpers/firearms.mjs).
                   A reload action gets two: Reload and Unload. --}}
             {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
             {{#each ammoButtons as |button|}}
@@ -79,6 +83,14 @@
                 <span class="drop-entry-roll-label">{{button.label}}</span>
               </button>
             {{/each}}
+            {{!-- An action with a Spirituality Cost but nothing to roll: spend the cost (#onUseSpirituality in base-actor-sheet.mjs). --}}
+            {{#if spiritButton}}
+              <button type="button" class="drop-entry-roll-btn spirit" data-action="useSpirituality" data-uuid="{{uuid}}"
+                      data-tooltip="LORD_OF_THE_MYSTERIES.Spirituality.UseTooltip">
+                <i class="fa-solid fa-sparkles"></i>
+                <span class="drop-entry-roll-label">{{spiritButton.label}}</span>
+              </button>
+            {{/if}}
             {{#if gunStatus}}
               {{!-- Rounds in the magazine, and (for guns with one) a filled / hollow dot for the chamber. Hover for what's loaded. --}}
               <span class="drop-entry-gun-status{{#if gunStatus.empty}} empty{{/if}}" data-tooltip="{{gunStatus.tooltip}}">
@@ -157,6 +169,11 @@
     {{#if owned}}
       <button type="button" class="drop-entry-remove" data-action="{{remove}}" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
         <i class="fa-solid fa-trash"></i>
+      </button>
+    {{else if @root.canHideGrants}}
+      {{!-- NPCs: hide this granted entry (#onHideGrant in base-actor-sheet.mjs). Restore it from the "Hidden" list. --}}
+      <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{hideKey}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Hide" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Hide'}}">
+        <i class="fa-solid fa-eye-slash"></i>
       </button>
     {{else}}
       {{!-- Granted entries can't be removed here; keep the remove button's column so the move buttons line up across rows. --}}

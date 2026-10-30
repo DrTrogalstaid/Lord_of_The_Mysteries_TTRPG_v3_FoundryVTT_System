@@ -28,7 +28,8 @@
     "css/actor-sheet.css", 
     "css/item-sheet.css",
     "css/drop-sections.css",
-    "css/inventory.css"
+    "css/inventory.css",
+    "css/npc-sheet.css"
   ],
   "languages": [
     {

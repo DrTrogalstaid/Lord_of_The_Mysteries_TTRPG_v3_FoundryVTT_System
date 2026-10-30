@@ -1,0 +1,114 @@
+{{!--
+  NPC Main tab: everything needed in a fight, like a stat block.
+    Attributes   #prepareAttributes in npc-sheet.mjs. Click a total to roll it.
+    Skills       #prepareSkills in npc-sheet.mjs. Only the skills dropped here (and any a Sequence raises).
+    Actions      The same collapsible sections as the player Actions tab (action-groups.hbs), without Favorites.
+  Granted rows have an eye-slash button that hides them on this NPC; hidden ones are listed at the bottom
+  of their box with a Restore button (hidden-grants.hbs).
+--}}
+<section class="tab main-tab {{tab.cssClass}}" data-group="sheet" data-tab="main">
+
+  <div class="attributes-box">
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.NPC.Attributes"}}</div>
+    <div class="attributes-grid npc-attributes">
+      {{#each attributesList as |attribute|}}
+      <div class="attribute-cell" data-tooltip="{{attribute.tooltip}}">
+        <div class="attribute-label">{{localize attribute.abbr}}</div>
+        <a class="attribute-total modifier rollable-number" data-action="rollAttribute" data-attribute="{{attribute.key}}">{{attribute.total}}</a>
+        <input type="number" class="npc-attribute-base" name="system.attributes.{{attribute.key}}.base" value="{{attribute.base}}" min="2"
+               aria-label="{{localize 'LORD_OF_THE_MYSTERIES.NPC.Base'}}" />
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{!-- Skills. A dropped skill is saved at Trained (#dropSkill in base-actor-sheet.mjs). --}}
+  <div class="drop-section npc-skills" data-drop-zone="skills">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.NPC.Skills"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.NPC.SkillsHint"}}</span>
+      {{/if}}
+    </header>
+
+    {{#if skills.length}}
+    <ul class="skill-list npc-skill-list">
+      {{#each skills as |skill|}}
+      <li class="skill-row npc-skill-row{{#unless skill.owned}} granted{{/unless}}{{#if skill.broken}} broken{{/if}}"
+          data-skill-uuid="{{skill.uuid}}"
+          data-skill-name="{{skill.name}}"
+          data-category="{{skill.category}}"
+          data-attribute="{{skill.attribute}}"
+          data-level="{{skill.effectiveLevel}}"
+          data-flat-modifier="{{skill.flatModifier}}">
+        <img class="skill-icon" src="{{skill.img}}" alt="" />
+        {{#if skill.broken}}
+          <span class="modifier npc-skill-modifier"></span>
+          <span class="skill-name">{{skill.name}}</span>
+        {{else}}
+          <a class="modifier rollable-number npc-skill-modifier" data-action="rollSkill" data-tooltip="LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip">
+            {{numberFormat skill.modifier decimals=0 sign=true}}
+          </a>
+          <a class="skill-name" data-action="openItem" data-uuid="{{skill.uuid}}">{{skill.name}}</a>
+          <span class="granted-attribute">{{skill.attributeLabel}}</span>
+        {{/if}}
+
+        {{#if skill.raisedByLabel}}
+          <span class="drop-entry-source npc-skill-source">{{localize "LORD_OF_THE_MYSTERIES.NPC.RaisedBy" names=skill.raisedByLabel}}</span>
+        {{/if}}
+        {{!-- Raised by a Sequence or a related skill: the level it's rolled at, with the reason on hover.
+              The dropdown keeps the NPC's own level. --}}
+        {{#if skill.associated}}
+          <span class="skill-associated" data-tooltip="{{skill.associatedTooltip}}">
+            <i class="fa-solid fa-link"></i> {{localize (lookup @root.skillLevelOptions skill.effectiveLevel)}}
+          </span>
+        {{/if}}
+
+        {{#unless skill.broken}}
+        <select class="skill-level-select" data-npc-skill-level {{#unless (and @root.editable skill.canChangeLevel)}}disabled{{/unless}}>
+          {{selectOptions @root.skillLevelOptions selected=skill.level localize=true}}
+        </select>
+        {{/unless}}
+
+        {{#if @root.editable}}
+          {{#if skill.owned}}
+            <button type="button" class="drop-entry-remove" data-action="deleteSkill" data-uuid="{{skill.uuid}}" data-category="{{skill.category}}"
+                    data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          {{else}}
+            {{!-- Only a Sequence gives this skill: hide the raise on this NPC (the Sequence isn't changed). --}}
+            <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{skill.uuid}}"
+                    data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Hide" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Hide'}}">
+              <i class="fa-solid fa-eye-slash"></i>
+            </button>
+          {{/if}}
+        {{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.NPC.SkillsEmpty"}}</p>
+    {{/if}}
+
+    {{> "systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs" entries=hiddenGrants.skills}}
+  </div>
+
+  {{!-- Actions: one drop section, so dropping an action anywhere in this box works. --}}
+  <div class="drop-section actions-section" data-drop-zone="actions">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.actions"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+        <button type="button" class="drop-section-add" data-action="addAction" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Add" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      {{/if}}
+    </header>
+
+    {{> "systems/lotm/templates/actor/player-character/parts/action-groups.hbs"}}
+
+    {{> "systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs" entries=hiddenGrants.actions}}
+  </div>
+
+</section>

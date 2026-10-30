@@ -121,3 +121,67 @@ can't: the click wiring, the rendered dialog, and the chat output.
       Strength, and the Analyze buttons and Education analysis boxes are hidden
 - [ ] Drag the character's copy of the ability onto another character: the granted skills
       (with levels and counts) come along
+
+## NPC sheet
+
+Setup: create an NPC actor. Have a Sequence with abilities (one with actions and a Spell List), a gun with a
+Shoot action, and a few skills from the Skills compendium ready to drag.
+
+- [ ] The NPC sheet opens with tabs Main, Abilities, Spells, Inventory, Sequences, Notes
+- [ ] Header: change the name and Organization; both save. With no Sequence the header says "No Sequence"
+- [ ] Drop a Sequence: the header shows "Sequence N · Name (Pathway)", Health / Spirituality maximums and the
+      defenses go up the same as they would on a player character with the same attributes and Sequence
+- [ ] Change an attribute's base on the Main tab: the total, defenses and maximums update. Hover a box for the breakdown.
+      Click a total: an attribute check posts to chat
+- [ ] Skills: the list starts empty (or with only skills the Sequence raises, tinted, "Raised by ..."). Drag Pistol
+      onto the Skills box: it appears at Trained. Dropping it again warns it's already there
+- [ ] Change a skill's level: the modifier updates and other skills keep their levels. Edit another field (an attribute):
+      the skill levels are still there
+- [ ] Click a skill's modifier: the Skill Check dialog opens at the right level. Trash a dropped skill: it's removed
+- [ ] An action that uses a skill the NPC has (e.g. Shoot with Pistol) shows the same bonus as the skill row
+- [ ] Actions on Main: collapsible sections by type, no Favorites section, no stars
+- [ ] Granted rows (from the Sequence, an ability or gear) have an eye-slash button; owned rows have the trash can
+- [ ] Hide a granted ability: it leaves the Abilities tab, its actions leave Main and its spells leave Spells.
+      "Hidden (1)" appears at the bottom of the Abilities box; Restore brings all of it back
+- [ ] Give the NPC two copies of the same gun. Hide Shoot on one: the other gun's Shoot stays
+- [ ] Hide a skill only a Sequence gives: it leaves the list and its raise no longer counts (actions using it roll lower);
+      Restore puts it back. Changing that skill's level first gives the NPC its own level and a trash can instead
+- [ ] Open the Sequence item itself after hiding things: nothing in it changed. A player with the same Sequence still has everything
+- [ ] Inventory: drop gear; set it Held / Worn / Stowed and change the quantity. "+" makes blank gear.
+      Worn armor adds to Physical defense and damage resistance. No slots, pockets or money panel show
+- [ ] Give the NPC far more gear than its Strength allows: its Agility doesn't drop
+- [ ] Notes: type in the editor, close and reopen the sheet: the text is still there
+- [ ] Drag the NPC onto a scene (unlinked token): things hidden on the NPC are hidden on the token too; hiding more on
+      the token doesn't change the NPC in the sidebar
+
+## Player sheet after the shared base sheet (regression)
+
+- [ ] Every tab still works as before: drops, move arrows, Favorites, collapsing action sections, Spell List groups,
+      inventory containers and money, study / success buttons, granted-skill tabs, rests, languages, damage resistance
+- [ ] Granted rows on the player sheet still have no remove or hide button, and no "Hidden" lists appear anywhere
+
+## Granted Skills box (Character tab)
+
+Setup: a Sequence whose skill increases include a compendium skill (e.g. Pistol) and a skill from the world.
+
+- [ ] Each row in the Granted Skills box has a roll modifier, a level dropdown and the study (book) button, plus
+      the ✋ button when a Sequence ability teaches that skill
+- [ ] The row's modifier and link badge match the same skill's row on its attribute tab
+- [ ] Change the level in the box: it saves, and the attribute tab's dropdown shows the new level. Change it on the
+      attribute tab: the box shows it too. Neither change undoes the other
+- [ ] Click the modifier: the Skill Check dialog opens at the raised level. The book and ✋ buttons open their dialogs
+- [ ] The world skill: it has controls in the box but isn't on a tab until you change its level; then it's also
+      listed on its attribute's tab
+
+## Spending Spirituality (player and NPC sheets)
+
+- [ ] Sidebar Spend button (player and NPC): a dialog shows current / max Spirituality and asks for an amount and
+      an optional reason. Spending lowers Spirituality and posts "X spends 3 Spirituality on Y: 10 → 7" to chat
+- [ ] Spending more than the actor has: a warning, nothing changes. Closing the dialog spends nothing
+- [ ] An action with a skill and a Spirituality Cost: the roll dialog has a "Spend N Spirituality" box, ticked.
+      Rolling spends it and the chat card says "−N Spirituality (X left)". Untick it: nothing is spent.
+      Closing the dialog without rolling spends nothing. Changing the attribute keeps the box as you set it
+- [ ] Not enough Spirituality: the box is greyed out with a warning, and the roll happens without spending
+- [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends the cost (note on the chat card)
+- [ ] An action with a cost but nothing to roll: its row has a blue "Spend N" button that spends it and posts to chat
+- [ ] The same from a hotbar macro of the action

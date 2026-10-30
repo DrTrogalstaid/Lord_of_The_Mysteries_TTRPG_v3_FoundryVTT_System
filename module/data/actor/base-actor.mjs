@@ -139,10 +139,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Like attribute_gain, it's worked out fresh every time, so removing the Sequence takes the raise away,
         // and the player's own pick in the skill dropdown is never changed.
         // Display only, not in the schema: { [skill uuid]: levels }. Read with sequenceSkillSteps[uuid] ?? 0.
+        // A raise the GM hid on an NPC (its hiddenGrants list, see actor-npc.mjs) doesn't count. Player characters have no such list.
         this.sequenceSkillSteps = {};
+        const hiddenGrants = new Set(this.hiddenGrants ?? []);
         for (const sequence of sequences) {
             for (const { skill_uuid, value } of sequence.system.skill_increase ?? []) {
-                if (!skill_uuid) continue;
+                if (!skill_uuid || hiddenGrants.has(skill_uuid)) continue;
                 this.sequenceSkillSteps[skill_uuid] = (this.sequenceSkillSteps[skill_uuid] ?? 0) + (value ?? 0);
             }
         }
@@ -199,7 +201,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // This has to happen before movement and defenses, because the Agility penalty lowers both.
         // Only agi.total is lowered; agi.base (what the player types in) is never touched.
         this.carrying = calculateCarrying(this.parent?.items ?? [], this.attributes.str.total);   // display only, not in the schema
-        this.attributes.agi.total -= this.carrying.penalty;
+        this.attributes.agi.total -= this._carryingAgilityPenalty();
 
         // Worn armor's temporary Agility penalty. Shown in the Corruption column for now, so the
         // breakdown still adds up to the total. Only the prepared value changes; the saved corruption doesn't.
@@ -222,6 +224,16 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // NOTE: THIS NEEDS TO BE CALLED LAST
         this._prepareSequenceCalculations(sequences);
 
+    }
+
+
+    /**
+     * Agility lost for carrying more than Strength allows (whole slots over the limit, see helpers/inventory.mjs).
+     * NPCs override this to 0 (actor-npc.mjs), so the GM never has to manage their gear.
+     * @returns {number}
+     */
+    _carryingAgilityPenalty() {
+        return this.carrying.penalty;
     }
 
 

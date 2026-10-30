@@ -242,11 +242,26 @@
 
   </div>
 
-  {{!-- Skills granted by Sequences (their skill increases and training bonus). Read-only references. --}}
-  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
-      zone="skills"
-      label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"
-      entries=sections.skills
-      remove="deleteItem"}}
+  {{!-- Skills granted by Sequences (their skill increases and training bonus). Each row has the same roll, level and
+        study controls as the tab rows above (granted-skill-entry.hbs). Still a drop section, so skills dropped here
+        are added like anywhere else on the sheet. --}}
+  <div class="drop-section granted-skills-box" data-drop-zone="skills">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+      {{/if}}
+    </header>
+
+    {{#if sections.skills.length}}
+      <ol class="drop-section-list">
+        {{#each sections.skills as |entry|}}
+          {{> "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs" entry}}
+        {{/each}}
+      </ol>
+    {{else}}
+      <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+    {{/if}}
+  </div>
 
 </section>

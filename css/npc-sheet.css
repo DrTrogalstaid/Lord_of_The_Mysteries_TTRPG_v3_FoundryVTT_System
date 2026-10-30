@@ -1,0 +1,141 @@
+/*
+ * NPC sheet (sheets/npc-sheet.mjs, templates/actor/npc/).
+ *
+ * The NPC sheet has the same "lotm sheet actor" classes as the player sheet, so the window layout
+ * (header / sidebar / tab bar / content grid), the sidebar boxes, the attribute boxes and every drop section
+ * already come from actor-sheet.css and drop-sections.css. This file only has what's NPC-only.
+ */
+
+/* ---- Header: portrait, name, Sequence line, organization ---- */
+
+.lotm.sheet.actor.npc .npc-header {
+  grid-area: header;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--psx-border);
+  border-radius: var(--psx-radius);
+  background: var(--psx-panel);
+  padding: 8px;
+}
+
+.lotm.sheet.actor.npc .npc-portrait {
+  width: 72px;
+  height: 72px;
+}
+
+.lotm.sheet.actor.npc .npc-header-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lotm.sheet.actor.npc .npc-name {
+  font-size: 18px;
+  font-weight: bold;
+  height: 30px;
+}
+
+.lotm.sheet.actor.npc .npc-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lotm.sheet.actor.npc .npc-sequence-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+.lotm.sheet.actor.npc .npc-organization {
+  flex: 0 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.lotm.sheet.actor.npc .npc-organization input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Tab pages: the same framed look as the player sheet's pages ---- */
+
+.lotm.sheet.actor.npc .main-tab,
+.lotm.sheet.actor.npc .notes-tab {
+  border: 1px solid var(--psx-border);
+  border-radius: 0 0 var(--psx-radius) var(--psx-radius);
+  padding: 6px;
+}
+
+/* ---- Main tab: attributes ---- */
+
+.lotm.sheet.actor.npc .npc-attributes .attribute-label {
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor.npc .npc-attributes .attribute-cell {
+  cursor: help;
+}
+
+.lotm.sheet.actor.npc .npc-attributes .attribute-total {
+  display: block;
+  cursor: pointer;
+}
+
+.lotm.sheet.actor.npc .npc-attribute-base {
+  width: 36px;
+  text-align: center;
+}
+
+/* ---- Main tab: skills ---- */
+
+.lotm.sheet.actor.npc .npc-skill-row {
+  padding: 1px 0.4rem;
+  border-radius: 4px;
+}
+
+/* A skill only a Sequence gives: same tint as granted drop-section rows. */
+.lotm.sheet.actor.npc .npc-skill-row.granted {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+.lotm.sheet.actor.npc .npc-skill-row.broken {
+  opacity: 0.6;
+}
+
+.lotm.sheet.actor.npc .npc-skill-modifier {
+  flex: 0 0 2.2rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+.lotm.sheet.actor.npc .npc-skill-row .skill-name {
+  flex: 1 1 auto;
+}
+
+.lotm.sheet.actor.npc .npc-skill-source {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* ---- Notes tab ---- */
+
+.lotm.sheet.actor.npc .npc-notes-box {
+  min-height: 300px;
+}
+
+.lotm.sheet.actor.npc .npc-notes-box prose-mirror {
+  min-height: 260px;
+}

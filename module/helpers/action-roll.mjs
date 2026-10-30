@@ -4,6 +4,7 @@ import { calculateSkillModifier } from "./skill-modifiers.mjs";
 import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 import { canFire, fireGun, gunFor } from "./firearms.mjs";
+import { spendSpirituality, spiritualityCost, spiritualityNote } from "./spirituality.mjs";
 
 /**
  * Action rolls
@@ -248,6 +249,8 @@ async function rollAttackDice(actor, action) {
 /**
  * Roll an action that has no skill: its Attack Roll Macro (e.g. "1d20 +@attributes.agi.total[AGI]")
  * plus its Modifiers field. There's no skill to set up, so there's no dialog: it rolls right away.
+ * Its Spirituality Cost is spent as it rolls (helpers/spirituality.mjs); without enough, it still rolls
+ * but nothing is spent, and a warning says so. (With a skill, SkillCheckDialog has a checkbox for this instead.)
  * @param {Actor} actor
  * @param {Item} action
  * @returns {Promise<Roll|null>}
@@ -266,10 +269,13 @@ async function rollActionWithoutSkill(actor, action) {
 
   const roll = await new LOTM_VTTRoll(formula, actor.getRollData()).evaluate();
 
+  const cost = spiritualityCost(action);
+  const spent = cost ? await spendSpirituality(actor, cost, { reason: action.name, chat: false }) : null;
+
   const chat = actionChatExtras(actor, action);
   await roll.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: Handlebars.escapeExpression(action.name) + chat.footer,
+    flavor: Handlebars.escapeExpression(action.name) + spiritualityNote(spent) + chat.footer,
     flags: chat.flags,
     rollMode: game.settings.get("core", "rollMode"),
   });

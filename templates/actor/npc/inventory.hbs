@@ -1,0 +1,28 @@
+{{!--
+  NPC Inventory tab: one list. Gear rows (drop-entry.hbs) get a quantity box and a Held / Worn / Stowed dropdown
+  (#prepareInventory in npc-sheet.mjs). No slots, pockets, carrying limit or money.
+  Gear still grants its abilities and actions, and worn armor still protects.
+--}}
+<section class="tab inventory-tab {{tab.cssClass}}" data-group="sheet" data-tab="inventory">
+  <div class="drop-section inventory-section" data-drop-zone="inventory">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+        <button type="button" class="drop-section-add" data-action="addItem" data-tooltip="LORD_OF_THE_MYSTERIES.NPC.AddGear" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.NPC.AddGear'}}">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      {{/if}}
+    </header>
+
+    {{#if sections.inventory.length}}
+      <ol class="drop-section-list">
+        {{#each sections.inventory as |entry|}}
+          {{> "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs" entry deleteAction="deleteItem"}}
+        {{/each}}
+      </ol>
+    {{else}}
+      <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+    {{/if}}
+  </div>
+</section>
