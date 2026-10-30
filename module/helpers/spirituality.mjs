@@ -4,8 +4,8 @@
  * Used by:
  *   - the sidebar's Spend button on the player and NPC sheets (openSpendSpiritualityDialog)
  *   - action rolls: an action with a Spirituality Cost spends it when it's rolled
- *       with a skill     a checkbox in SkillCheckDialog, on unless the actor can't afford it
- *       without a skill  spent automatically when it rolls (helpers/action-roll.mjs)
+ *       with a roll      a checkbox in the roll dialog (apps/roll-dialog.mjs), on unless the actor can't afford it.
+ *                        Shift-click (no dialog) spends it too.
  *       with no roll     the "Spend N" button on the action's row (useActionSpirituality)
  *
  * Spirituality never goes below 0: when there isn't enough, nothing is spent and a warning is shown.

@@ -22,9 +22,17 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/section-entry.hbs',
     'systems/lotm/templates/actor/player-character/parts/action-groups.hbs',
     'systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs',
+    'systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs',
+    'systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs',
 
     // App partials
     'systems/lotm/templates/apps/skill-check-dialog.hbs',
+    'systems/lotm/templates/apps/attribute-check-dialog.hbs',
+    'systems/lotm/templates/apps/action-roll-dialog.hbs',
+    // Shared by every roll dialog (see ROLL_DIALOG_PARTIALS in apps/roll-dialog.mjs).
+    'systems/lotm/templates/apps/roll-dialog/modifiers.hbs',
+    'systems/lotm/templates/apps/roll-dialog/spirituality.hbs',
+    'systems/lotm/templates/apps/roll-dialog/footer.hbs',
 
     // Item partials
     'systems/lotm/templates/item/parts/item-effects.hbs',

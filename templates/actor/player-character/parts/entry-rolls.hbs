@@ -1,0 +1,54 @@
+{{!--
+  The roll buttons of an action or spell row: [d20 Pistol +5] [Damage], ammo buttons, "Spend N", the gun's rounds.
+  The context is the row's entry (buildEntry / #addActionButtons in base-actor-sheet.mjs). Renders nothing when
+  the entry has nothing to roll (hasRolls). Used by section-entry.hbs and drop-entry.hbs:
+    {{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}
+--}}
+{{#if hasRolls}}
+<div class="drop-entry-rolls">
+  {{#if attack}}
+    {{!-- Opens the roll dialog (#onRollAction in base-actor-sheet.mjs). --}}
+    <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{uuid}}"
+            data-gun-id="{{gunId}}" data-tooltip="{{attack.tooltip}}">
+      <i class="fa-solid fa-dice-d20"></i>
+      <span class="drop-entry-roll-label">{{attack.label}}</span>
+      <span class="drop-entry-roll-bonus">{{attack.bonusLabel}}</span>
+    </button>
+  {{/if}}
+  {{#if damage}}
+    {{!-- Hover shows what will be rolled, e.g. "2d6+1 Piercing" (getDamageTooltip in action-roll.mjs). --}}
+    <button type="button" class="drop-entry-roll-btn damage" data-action="rollDamage" data-uuid="{{uuid}}"
+            data-tooltip="{{damage.tooltip}}">
+      {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
+    </button>
+  {{/if}}
+  {{!-- Reload / Chamber / Unload (#onUseAmmo in base-actor-sheet.mjs -> useAmmoAction in helpers/firearms.mjs).
+        A reload action gets two: Reload and Unload. --}}
+  {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
+  {{#each ammoButtons as |button|}}
+    <button type="button" class="drop-entry-roll-btn ammo" data-action="useAmmo" data-uuid="{{../uuid}}"
+            data-gun-id="{{../gunId}}" data-ammo-use="{{button.use}}"{{#if button.disabled}} disabled{{/if}}>
+      <i class="fa-solid {{#if (eq button.use 'unload')}}fa-eject{{else}}fa-gun{{/if}}"></i>
+      <span class="drop-entry-roll-label">{{button.label}}</span>
+    </button>
+  {{/each}}
+  {{!-- "Spend N": spend the Spirituality Cost without rolling (#onUseSpirituality in base-actor-sheet.mjs).
+        On spells with a cost, and on actions with a cost but nothing to roll (#addActionButtons). --}}
+  {{#if spiritButton}}
+    <button type="button" class="drop-entry-roll-btn spirit" data-action="useSpirituality" data-uuid="{{uuid}}"
+            data-tooltip="LORD_OF_THE_MYSTERIES.Spirituality.UseTooltip">
+      <i class="fa-solid fa-sparkles"></i>
+      <span class="drop-entry-roll-label">{{spiritButton.label}}</span>
+    </button>
+  {{/if}}
+  {{#if gunStatus}}
+    {{!-- Rounds in the magazine, and (for guns with one) a filled / hollow dot for the chamber. Hover for what's loaded. --}}
+    <span class="drop-entry-gun-status{{#if gunStatus.empty}} empty{{/if}}" data-tooltip="{{gunStatus.tooltip}}">
+      <i class="fa-solid fa-gun"></i> {{gunStatus.label}}
+      {{#if gunStatus.hasChamber}}
+        <i class="{{#if gunStatus.chambered}}fa-solid{{else}}fa-regular{{/if}} fa-circle chamber-dot"></i>
+      {{/if}}
+    </span>
+  {{/if}}
+</div>
+{{/if}}

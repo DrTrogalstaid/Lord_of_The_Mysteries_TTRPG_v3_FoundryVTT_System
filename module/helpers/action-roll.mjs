@@ -1,21 +1,25 @@
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
+import ActionRollDialog from "../apps/action-roll-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
 import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 import { canFire, fireGun, gunFor } from "./firearms.mjs";
-import { spendSpirituality, spiritualityCost, spiritualityNote } from "./spirituality.mjs";
+import { postRoll } from "./message-modes.mjs";
 
 /**
  * Action rolls
  * ------------
  * The one place actions get rolled. Everything that rolls an action calls these:
- *   - the dice button on the character sheet (PlayerCharacterSheet.#onRollAction)
+ *   - the dice button on the actor sheets (#onRollAction in sheets/base-actor-sheet.mjs)
  *   - hotbar macros (rollItemMacro in lotm.mjs, through action.system.rollAttack())
- *   - the "Roll Damage" button on an action's attack message in chat
+ *   - the "Roll Damage" and "Big Success" buttons on an action's attack message in chat
  *
  * The attack goes through SkillCheckDialog, the same dialog as a plain skill check,
  * so an action's attack bonus always matches the skill's bonus on the Character tab.
+ * An action with no skill goes through ActionRollDialog. Both are built on LotmRollDialog (apps/roll-dialog.mjs).
+ * Damage has no dialog: it rolls straight away, and its chat message gets Damage / Heal buttons
+ * that change the selected tokens' Health (applyDamageFromMessage below).
  *
  * The actor is passed in separately because an action granted by a Sequence, ability
  * or gear isn't always owned by the character directly, so action.actor can be empty.
@@ -50,6 +54,47 @@ export function findSkillEntry(actor, skill, skillUuid) {
   return { uuid: skillUuid, category, level: "untrained" };
 }
 
+/** The skill a spell rolls with when its Skill slot is empty, looked up by name if the configured UUID is gone. */
+const SPELL_SKILL_NAME = "Occultism";
+
+/** The default spell skill's UUID once it's been found (a promise, so lookups at the same moment share one). */
+let spellSkillLookup = null;
+
+/**
+ * The skill spells roll with when their Skill slot is empty: CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid
+ * (Occultism in the Skills compendium). If that UUID doesn't lead to a skill (the compendium's Occultism was
+ * replaced, so it has a new id), the Skills compendium is searched for a skill named Occultism instead.
+ * @returns {Promise<string>}  The skill's UUID, or "" when there's no Occultism skill at all.
+ */
+export function defaultSpellSkillUuid() {
+  spellSkillLookup ??= (async () => {
+    const configured = CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid;
+    const found = configured ? await fromUuid(configured).catch(() => null) : null;
+    if (found?.type === "skill") return configured;
+
+    const pack = game.packs?.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
+    const index = await pack?.getIndex();
+    const entry = index?.find((e) => e.name?.toLowerCase() === SPELL_SKILL_NAME.toLowerCase());
+    if (!entry) {
+      console.warn(`Lord of the Mysteries | No "${SPELL_SKILL_NAME}" skill found, so spells without a skill can't roll with it.`);
+    }
+    return entry?.uuid ?? "";
+  })();
+  return spellSkillLookup;
+}
+
+/**
+ * The skill an action or spell rolls with: its Skill slot, or for a spell with an empty slot, Occultism
+ * (defaultSpellSkillUuid). "" = no skill (an action that rolls only its own formula).
+ * @param {Item} item  An action or spell.
+ * @returns {Promise<string>}  A skill Item's UUID, or "".
+ */
+export async function rollSkillUuid(item) {
+  const own = item?.system?.skill;
+  if (own) return own;
+  return item?.type === "spell" ? defaultSpellSkillUuid() : "";
+}
+
 /**
  * Everything SkillCheckDialog needs to know about the skill an action rolls with.
  * Used both to roll the action and to show its "+5" on the sheet, so the two always agree.
@@ -59,7 +104,7 @@ export function findSkillEntry(actor, skill, skillUuid) {
  *   null when the action has no skill, or its skill no longer exists.
  */
 async function resolveActionSkill(actor, action) {
-  const skillUuid = action.system.skill;
+  const skillUuid = await rollSkillUuid(action);
   if (!skillUuid) return null;
 
   const skill = await fromUuid(skillUuid).catch(() => null);
@@ -115,7 +160,7 @@ export function getAttackFormula(action) {
  */
 export async function getActionAttackSummary(actor, action) {
   if (!actor) return null;
-  if (!action.system.skill) return getUnskilledAttackSummary(actor, action);
+  if (!(await rollSkillUuid(action))) return getUnskilledAttackSummary(actor, action);
 
   const info = await resolveActionSkill(actor, action);
   if (!info) return null;
@@ -196,23 +241,24 @@ function actionChatExtras(actor, action) {
  * @param {object} [options]
  * @param {string} [options.gunId]  The gun the action came from (set by the character sheet for actions listed
  *                                  under a gun). Without it, the gun in the character's hand is used.
+ * @param {boolean} [options.fast]  Shift-click: roll right away with the dialog's defaults, without showing it.
  * @returns {Promise<Roll|null>}  The roll, or null if it was cancelled or couldn't happen.
  */
-export async function rollActionAttack(actor, action, { gunId } = {}) {
+export async function rollActionAttack(actor, action, { gunId, fast = false } = {}) {
   if (!actor) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.NoActor", { name: action.name }));
     return null;
   }
 
   // Not a gun shot: just roll.
-  if (action.system.ammoUse !== "fire") return rollAttackDice(actor, action);
+  if (action.system.ammoUse !== "fire") return rollAttackDice(actor, action, { fast });
 
   // A gun shot. No rounds ready = no roll.
   const gun = gunFor(actor, gunId);
   const amount = Math.max(1, action.system.ammoAmount ?? 0);
   if (!gun || !canFire(gun, amount)) return null;
 
-  const roll = await rollAttackDice(actor, action);
+  const roll = await rollAttackDice(actor, action, { fast });
   if (roll) await fireGun(actor, gun, { amount });   // null = the dialog was closed, so nothing was fired
   return roll;
 }
@@ -221,10 +267,12 @@ export async function rollActionAttack(actor, action, { gunId } = {}) {
  * The attack roll itself, with or without a skill (no ammo handling: that's in rollActionAttack above).
  * @param {Actor} actor
  * @param {Item} action
+ * @param {object} [options]
+ * @param {boolean} [options.fast]  Shift-click: skip the dialog.
  * @returns {Promise<Roll|null>}
  */
-async function rollAttackDice(actor, action) {
-  if (!action.system.skill) return rollActionWithoutSkill(actor, action);
+async function rollAttackDice(actor, action, { fast = false } = {}) {
+  if (!(await rollSkillUuid(action))) return rollActionWithoutSkill(actor, action, { fast });
 
   const info = await resolveActionSkill(actor, action);
   if (!info) {
@@ -241,45 +289,28 @@ async function rollAttackDice(actor, action) {
     flatModifier: info.flatModifier,
     // The action item itself. The dialog reads its fields straight from action.system.
     action,
-    // Added to the chat message: the flags and "Roll Damage" button (see actionChatExtras).
+    // Added to the chat message: the flags and damage buttons (see actionChatExtras).
     chat: actionChatExtras(actor, action),
-  });
+  }, { fast });
 }
 
 /**
  * Roll an action that has no skill: its Attack Roll Macro (e.g. "1d20 +@attributes.agi.total[AGI]")
- * plus its Modifiers field. There's no skill to set up, so there's no dialog: it rolls right away.
- * Its Spirituality Cost is spent as it rolls (helpers/spirituality.mjs); without enough, it still rolls
- * but nothing is spent, and a warning says so. (With a skill, SkillCheckDialog has a checkbox for this instead.)
+ * plus its Modifiers field, through ActionRollDialog (the same roll dialog as everything else, so it has
+ * modifiers, the who-sees-it buttons and the Spirituality checkbox).
  * @param {Actor} actor
  * @param {Item} action
+ * @param {object} [options]
+ * @param {boolean} [options.fast]  Shift-click: skip the dialog.
  * @returns {Promise<Roll|null>}
  */
-async function rollActionWithoutSkill(actor, action) {
-  const baseFormula = getAttackFormula(action);
-  if (!baseFormula || !Roll.validate(baseFormula)) {
+async function rollActionWithoutSkill(actor, action, { fast = false } = {}) {
+  const formula = getAttackFormula(action);
+  if (!formula || !Roll.validate(formula)) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidAttack", { name: action.name }));
     return null;
   }
-
-  // Add the Modifiers field as a labelled N[Label] term, the same style skill checks use,
-  // so it gets its own row in the chat card's breakdown.
-  const modifier = Number(action.system.modifiers) || 0;
-  const formula = modifier ? `${baseFormula} ${signedTerm(modifier)}[${action.name}]` : baseFormula;
-
-  const roll = await new LOTM_VTTRoll(formula, actor.getRollData()).evaluate();
-
-  const cost = spiritualityCost(action);
-  const spent = cost ? await spendSpirituality(actor, cost, { reason: action.name, chat: false }) : null;
-
-  const chat = actionChatExtras(actor, action);
-  await roll.toMessage({
-    speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: Handlebars.escapeExpression(action.name) + spiritualityNote(spent) + chat.footer,
-    flags: chat.flags,
-    rollMode: game.settings.get("core", "rollMode"),
-  });
-  return roll;
+  return ActionRollDialog.prompt(actor, action, formula, { chat: actionChatExtras(actor, action), fast });
 }
 
 /* -------------------------------------------- */
@@ -298,6 +329,41 @@ export function getDamageFormula(action) {
 }
 
 /**
+ * The key in CONFIG.LORD_OF_THE_MYSTERIES.damageTypes for some text: "fire", "Fire" and the translated name all
+ * give "fire". null when the text isn't a damage type (e.g. a label like "2d6[Explosion]").
+ * @param {string} text
+ * @returns {string|null}
+ */
+export function damageTypeKey(text) {
+  const value = String(text ?? "").trim().toLowerCase();
+  if (!value) return null;
+  const types = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes ?? {};
+  if (value in types) return value;
+  return Object.keys(types).find((key) => game.i18n.localize(types[key]).toLowerCase() === value) ?? null;
+}
+
+/**
+ * A damage type as a readable name: a key ("fire") in the user's language, anything else as typed.
+ * @param {string} type
+ * @returns {string}  "" for no type.
+ */
+export function damageTypeName(type) {
+  if (!type) return "";
+  const key = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes?.[type];
+  return key ? game.i18n.localize(key) : type;
+}
+
+/**
+ * The action's own Damage Type: a damageTypes key when it is one, otherwise the text as typed ("piercing").
+ * @param {Item} action
+ * @returns {string}  "" when it has none.
+ */
+function defaultDamageType(action) {
+  const text = action?.system.damageType?.trim() ?? "";
+  return damageTypeKey(text) ?? text;
+}
+
+/**
  * The action's damage type as a readable name. The field is free text, so:
  *   "fire" (a key in CONFIG.LORD_OF_THE_MYSTERIES.damageTypes) -> "Fire" in the user's language
  *   anything else ("piercing")                                 -> shown as typed
@@ -305,14 +371,57 @@ export function getDamageFormula(action) {
  * @returns {string}  "" when the action has no damage type.
  */
 export function getDamageTypeLabel(action) {
-  const type = action?.system.damageType?.trim() ?? "";
-  if (!type) return "";
-  const key = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes?.[type.toLowerCase()];
-  return key ? game.i18n.localize(key) : type;
+  return damageTypeName(defaultDamageType(action));
+}
+
+/**
+ * Whether a damage formula names a damage type itself, like "2d6[fire] + 1d4[cold]".
+ * @param {string} formula
+ * @returns {boolean}
+ */
+function formulaNamesTypes(formula) {
+  return [...formula.matchAll(/\[([^\]]+)\]/g)].some((match) => damageTypeKey(match[1]));
+}
+
+/**
+ * How much of each damage type a damage roll did.
+ *
+ * Every part of the formula is the type it names in brackets ("2d6[fire]"), or the action's Damage Type
+ * when it doesn't name one. So "2d6[fire] + 1d4 + 3" on an action set to Physical is fire for the 2d6 and
+ * physical for the rest. A formula that multiplies or divides can't be split up, so all of it is the action's type.
+ *
+ * @param {Roll} roll            An evaluated damage roll.
+ * @param {string} defaultType   The action's Damage Type (see defaultDamageType). "" = untyped.
+ * @returns {{type: string, label: string, amount: number}[]}  One row per type, in the order they first appear.
+ */
+export function damageByType(roll, defaultType = "") {
+  const whole = [{ type: defaultType, label: damageTypeName(defaultType), amount: roll.total }];
+  const OperatorTerm = foundry.dice?.terms?.OperatorTerm;
+
+  const totals = new Map();
+  let sign = 1;
+  for (const term of roll.terms ?? []) {
+    if (OperatorTerm && term instanceof OperatorTerm) {
+      if (term.operator === "+") sign = 1;
+      else if (term.operator === "-") sign = -1;
+      else return whole;
+      continue;
+    }
+    const value = Number(term.total);
+    if (!Number.isFinite(value)) continue;
+    const type = damageTypeKey(term.flavor) ?? defaultType;
+    totals.set(type, (totals.get(type) ?? 0) + sign * value);
+  }
+
+  const rows = [...totals].map(([type, amount]) => ({ type, label: damageTypeName(type), amount }));
+  const sum = rows.reduce((total, row) => total + row.amount, 0);
+  // Anything that didn't add up (an unusual formula): don't guess, use the action's type for all of it.
+  return rows.length && sum === roll.total ? rows : whole;
 }
 
 /**
  * What the sheet's Damage button shows on hover, e.g. "2d6+3 Fire".
+ * A formula that names its own types ("2d6[fire] + 1d4[cold]") shows just the formula, since the types are in it.
  * Values like @str are filled in from the character, so the player sees the real numbers.
  * @param {Actor} actor   The character whose sheet this is (can be empty, then @values stay as typed).
  * @param {Item} action
@@ -328,16 +437,41 @@ export function getDamageTooltip(actor, action) {
   }
 
   const type = getDamageTypeLabel(action);
-  return type ? `${formula} ${type}` : formula;
+  return (type && !formulaNamesTypes(formula)) ? `${formula} ${type}` : formula;
+}
+
+/**
+ * The average of a roll formula: halfway between its lowest and highest result, rounded down
+ * (2d6+3 -> 10, 1d8 -> 4). @values are filled in from the actor first, so "1d8+@damageBonus" works too.
+ * @param {string} formula
+ * @param {object} rollData
+ * @returns {Promise<number>}
+ */
+export async function averageRoll(formula, rollData) {
+  const [low, high] = await Promise.all([
+    new Roll(formula, rollData).evaluate({ minimize: true }),
+    new Roll(formula, rollData).evaluate({ maximize: true }),
+  ]);
+  return Math.floor((low.total + high.total) / 2);
 }
 
 /**
  * Roll an action's damage from its Damage Roll Macro and post it to chat.
+ *
+ * The message gets "Damage" and "Heal" buttons that apply the amount to the selected tokens
+ * (applyDamageFromMessage below). The amount, and how much of it is each damage type, is saved on the message
+ * (flags.lotm.damage). Damage types: see damageByType; a roll with more than one gets a line like "5 Fire · 3 Cold".
+ *
+ * Big Success: the damage is never less than the formula's average. If the roll comes out lower,
+ * the average is used instead, and the message says so.
+ *
  * @param {Actor} actor
  * @param {Item} action
+ * @param {object} [options]
+ * @param {boolean} [options.bigSuccess]  Roll as a Big Success (the "Big Success" button on the attack's message).
  * @returns {Promise<Roll|null>}
  */
-export async function rollActionDamage(actor, action) {
+export async function rollActionDamage(actor, action, { bigSuccess = false } = {}) {
   if (!actor) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.NoActor", { name: action.name }));
     return null;
@@ -349,61 +483,174 @@ export async function rollActionDamage(actor, action) {
     return null;
   }
 
-  const roll = await new LOTM_VTTRoll(formula, actor.getRollData()).evaluate();
+  const rollData = actor.getRollData();
+  const roll = await new LOTM_VTTRoll(formula, rollData).evaluate();
 
-  const damageType = getDamageTypeLabel(action);
-  const flavor = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamageFlavor", {
-    action: Handlebars.escapeExpression(action.name),
-    type: damageType ? ` (${Handlebars.escapeExpression(damageType)})` : "",
-  });
+  // The amount the Damage / Heal buttons apply.
+  let amount = roll.total;
+  let note = "";
+  if (bigSuccess) {
+    const average = await averageRoll(formula, rollData);
+    const raised = roll.total < average;
+    if (raised) amount = average;
+    const key = raised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
+    note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, average })}</div>`;
+  }
 
-  await roll.toMessage({
+  // How much of it is each damage type, and their names for the title ("Shoot: Damage (Fire, Cold)").
+  const parts = damageByType(roll, defaultDamageType(action));
+  const typeNames = parts.map((part) => part.label).filter(Boolean);
+  const flavor = game.i18n.format(
+    bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor",
+    {
+      action: Handlebars.escapeExpression(action.name),
+      type: typeNames.length ? ` (${Handlebars.escapeExpression(typeNames.join(", "))})` : "",
+    }
+  );
+  // More than one type: "5 Fire · 3 Cold" under the title.
+  const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
+  const breakdown = parts.length > 1
+    ? `<div class="lotm chat-damage-types">${parts.map((part) =>
+        `<span class="chat-damage-type" data-damage-type="${Handlebars.escapeExpression(part.type)}">${part.amount} ${Handlebars.escapeExpression(part.label || untyped)}</span>`
+      ).join(" · ")}</div>`
+    : "";
+
+  await postRoll(roll, {
     speaker: ChatMessage.getSpeaker({ actor }),
-    flavor,
-    flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid } },
-    rollMode: game.settings.get("core", "rollMode"),
+    flavor: flavor + breakdown + note + applyButtonsHTML(amount),
+    flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid, damage: {
+      amount,
+      bigSuccess,
+      // { fire: 5, cold: 3 } ("" = untyped). What was rolled; a Big Success raise isn't split between them.
+      types: Object.fromEntries(parts.map((part) => [part.type, part.amount])),
+    } } },
   });
   return roll;
 }
 
 /* -------------------------------------------- */
-/*  "Roll Damage" button in chat                 */
+/*  Chat buttons                                 */
 /* -------------------------------------------- */
 
 /**
- * HTML for the button SkillCheckDialog adds under an action's attack roll.
+ * HTML for the buttons the roll dialogs add under an action's attack roll: "Roll Damage", then "Big Success".
  * @returns {string}
  */
 export function damageButtonHTML() {
-  const label = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.RollDamage");
-  return `<button type="button" class="lotm-roll-damage" data-lotm-action="damage">${label}</button>`;
+  const damage = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.RollDamage");
+  const big = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccess");
+  const bigHint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccessHint"));
+  return `<div class="lotm-damage-buttons">
+    <button type="button" class="lotm-roll-damage" data-lotm-action="damage">${damage}</button>
+    <button type="button" class="lotm-roll-damage big-success" data-lotm-action="bigSuccess" data-tooltip="${bigHint}">${big}</button>
+  </div>`;
 }
 
-/** Make the "Roll Damage" button work. Called once from the init hook in lotm.mjs. */
+/**
+ * HTML for the buttons under a damage roll: apply it to the selected tokens as damage, or as healing.
+ * @param {number} amount
+ * @returns {string}
+ */
+function applyButtonsHTML(amount) {
+  const hint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.ApplyHint"));
+  const damage = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyDamage", { amount });
+  const heal = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyHeal", { amount });
+  return `<div class="lotm-apply-buttons">
+    <button type="button" class="lotm-apply" data-lotm-apply="damage" data-tooltip="${hint}"><i class="fa-solid fa-heart-crack"></i> ${damage}</button>
+    <button type="button" class="lotm-apply" data-lotm-apply="heal" data-tooltip="${hint}"><i class="fa-solid fa-heart"></i> ${heal}</button>
+  </div>`;
+}
+
+/**
+ * The Damage / Heal buttons on a damage message: change every selected token's Health by the message's amount.
+ * Health stays between 0 and its maximum. Damage reduction isn't taken off here.
+ * Each token needs to be one the user owns (the GM owns them all), otherwise it's skipped with a warning.
+ * @param {ChatMessage} message
+ * @param {"damage"|"heal"} kind
+ */
+export async function applyDamageFromMessage(message, kind) {
+  const amount = Number(message.getFlag("lotm", "damage")?.amount);
+  if (!Number.isFinite(amount)) return;
+
+  const tokens = canvas.tokens?.controlled ?? [];
+  if (!tokens.length) {
+    ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.SelectToken"));
+    return;
+  }
+
+  for (const token of tokens) {
+    const actor = token.actor;
+    const hp = actor?.system.resources?.hp;
+    if (!hp) continue;
+    if (!actor.isOwner) {
+      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.NotOwner", { name: token.name }));
+      continue;
+    }
+
+    const before = Number(hp.value) || 0;
+    const after = kind === "heal"
+      ? (hp.max > 0 ? Math.min(hp.max, before + amount) : before + amount)
+      : Math.max(0, before - amount);
+    await actor.update({ "system.resources.hp.value": after });
+
+    const key = kind === "heal" ? "LORD_OF_THE_MYSTERIES.Action.Healed" : "LORD_OF_THE_MYSTERIES.Action.Damaged";
+    ui.notifications.info(game.i18n.format(key, { name: token.name, amount, before, after }));
+  }
+}
+
+/**
+ * Make the chat buttons work. Called once from the init hook in lotm.mjs.
+ *   Attack messages:  "Roll Damage" and "Big Success" (older messages have only the one damage button)
+ *   Damage messages:  "Damage" and "Heal"
+ * The buttons are written into the message's flavor, which Foundry shows above the roll, so they're moved
+ * below it into the message's content.
+ */
 export function registerActionChatListeners() {
   Hooks.on("renderChatMessageHTML", (message, html) => {
-    const button = html.querySelector("button[data-lotm-action='damage']");
-    if (!button) return;
+    const content = html.querySelector(".message-content");
 
-    html.querySelector(".message-content")?.append(button);
-
-    button.addEventListener("click", async () => {
-      // SkillCheckDialog saved which action and character this attack was for.
-      const actionUuid = message.getFlag("lotm", "actionUuid");
-      const actorUuid = message.getFlag("lotm", "actorUuid");
-      const [action, actor] = await Promise.all([
-        fromUuid(actionUuid).catch(() => null),
-        fromUuid(actorUuid).catch(() => null),
-      ]);
-
-      if (!action || !actor) {
-        ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Gone"));
-        return;
+    // Roll Damage / Big Success
+    const rollButtons = html.querySelectorAll("button[data-lotm-action]");
+    if (rollButtons.length) {
+      const holder = html.querySelector(".lotm-damage-buttons") ?? rollButtons[0];
+      content?.append(holder);
+      for (const button of rollButtons) {
+        button.addEventListener("click", () => onRollDamageButton(message, button.dataset.lotmAction === "bigSuccess"));
       }
-      // Only the character's owners (and the GM) can roll its damage.
-      if (!actor.isOwner) return;
+    }
 
-      await rollActionDamage(actor, action);
-    });
+    // Damage / Heal
+    const applyButtons = html.querySelectorAll("button[data-lotm-apply]");
+    if (applyButtons.length) {
+      const holder = html.querySelector(".lotm-apply-buttons");
+      if (holder) content?.append(holder);
+      for (const button of applyButtons) {
+        button.addEventListener("click", () => applyDamageFromMessage(message, button.dataset.lotmApply));
+      }
+    }
   });
+}
+
+/**
+ * Roll Damage / Big Success on an attack message.
+ * @param {ChatMessage} message
+ * @param {boolean} bigSuccess
+ */
+async function onRollDamageButton(message, bigSuccess) {
+  // The roll dialog saved which action and character this attack was for.
+  const actionUuid = message.getFlag("lotm", "actionUuid");
+  const actorUuid = message.getFlag("lotm", "actorUuid");
+  const [action, actor] = await Promise.all([
+    fromUuid(actionUuid).catch(() => null),
+    fromUuid(actorUuid).catch(() => null),
+  ]);
+
+  if (!action || !actor) {
+    ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Gone"));
+    return;
+  }
+  // Only the character's owners (and the GM) can roll its damage.
+  if (!actor.isOwner) return;
+
+  await rollActionDamage(actor, action, { bigSuccess });
 }

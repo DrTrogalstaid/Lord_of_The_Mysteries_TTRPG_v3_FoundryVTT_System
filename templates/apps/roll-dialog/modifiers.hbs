@@ -1,0 +1,18 @@
+{{!-- Roll dialogs: the modifiers list and the row to add one (LotmRollDialog in module/apps/roll-dialog.mjs). --}}
+<ol class="modifiers">
+    {{#each modifiers as |m|}}
+        <li>
+            <span class="mod-label">{{m.label}}</span>
+            <span class="mod-value">{{numberFormat m.value decimals=0 sign=true}}</span>
+            <a data-action="removeModifier" data-modifier-id="{{m.id}}" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RemoveModifier'}}">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+        </li>
+    {{/each}}
+</ol>
+
+<div class="add-modifier-row">
+    <input type="text" class="mod-name" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.ModifierLabel'}}" />
+    <input type="number" class="mod-value" placeholder="+/-" />
+    <button type="button" data-action="addModifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.AddModifier"}}</button>
+</div>

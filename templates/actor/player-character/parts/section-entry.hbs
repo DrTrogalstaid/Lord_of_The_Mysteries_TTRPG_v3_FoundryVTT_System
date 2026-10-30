@@ -7,12 +7,13 @@
 
   remove     data-action for the delete button (owned entries only).
   favorites  true in the action sections of sheets that have Favorites (the player sheet): shows the star
-             that adds / removes the action from Favorites.
+             that adds / removes the action or spell from Favorites (entry-favorite.hbs).
+  Actions and spells (entry.isRollable) get their roll buttons from entry-rolls.hbs.
 
   Granted entries (not owned) get an eye-slash button instead of the trash can on sheets that can hide them
   (@root.canHideGrants, NPCs). It hides the entry on this actor only; the Item that grants it isn't changed.
 --}}
-<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if isAction}} action{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}" data-item-id="{{id}}">
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if isRollable}} action{{/if}}{{#if isSpell}} spell{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}" data-item-id="{{id}}">
   {{#if broken}}
     <span class="drop-entry-icon">
       <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
@@ -31,19 +32,8 @@
       {{else}}
         <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
       {{/if}}
-      {{!-- Action sections: the star adds / removes this action from Favorites (#onToggleFavorite in base-actor-sheet.mjs).
-            Players who can't edit the sheet just see a filled star on favorites. --}}
-      {{#if favorites}}
-        {{#if @root.editable}}
-          <button type="button" class="drop-entry-favorite{{#if favorite}} active{{/if}}" data-action="toggleFavorite" data-key="{{key}}"
-                  data-tooltip="{{#if favorite}}LORD_OF_THE_MYSTERIES.ActionGroups.Unfavorite{{else}}LORD_OF_THE_MYSTERIES.ActionGroups.Favorite{{/if}}"
-                  aria-pressed="{{#if favorite}}true{{else}}false{{/if}}">
-            <i class="{{#if favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star"></i>
-          </button>
-        {{else if favorite}}
-          <i class="fa-solid fa-star drop-entry-favorite active"></i>
-        {{/if}}
-      {{/if}}
+      {{!-- The Favorites star (entry-favorite.hbs), in the action sections of sheets that have Favorites. --}}
+      {{#if favorites}}{{> "systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs"}}{{/if}}
       {{#if grantedByLabel}}
         <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{grantedByLabel}}</span>
       {{/if}}
@@ -52,62 +42,14 @@
       <span class="drop-entry-detail">{{detail}}</span>
     {{/if}}
 
-    {{!-- Action buttons, pf2e style: [d20 Pistol +5] [Damage]. Hidden on broken entries. --}}
+    {{!-- Action and spell buttons, pf2e style: [d20 Pistol +5] [Damage] (entry-rolls.hbs). Hidden on broken entries. --}}
     {{#unless broken}}
-      {{#if isAction}}
-        {{#if hasRolls}}
-          <div class="drop-entry-rolls">
-            {{#if attack}}
-              {{!-- Opens the skill check dialog (#onRollAction in base-actor-sheet.mjs). --}}
-              <button type="button" class="drop-entry-roll-btn attack" data-action="rollAction" data-uuid="{{uuid}}"
-                      data-gun-id="{{gunId}}" data-tooltip="{{attack.tooltip}}">
-                <i class="fa-solid fa-dice-d20"></i>
-                <span class="drop-entry-roll-label">{{attack.label}}</span>
-                <span class="drop-entry-roll-bonus">{{attack.bonusLabel}}</span>
-              </button>
-            {{/if}}
-            {{#if damage}}
-              {{!-- Hover shows what will be rolled, e.g. "2d6+1 Piercing" (getDamageTooltip in action-roll.mjs). --}}
-              <button type="button" class="drop-entry-roll-btn damage" data-action="rollDamage" data-uuid="{{uuid}}"
-                      data-tooltip="{{damage.tooltip}}">
-                {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
-              </button>
-            {{/if}}
-            {{!-- Reload / Chamber / Unload (#onUseAmmo in base-actor-sheet.mjs -> useAmmoAction in helpers/firearms.mjs).
-                  A reload action gets two: Reload and Unload. --}}
-            {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
-            {{#each ammoButtons as |button|}}
-              <button type="button" class="drop-entry-roll-btn ammo" data-action="useAmmo" data-uuid="{{../uuid}}"
-                      data-gun-id="{{../gunId}}" data-ammo-use="{{button.use}}"{{#if button.disabled}} disabled{{/if}}>
-                <i class="fa-solid {{#if (eq button.use 'unload')}}fa-eject{{else}}fa-gun{{/if}}"></i>
-                <span class="drop-entry-roll-label">{{button.label}}</span>
-              </button>
-            {{/each}}
-            {{!-- An action with a Spirituality Cost but nothing to roll: spend the cost (#onUseSpirituality in base-actor-sheet.mjs). --}}
-            {{#if spiritButton}}
-              <button type="button" class="drop-entry-roll-btn spirit" data-action="useSpirituality" data-uuid="{{uuid}}"
-                      data-tooltip="LORD_OF_THE_MYSTERIES.Spirituality.UseTooltip">
-                <i class="fa-solid fa-sparkles"></i>
-                <span class="drop-entry-roll-label">{{spiritButton.label}}</span>
-              </button>
-            {{/if}}
-            {{#if gunStatus}}
-              {{!-- Rounds in the magazine, and (for guns with one) a filled / hollow dot for the chamber. Hover for what's loaded. --}}
-              <span class="drop-entry-gun-status{{#if gunStatus.empty}} empty{{/if}}" data-tooltip="{{gunStatus.tooltip}}">
-                <i class="fa-solid fa-gun"></i> {{gunStatus.label}}
-                {{#if gunStatus.hasChamber}}
-                  <i class="{{#if gunStatus.chambered}}fa-solid{{else}}fa-regular{{/if}} fa-circle chamber-dot"></i>
-                {{/if}}
-              </span>
-            {{/if}}
-          </div>
-        {{/if}}
-      {{/if}}
+      {{#if isRollable}}{{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}{{/if}}
     {{/unless}}
   </div>
 
-  {{!-- Stats on the right. Actions always show all three, so the columns line up row to row. --}}
-  {{#if isAction}}
+  {{!-- Stats on the right. Actions and spells always show all three, so the columns line up row to row. --}}
+  {{#if isRollable}}
     <div class="drop-entry-stats">
       <div class="drop-entry-stat drop-entry-action-type">
         <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>

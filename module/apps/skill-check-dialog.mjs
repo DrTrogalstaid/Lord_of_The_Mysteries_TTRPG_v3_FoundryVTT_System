@@ -1,15 +1,14 @@
-import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
+import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
-import { buildSkillCheckFormula, computeSkillCheckTotal } from "../helpers/skill-check-formula.mjs";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ApplicationV2 } = foundry.applications.api;
+import { buildSkillCheckFormula, computeSkillCheckTotal, signedTerm } from "../helpers/skill-check-formula.mjs";
+import { spiritualityCost } from "../helpers/spirituality.mjs";
 
 /**
  * SkillCheckDialog
  * -----------------
- * Popup shown when a player clicks a skill's modifier on the character sheet.
- * Lets them:
+ * Popup shown when a player clicks a skill's modifier on a sheet, or rolls an action that uses a skill.
+ * Built on LotmRollDialog (roll-dialog.mjs), which gives it the modifiers list, the who-sees-it buttons,
+ * the Spirituality checkbox and the Roll button. This class adds the skill part. It lets them:
  *   - see the skill's normal (compendium-defined) linked attribute
  *   - override it with ANY of the system's 8 attributes for this roll only,
  *     to cover the "a skill's related attribute can change based on how it's
@@ -28,29 +27,17 @@ const { ApplicationV2 } = foundry.applications.api;
  * world setting, in which case prompt() blocks the roll before the dialog
  * even opens and shows a warning instead.
  */
-export default class SkillCheckDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export default class SkillCheckDialog extends LotmRollDialog {
+    /** @override */
     static DEFAULT_OPTIONS = {
-        tag: "form",
-        classes: ["lotm", "skill-check-dialog"],
         window: {
-            title: "LORD_OF_THE_MYSTERIES.SkillCheck.Title",
-            icon: "fa-solid fa-dice-d20",
-            resizable: false
-        },
-        position: { width: 380, height: "auto" },
-        form: {
-            handler: SkillCheckDialog.#onSubmit,
-            submitOnChange: false,
-            closeOnSubmit: true
-        },
-        actions: {
-            addModifier: SkillCheckDialog.#onAddModifier,
-            removeModifier: SkillCheckDialog.#onRemoveModifier
+            title: "LORD_OF_THE_MYSTERIES.SkillCheck.Title"
         }
     };
 
+    /** @override */
     static PARTS = {
-        form: { template: "systems/lotm/templates/apps/skill-check-dialog.hbs" }
+        form: { template: "systems/lotm/templates/apps/skill-check-dialog.hbs", templates: ROLL_DIALOG_PARTIALS }
     };
 
     /**
@@ -64,28 +51,26 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
      * @param {Item} [skillEntry.action]      The action item, when rolling an action (e.g. a revolver's "Shoot") with
      *                                        this skill. Opened through helpers/action-roll.mjs. The dialog uses its
      *                                        name (window title, chat card), system.attackRollMacro (rolled instead of
-     *                                        the plain 1d20) and system.modifiers (added as a removable modifier).
+     *                                        the plain 1d20), system.modifiers (added as a removable modifier) and
+     *                                        system.spiritualityCost (the Spirituality checkbox).
      * @param {object} [skillEntry.chat]      Extra things to put on the chat message:
      * @param {object} [skillEntry.chat.flags]   Message flags (actions save which action/character this was).
-     * @param {string} [skillEntry.chat.footer]  HTML added after the flavor text (actions add a "Roll Damage" button).
+     * @param {string} [skillEntry.chat.footer]  HTML added after the flavor text (actions add the damage buttons).
      */
     constructor(actor, skillEntry, options = {}) {
-        super(options);
-        this.actor = actor;
+        const action = skillEntry.action ?? null;
+        super(actor, {
+            // The action's own Modifiers field starts in the modifier list, labelled with the action's name,
+            // so the player sees it in the breakdown and can remove it for this roll if it doesn't apply.
+            modifiers: action ? [{ label: action.name, value: Number(action.system.modifiers) || 0 }] : [],
+            spirituality: action ? { cost: spiritualityCost(action), reason: action.name } : null,
+            chat: skillEntry.chat ?? {},
+            ...options
+        });
         this.skillEntry = skillEntry;
-        this.action = skillEntry.action ?? null;
+        this.action = action;
         this.defaultAttribute = skillEntry.attribute ?? skillEntry.category;
         this.attributeKey = this.defaultAttribute;
-        this.modifiers = []; // { id, label, value }
-        this.submitted = false;
-        this.resolve = null;
-
-        // The action's own Modifiers field starts in the modifier list, labelled with the action's name,
-        // so the player sees it in the breakdown and can remove it for this roll if it doesn't apply.
-        const actionModifier = Number(this.action?.system.modifiers) || 0;
-        if (actionModifier) {
-            this.modifiers.push({ id: foundry.utils.randomID(), label: this.action.name, value: actionModifier });
-        }
     }
 
     /**
@@ -93,33 +78,21 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
      * dialog was cancelled/closed without rolling, or if the roll was blocked
      * because it's an untrained skill and the GM has disallowed those (see
      * the "allowUntrainedSkillChecks" world setting, registered in lotm.mjs).
+     * @param {Actor} actor
+     * @param {object} skillEntry         See the constructor.
+     * @param {object} [options]
+     * @param {boolean} [options.fast]    Shift-click: roll right away with the defaults.
      * @returns {Promise<Roll|null>}
      */
-    static async prompt(actor, skillEntry) {
+    static async prompt(actor, skillEntry, { fast = false } = {}) {
         if (skillEntry.level === "untrained" && !game.settings.get("lotm", "allowUntrainedSkillChecks")) {
             ui.notifications.warn(
                 game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.UntrainedBlocked", { skill: skillEntry.name })
             );
             return null;
         }
-
-        return new Promise((resolve) => {
-            const app = new this(actor, skillEntry);
-            app.resolve = resolve;
-            app.addEventListener(
-                "close",
-                () => {
-                    if (!app.submitted) resolve(null);
-                },
-                { once: true }
-            );
-            app.render(true);
-        });
+        return this.show(new this(actor, skillEntry), { fast });
     }
-
-    /* -------------------------------------------- */
-    /*  Context / rendering                          */
-    /* -------------------------------------------- */
 
     /**
      * Window title: "Shoot (Pistol)" when rolling an action, the usual skill check title otherwise.
@@ -148,7 +121,23 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
         return { die: formula, custom: true, invalid: false, formula };
     }
 
-    async _prepareContext() {
+    /** The skill's numbers for this roll. */
+    #parts() {
+        const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
+        return {
+            attrTotal: this.actor.system.attributes[this.attributeKey]?.total ?? 0,
+            levelBonus,
+            levelLabel: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level),
+            flatModifier: this.skillEntry.flatModifier ?? 0,
+        };
+    }
+
+    /* -------------------------------------------- */
+    /*  LotmRollDialog parts                         */
+    /* -------------------------------------------- */
+
+    /** @override */
+    _prepareBodyContext() {
         const attributes = Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.attributes).map(([key, labelKey]) => ({
             key,
             label: game.i18n.localize(labelKey),
@@ -156,9 +145,7 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
             selected: key === this.attributeKey,
             isDefault: key === this.defaultAttribute
         }));
-
-        const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
-        const flatModifier = this.skillEntry.flatModifier ?? 0;
+        const { levelBonus, levelLabel, flatModifier } = this.#parts();
         const base = this.#baseDie();
 
         return {
@@ -168,88 +155,33 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
             actionFormulaInvalid: base.invalid,
             actionFormula: base.formula,
             skillName: this.skillEntry.name,
-            levelLabel: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level),
+            levelLabel,
             levelBonus,
             flatModifier,
             attributes,
             attributeChanged: this.attributeKey !== this.defaultAttribute,
-            modifiers: this.modifiers,
-            total: computeSkillCheckTotal({
-                attrTotal: this.actor.system.attributes[this.attributeKey]?.total ?? 0,
-                levelBonus,
-                flatModifier,
-                modifiers: this.modifiers
-            })
         };
     }
 
-    _onRender(context, options) {
-        this.element.querySelector("select[name=attribute]")?.addEventListener("change", (ev) => {
-            this.attributeKey = ev.target.value;
-            this.render();
-        });
-
-        this.element.querySelector(".mod-value")?.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter") {
-                ev.preventDefault();
-                SkillCheckDialog.#onAddModifier.call(this, ev, ev.currentTarget);
-            }
-        });
+    /** @override */
+    _totalLabel() {
+        const { attrTotal, levelBonus, flatModifier } = this.#parts();
+        return signedTerm(computeSkillCheckTotal({ attrTotal, levelBonus, flatModifier, modifiers: this.modifiers }));
     }
 
-    /* -------------------------------------------- */
-    /*  Actions                                      */
-    /* -------------------------------------------- */
-
-    static #onAddModifier(event, target) {
-        const form = this.element;
-        const nameInput = form.querySelector(".mod-name");
-        const valueInput = form.querySelector(".mod-value");
-        const value = Number(valueInput.value);
-
-        if (!value || Number.isNaN(value)) {
-            ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillCheck.InvalidModifier"));
-            return;
-        }
-
-        this.modifiers.push({
-            id: foundry.utils.randomID(),
-            label: nameInput.value.trim() || (value > 0 ? "Bonus" : "Penalty"),
-            value
-        });
-
-        nameInput.value = "";
-        valueInput.value = "";
-        this.render();
-    }
-
-    static #onRemoveModifier(event, target) {
-        const id = target.dataset.modifierId;
-        this.modifiers = this.modifiers.filter((m) => m.id !== id);
-        this.render();
-    }
-
-    static async #onSubmit(event, form, formData) {
-        this.submitted = true;
-
-        const attr = CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.attributeKey];
-        const attrAbbrKey = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations[this.attributeKey];
-        const attrAbbr = game.i18n.localize(attrAbbrKey).toUpperCase();
-        const attrTotal = this.actor.system.attributes[this.attributeKey]?.total ?? 0;
-        const levelBonus = calculateSkillModifier(this.skillEntry.level, 0);
-        const levelLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level);
-        const flatModifier = this.skillEntry.flatModifier ?? 0;
-
+    /** @override */
+    _formula() {
         const base = this.#baseDie();
         if (base.invalid) {
             ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.InvalidActionFormula", {
                 action: this.action.name, formula: base.formula
             }));
         }
-
-        const formula = buildSkillCheckFormula({
+        const { attrTotal, levelBonus, levelLabel, flatModifier } = this.#parts();
+        const attrAbbrKey = CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations[this.attributeKey];
+        return buildSkillCheckFormula({
             baseDie: base.die, // 1d20, or the action's own formula (see #baseDie)
-            attrAbbr,
+            attrAbbr: game.i18n.localize(attrAbbrKey).toUpperCase(),
             attrTotal,
             levelLabel,
             levelBonus,
@@ -257,10 +189,11 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
             flatModifier,
             modifiers: this.modifiers
         });
+    }
 
-        const roll = new LOTM_VTTRoll(formula, this.actor.getRollData());
-        await roll.evaluate();
-
+    /** @override */
+    _flavor() {
+        const attr = CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.attributeKey];
         const attributeChanged = this.attributeKey !== this.defaultAttribute;
         const defaultAttrLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.defaultAttribute]);
         const checkFlavor = attributeChanged
@@ -275,28 +208,20 @@ export default class SkillCheckDialog extends HandlebarsApplicationMixin(Applica
               });
 
         // Rolling an action: put its name in front, e.g. "Shoot: Pistol check (Agility)".
-        const flavor = this.action
+        return this.action
             ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.ActionFlavor", {
                   action: Handlebars.escapeExpression(this.action.name),
                   check: checkFlavor
               })
             : checkFlavor;
-
-        // Extras from the caller, e.g. an action's "Roll Damage" button and the flags it needs.
-        const chat = this.skillEntry.chat ?? {};
-
-        await roll.toMessage({
-            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-            flavor: flavor + (chat.footer ?? ""),
-            flags: chat.flags ?? {},
-            rollMode: game.settings.get("core", "rollMode")
-        });
-
-        this.resolve(roll);
     }
 
-    async close(options) {
-        if (!this.submitted) this.resolve?.(null);
-        return super.close(options);
+    /** @override */
+    _onRender(context, options) {
+        super._onRender(context, options);
+        this.element.querySelector("select[name=attribute]")?.addEventListener("change", (ev) => {
+            this.attributeKey = ev.target.value;
+            this.render();
+        });
     }
 }

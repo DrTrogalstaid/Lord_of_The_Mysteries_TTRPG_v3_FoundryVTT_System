@@ -1,9 +1,11 @@
 {{!--
-  One row in a drop section list. The context is one entry built by buildEntry() in player-character-sheet.mjs.
-  Extra value passed in by the caller:
+  One row in a drop section list. The context is one entry built by buildEntry() in base-actor-sheet.mjs.
+  Extra values passed in by the caller:
     deleteAction  the sheet action for the remove button, e.g. "deleteSpell"
+    favorites     true on sheets that have Favorites (@root.showFavorites): spell rows get the star (entry-favorite.hbs)
+  Spells (entry.isRollable) get the same roll buttons as actions (entry-rolls.hbs) and the same three stats.
 --}}
-<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if spellActions.length}} has-actions{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"{{#if id}} data-item-id="{{id}}"{{/if}}>
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if spellActions.length}} has-actions{{/if}}{{#if isRollable}} action{{/if}}{{#if isSpell}} spell{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"{{#if id}} data-item-id="{{id}}"{{/if}}>
 
   {{!-- Image. Click posts the Item to chat. Broken references get a plain image. --}}
   {{#if broken}}
@@ -17,11 +19,14 @@
 
   {{!-- Name (click opens the Item's sheet), detail line, and where it came from. --}}
   <div class="drop-entry-main">
-    {{#if broken}}
-    <span class="drop-entry-name">{{name}}</span>
-    {{else}}
-    <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
-    {{/if}}
+    <div class="drop-entry-title-row">
+      {{#if broken}}
+      <span class="drop-entry-name">{{name}}</span>
+      {{else}}
+      <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
+      {{/if}}
+      {{#if (and favorites isRollable)}}{{> "systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs"}}{{/if}}
+    </div>
     {{#if detail}}<span class="drop-entry-detail">{{detail}}</span>{{/if}}
     {{!-- Guns: rounds loaded and the chamber. Ammo: rounds left. Built by firearmStatus / ammoBoxStatus (helpers/firearms.mjs). --}}
     {{#if firearm}}
@@ -41,10 +46,29 @@
     {{#if grantedByLabel}}
     <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}}: {{grantedByLabel}}</span>
     {{/if}}
+    {{!-- Spells: [d20 Occultism +5] [Damage] and so on, like action rows. --}}
+    {{#unless broken}}
+      {{#if isRollable}}{{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}{{/if}}
+    {{/unless}}
   </div>
 
-  {{!-- Labeled stats on the right. --}}
-  {{#if hasStats}}
+  {{!-- Labeled stats on the right. Spells show all three, the same columns as actions. --}}
+  {{#if isRollable}}
+  <div class="drop-entry-stats">
+    <div class="drop-entry-stat drop-entry-action-type">
+      <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+      <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+    </div>
+    <div class="drop-entry-stat drop-entry-cost">
+      <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+      <span class="drop-entry-stat-value">{{cost}}</span>
+    </div>
+    <div class="drop-entry-stat drop-entry-range">
+      <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Range"}}</span>
+      <span class="drop-entry-stat-value">{{rangeLabel}}</span>
+    </div>
+  </div>
+  {{else if hasStats}}
   <div class="drop-entry-stats">
     {{#if actionTypeLabel}}
     <div class="drop-entry-stat">
@@ -75,7 +99,10 @@
     {{#if gear.valueLabel}}
     <span class="gear-value" data-tooltip="{{gear.valueTooltip}}">{{gear.valueLabel}}</span>
     {{/if}}
+    {{!-- Slots taken. NPCs don't track slots, so their rows leave this out. --}}
+    {{#if gear.slotsLabel}}
     <span class="gear-slots" data-tooltip="{{gear.sizeLabel}}">{{gear.slotsLabel}}</span>
+    {{/if}}
     {{#if (and owned @root.editable)}}
       <input type="number" class="gear-quantity" min="0" step="1" value="{{gear.quantity}}"
              data-item-field="system.quantity" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Quantity">
@@ -113,17 +140,23 @@
   <button type="button" class="drop-entry-remove" data-action="{{deleteAction}}" data-item-id="{{id}}" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Remove"}}">
     <i class="fa-solid fa-trash"></i>
   </button>
+  {{else if (and @root.canHideGrants @root.editable)}}
+  {{!-- NPCs: hide this granted entry (#onHideGrant in base-actor-sheet.mjs). Restore it from the "Hidden" list. --}}
+  <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{hideKey}}" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Hide"}}">
+    <i class="fa-solid fa-eye-slash"></i>
+  </button>
   {{else}}
   <span class="drop-entry-spacer"></span>
   {{/if}}
 
   {{!-- Spells tab: the actions this spell grants, on their own lines under it, with roll buttons and the
-        Favorites star. They're on the Actions tab only once favorited (groupActions in player-character-sheet.mjs).
-        This list isn't a .drop-section-list, so the move buttons above ignore these rows. --}}
+        Favorites star (on sheets that have Favorites). They're on the Actions tab only once favorited
+        (groupActions in base-actor-sheet.mjs). This list isn't a .drop-section-list, so the move buttons above
+        ignore these rows. --}}
   {{#if spellActions.length}}
   <ol class="spell-actions">
     {{#each spellActions as |action|}}
-      {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" action remove="deleteAction" favorites=true}}
+      {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" action remove="deleteAction" favorites=@root.showFavorites}}
     {{/each}}
   </ol>
   {{/if}}

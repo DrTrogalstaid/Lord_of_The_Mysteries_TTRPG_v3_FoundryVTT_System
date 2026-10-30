@@ -1,0 +1,17 @@
+{{!-- Roll dialogs: "Spend N Spirituality" for actions with a Spirituality Cost (helpers/spirituality.mjs).
+      Ticked when the actor has enough; can't be ticked when they don't. Renders nothing without a cost. --}}
+{{#if spiritCost}}
+<div class="form-group skill-check-spirituality">
+    <label class="checkbox">
+        <input type="checkbox" name="spendSpirituality" {{checked spendSpirit}} {{#unless spiritAffordable}}disabled{{/unless}} />
+        <i class="fa-solid fa-sparkles"></i>
+        {{localize "LORD_OF_THE_MYSTERIES.Spirituality.ActionCheckbox" cost=spiritCost value=spiritValue}}
+    </label>
+    {{#unless spiritAffordable}}
+    <p class="hint skill-check-formula-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{localize "LORD_OF_THE_MYSTERIES.Spirituality.ActionNotEnough" cost=spiritCost value=spiritValue}}
+    </p>
+    {{/unless}}
+</div>
+{{/if}}

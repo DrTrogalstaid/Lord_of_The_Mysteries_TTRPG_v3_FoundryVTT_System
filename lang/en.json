@@ -67,6 +67,25 @@
         "InvalidActionFormulaHint": "This action's roll formula isn't valid, so 1d20 will be rolled instead:"
     },
 
+    "RollDialog": {
+        "Visibility": "Who sees it",
+        "ShiftHint": "Tip: Shift-click a roll to skip this window.",
+        "Bonus": "Bonus",
+        "Penalty": "Penalty",
+        "Modes": {
+            "public": "Public Roll",
+            "gm": "Private GM Roll",
+            "blind": "Blind GM Roll",
+            "self": "Self Roll"
+        }
+    },
+
+    "AttributeCheck": {
+        "Title": "{attribute} Check",
+        "Flavor": "{attribute} Check",
+        "Total": "Total"
+    },
+
     "GrantedSkills": {
         "GrantsSkills": "Grants Skills",
         "GrantsSkillsHint": "Characters with this ability get a skill tab for it, where they can add skills from the options below or custom ones.",
@@ -702,7 +721,9 @@
       "Hint": "Drop the skill this action rolls with (e.g. Pistol)",
       "None": "None: this action can't be rolled from the character sheet",
       "NotASkill": "{name} is not a skill.",
-      "Missing": "The skill on {name} no longer exists."
+      "Missing": "The skill on {name} no longer exists.",
+      "SpellDefault": "None set: this spell rolls with Occultism",
+      "SpellHint": "Drop a skill to roll with it instead of Occultism"
     },
     
     "Action":{
@@ -711,7 +732,21 @@
       "InvalidDamage": "{name} has no valid damage formula.",
       "NoActor": "{name} needs a character to roll.",
       "Gone": "That action or character no longer exists.",
-      "InvalidAttack": "{name} has no valid attack formula."
+      "InvalidAttack": "{name} has no valid attack formula.",
+      "BigSuccess": "Big Success",
+      "BigSuccessHint": "Roll damage as a Big Success: never less than the average damage",
+      "BigSuccessFlavor": "{action}: Big Success Damage{type}",
+      "BigSuccessRaised": "Big Success: rolled {rolled}, raised to the average ({average})",
+      "BigSuccessKept": "Big Success: rolled {rolled} (average {average})",
+      "ApplyDamage": "Damage ({amount})",
+      "ApplyHeal": "Heal ({amount})",
+      "ApplyHint": "Apply to the selected token(s)",
+      "SelectToken": "Select one or more tokens first.",
+      "NotOwner": "You can't change {name}'s Health. Ask the GM to apply it.",
+      "Damaged": "{name} takes {amount} damage: {before} → {after}",
+      "Healed": "{name} heals {amount}: {before} → {after}",
+      "Untyped": "untyped",
+      "DamageTypesHint": "Give parts their own type in brackets, like 2d6[fire] + 1d4[cold]. Parts without one use the Damage Type below."
     },
 
     "ActionGroups": {

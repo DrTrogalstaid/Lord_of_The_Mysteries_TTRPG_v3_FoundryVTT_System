@@ -263,6 +263,8 @@
   margin-top: 0.75rem;
 }
 
+/* The Spell List's title is the <summary> of a <details>: clicking it folds the list.
+   list-style / ::-webkit-details-marker hide the browser's own triangle; the chevron replaces it. */
 .lotm.sheet.actor .spell-list-title {
   display: flex;
   align-items: baseline;
@@ -271,6 +273,32 @@
   padding-bottom: 0.15rem;
   border-bottom: 1px solid var(--color-border-light-tertiary, #999);
   font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lotm.sheet.actor .spell-list-title::-webkit-details-marker {
+  display: none;
+}
+
+.lotm.sheet.actor .spell-list-title:hover {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+/* Points right when closed, down when open. */
+.lotm.sheet.actor .spell-list-chevron {
+  width: 0.8em;
+  font-size: 0.7em;
+  transition: transform 0.12s;
+}
+
+.lotm.sheet.actor .spell-list[open] > .spell-list-title .spell-list-chevron {
+  transform: rotate(90deg);
+}
+
+.lotm.sheet.actor .spell-list:not([open]) > .spell-list-title {
+  margin-bottom: 0;
 }
 
 .lotm.sheet.actor .spell-list-count {

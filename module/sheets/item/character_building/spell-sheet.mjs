@@ -2,6 +2,8 @@ import {
   onManageActiveEffect,
   prepareActiveEffectCategories,
 } from '../../../helpers/effects.mjs';
+// The Skill slot, the same one the action sheet uses.
+import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from '../../../helpers/skill-slot.mjs';
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -26,6 +28,7 @@ export class LordOfTheMysteriesSpellSheet extends HandlebarsApplicationMixin(Ite
     },
     dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
     actions: {
+      ...SKILL_SLOT_ACTIONS,
       addSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onAddSequenceUpgrade,
       deleteSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onDeleteSequenceUpgrade,
       deleteSpell: LordOfTheMysteriesSpellSheet.#onDeleteSpell,
@@ -81,6 +84,9 @@ export class LordOfTheMysteriesSpellSheet extends HandlebarsApplicationMixin(Ite
     context.effects = prepareActiveEffectCategories(this.item.effects);
 
     // Sequence Upgrade rows just need their array index for input naming.
+    // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
+    context.actionSkill = await prepareSkillSlot(this.item);
+
     context.higherSequenceUpgrades = (context.system.higherSequenceUpgrades ?? []).map((value, index) => ({
       index,
       value,
@@ -117,6 +123,9 @@ export class LordOfTheMysteriesSpellSheet extends HandlebarsApplicationMixin(Ite
     this.element.querySelectorAll('.effect-control').forEach((el) => {
       el.addEventListener('click', (ev) => onManageActiveEffect(ev, this.item));
     });
+
+    // Let the Skill slot accept a dropped skill.
+    bindSkillSlot(this);
   }
 
   /* -------------------------------------------- */

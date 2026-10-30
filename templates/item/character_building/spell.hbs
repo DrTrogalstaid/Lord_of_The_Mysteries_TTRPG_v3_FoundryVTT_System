@@ -62,10 +62,56 @@
         <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" />
       </fieldset>
 
-      <!--Attack-->
+      {{!-- Rolls: the same fields as an action (spell.mjs), so a spell rolls like one from the sheets. --}}
+
+      <!--Skill: the skill this spell rolls with. Empty = Occultism. Drop handling: bindSkillSlot() in helpers/skill-slot.mjs. -->
+      <fieldset class="action-skill" data-skill-slot>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.Label"}}</legend>
+        {{#if actionSkill}}
+          <div class="action-skill-entry">
+            <img src="{{actionSkill.img}}" alt="" width="24" height="24">
+            {{#if actionSkill.broken}}
+              <span class="action-skill-name">{{actionSkill.name}}</span>
+            {{else}}
+              <a class="action-skill-name" data-action="openSkill" data-uuid="{{actionSkill.uuid}}">{{actionSkill.name}}</a>
+            {{/if}}
+            {{#if editable}}
+              <a class="item-control" data-action="removeSkill" title="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                <i class="fas fa-trash"></i>
+              </a>
+            {{/if}}
+          </div>
+        {{else}}
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.SpellDefault"}}</p>
+        {{/if}}
+        {{#if editable}}<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.SpellHint"}}</p>{{/if}}
+      </fieldset>
+
+      <!--Attack Roll Macro-->
       <fieldset>
-        <legend>Attack</legend>
-        <input id="attack" class="blend-input" type="text" name="system.attack" value="{{system.attack}}" placeholder="Attack" />
+        <legend>Attack Roll Macro</legend>
+        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
+      </fieldset>
+
+      <!--Modifiers-->
+      <fieldset>
+        <legend>Modifiers</legend>
+        <input id="modifiers" class="blend-input" type="number" name="system.modifiers" value="{{system.modifiers}}" step="1" />
+      </fieldset>
+
+      <!--Damage Roll Macro. Parts can name their own damage type: 2d6[fire] + 1d4[cold]. -->
+      <fieldset>
+        <legend>Damage Roll Macro</legend>
+        <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="2d8[fire]" />
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DamageTypesHint"}}</p>
+      </fieldset>
+
+      <!--Damage Type: for the parts of the damage formula that don't name their own. -->
+      <fieldset class="damageType">
+        <legend>Damage Type</legend>
+        <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.damageTypes selected=system.damageType blank="" localize=true}}
+        </select>
       </fieldset>
 
       <!--DC Results-->

@@ -184,4 +184,52 @@ Setup: a Sequence whose skill increases include a compendium skill (e.g. Pistol)
 - [ ] Not enough Spirituality: the box is greyed out with a warning, and the roll happens without spending
 - [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends the cost (note on the chat card)
 - [ ] An action with a cost but nothing to roll: its row has a blue "Spend N" button that spends it and posts to chat
+- [ ] A spell with a cost: its row has the roll button AND "Spend N". Spend spends without rolling. (Rolling with the
+      dialog's Spirituality box ticked spends it too, so cast one way or the other, not both.)
+- [ ] An action with a cost and a roll: no "Spend N" button; the cost is paid through the roll dialog
 - [ ] The same from a hotbar macro of the action
+
+## Roll dialogs and damage buttons
+
+Setup: set the chat sidebar's roll mode to Private GM Roll.
+
+- [ ] Skill rolls, attribute checks (click an attribute total) and actions without a skill all open a roll dialog
+      with the modifiers list, four who-sees-it buttons (Public, Private GM, Blind GM, Self) and a Roll button
+- [ ] The buttons start on Private GM Roll (the sidebar's choice). Pick Blind GM and roll: only the GM sees it.
+      The sidebar is still on Private GM Roll, and the next dialog starts there again
+- [ ] Public: the roll is posted as the character, for everyone
+- [ ] Pick a mode, then add a modifier: the mode stays. Change a skill roll's attribute: the mode and the
+      Spirituality box stay as you set them
+- [ ] Shift-click a skill, an attribute total and an action's roll button: each rolls right away, no window,
+      using the sidebar's mode
+- [ ] An action without a skill: the dialog shows its formula with the character's numbers filled in; its
+      Modifiers field is in the list (removable); its Spirituality Cost has the checkbox
+- [ ] Attack card: "Roll Damage" with "Big Success" to its right. Older attack cards still have a working Roll Damage
+- [ ] Roll Damage: the damage card has "Damage (N)" and "Heal (N)". Select a token and click Damage: its Health
+      drops by N (not below 0). Heal raises it (not above max). With nothing selected: a warning
+- [ ] Big Success: when the roll is below the formula's average, the card says "rolled X, raised to the average (Y)"
+      and the buttons use Y; otherwise it says the roll and the average, and the buttons use the roll
+- [ ] As a player, clicking Damage with an enemy token selected warns that only the GM can change its Health
+- [ ] The sheet's own Damage button still rolls normal damage, and its card has the Damage / Heal buttons too
+
+## Spells roll like actions
+
+- [ ] Open a spell's sheet, Details tab: Skill slot (empty says it rolls with Occultism), Attack Roll Macro, Modifiers,
+      Damage Roll Macro (with the damage-types hint) and Damage Type. A spell that had something in the old Attack
+      field shows it in Attack Roll Macro
+- [ ] Spells tab (player and NPC): every spell row has "[d20 Occultism +N]" and, with a damage formula, a Damage button.
+      Rolling opens the skill check dialog with the spell's Spirituality checkbox; the attack card has Roll Damage /
+      Big Success. Drop another skill on the spell: the button and roll use that skill instead
+- [ ] Spell Lists fold open and closed by clicking their title, and start open. Close one, close and reopen the sheet:
+      still closed for you, open for another player
+- [ ] Player sheet: each spell row has a star. Star one: it shows in Favorites on the Actions tab (with its roll buttons),
+      but not in the Attack / Move / ... sections. Unstar it from either place: it leaves Favorites.
+      NPC spell rows have no star
+- [ ] A hotbar macro of a spell rolls it
+
+## Damage types in the formula
+
+- [ ] Action set to Physical with damage "2d6[fire] + 1d4 + 2": the damage card's title says (Fire, Physical) and a line
+      shows e.g. "7 Fire · 5 Physical"
+- [ ] "2d6" on a Fire action: the title says (Fire), no breakdown line
+- [ ] The Damage button's hover on the sheet shows the formula with the types in it (no extra type added at the end)

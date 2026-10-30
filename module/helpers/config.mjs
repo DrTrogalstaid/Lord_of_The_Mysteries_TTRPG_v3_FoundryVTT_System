@@ -106,6 +106,12 @@ LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
 LORD_OF_THE_MYSTERIES.dodgeSkillUuid = 'Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ';
 
 /**
+ * The skill a spell rolls with when its Skill slot is empty: Occultism, in the Skills compendium
+ * (see rollSkillUuid in helpers/action-roll.mjs).
+ */
+LORD_OF_THE_MYSTERIES.spellSkillUuid = 'Compendium.lotm.skills_compendium.Item.23huemg1lJ4Wk90O';
+
+/**
  * Skills every character has at least this level in, keyed by skill UUID.
  * Rulebook: "Your dodge skill is trained by default." Picking Proficient (with Education) still works.
  */

@@ -244,8 +244,8 @@ function rollItemMacro(itemUuid) {
       );
     }
 
-    // Actions roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
-    if (item.type === 'action') return item.system.rollAttack();
+    // Actions and spells roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
+    if (item.type === "action" || item.type === "spell") return item.system.rollAttack();
     item.roll();
   });
 }

@@ -123,10 +123,11 @@
       <fieldset>
         <legend>Damage Roll Macro</legend>
         <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="Damage roll macro" />
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DamageTypesHint"}}</p>
       </fieldset>
 
-      <!--Damage Type: shown in the damage chat message title. Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.
-          The blank first option = no damage type. -->
+      <!--Damage Type: the type of every part of the damage formula that doesn't name its own (2d6[fire] does).
+          Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes. The blank first option = no damage type. -->
       <fieldset class="damageType">
         <legend>Damage Type</legend>
         <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>

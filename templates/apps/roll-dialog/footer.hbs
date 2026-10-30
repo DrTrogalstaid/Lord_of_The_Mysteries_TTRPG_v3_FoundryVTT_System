@@ -1,0 +1,22 @@
+{{!-- Roll dialogs: who sees the roll (four toggle buttons, helpers/message-modes.mjs) and the Roll button.
+      The buttons start on the chat sidebar's choice and only change this roll. --}}
+<div class="roll-modes">
+    <span class="roll-modes-title">{{localize "LORD_OF_THE_MYSTERIES.RollDialog.Visibility"}}</span>
+    <div class="roll-mode-buttons" role="group">
+        {{#each messageModes as |mode|}}
+        <button type="button" class="roll-mode{{#if mode.active}} active{{/if}}" data-action="setMessageMode" data-mode="{{mode.key}}"
+                data-tooltip="{{mode.label}}" aria-label="{{mode.label}}" aria-pressed="{{#if mode.active}}true{{else}}false{{/if}}">
+            <i class="{{mode.icon}}"></i>
+        </button>
+        {{/each}}
+    </div>
+    <span class="roll-mode-label">{{messageModeLabel}}</span>
+</div>
+
+<footer>
+    <button type="submit">
+        <i class="fa-solid fa-dice-d20"></i>
+        {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Roll"}}{{#if totalLabel}} ({{totalLabel}}){{/if}}
+    </button>
+    <p class="hint roll-dialog-shift-hint">{{localize "LORD_OF_THE_MYSTERIES.RollDialog.ShiftHint"}}</p>
+</footer>

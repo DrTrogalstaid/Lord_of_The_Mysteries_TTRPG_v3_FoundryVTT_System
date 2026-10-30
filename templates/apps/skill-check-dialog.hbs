@@ -1,3 +1,5 @@
+{{!-- SkillCheckDialog (module/apps/skill-check-dialog.mjs). The modifiers, Spirituality, who-sees-it buttons and
+      Roll button are the shared roll dialog partials (templates/apps/roll-dialog/). --}}
 <div class="skill-check-dialog-content">
     <header class="skill-check-header">
         {{!-- Only when rolling an action (e.g. a revolver's "Shoot"): its name and the dice it rolls. --}}
@@ -21,22 +23,7 @@
     </p>
     {{/if}}
 
-    {{!-- Actions with a Spirituality Cost: spend it when rolling (SkillCheckDialog, helpers/spirituality.mjs). --}}
-    {{#if spiritCost}}
-    <div class="form-group skill-check-spirituality">
-        <label class="checkbox">
-            <input type="checkbox" name="spendSpirituality" {{checked spendSpirit}} {{#unless spiritAffordable}}disabled{{/unless}} />
-            <i class="fa-solid fa-sparkles"></i>
-            {{localize "LORD_OF_THE_MYSTERIES.Spirituality.ActionCheckbox" cost=spiritCost value=spiritValue}}
-        </label>
-        {{#unless spiritAffordable}}
-        <p class="hint skill-check-formula-warning">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            {{localize "LORD_OF_THE_MYSTERIES.Spirituality.ActionNotEnough" cost=spiritCost value=spiritValue}}
-        </p>
-        {{/unless}}
-    </div>
-    {{/if}}
+    {{> "systems/lotm/templates/apps/roll-dialog/spirituality.hbs"}}
 
     <div class="form-group">
         <label>{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.LinkedAttribute"}}</label>
@@ -53,30 +40,7 @@
     </div>
 
     <hr />
-
-    <ol class="modifiers">
-        {{#each modifiers as |m|}}
-            <li>
-                <span class="mod-label">{{m.label}}</span>
-                <span class="mod-value">{{numberFormat m.value decimals=0 sign=true}}</span>
-                <a data-action="removeModifier" data-modifier-id="{{m.id}}" title="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RemoveModifier'}}">
-                    <i class="fa-solid fa-xmark"></i>
-                </a>
-            </li>
-        {{/each}}
-    </ol>
-
-    <div class="add-modifier-row">
-        <input type="text" class="mod-name" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.ModifierLabel'}}" />
-        <input type="number" class="mod-value" placeholder="+/-" />
-        <button type="button" data-action="addModifier">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.AddModifier"}}</button>
-    </div>
-
+    {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}
     <hr />
-
-    <footer>
-        <button type="submit">
-            {{localize "LORD_OF_THE_MYSTERIES.SkillCheck.Roll"}} ({{numberFormat total decimals=0 sign=true}})
-        </button>
-    </footer>
+    {{> "systems/lotm/templates/apps/roll-dialog/footer.hbs"}}
 </div>

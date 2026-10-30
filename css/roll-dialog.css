@@ -1,0 +1,110 @@
+/*
+ * Roll dialogs (module/apps/roll-dialog.mjs and the dialogs built on it) and the damage chat buttons
+ * (helpers/action-roll.mjs). The rest of the dialog's look comes from the skill-check-dialog styles in lotm.css.
+ */
+
+/* ---- Who sees it: four toggle buttons ---- */
+
+.lotm.roll-dialog .roll-modes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lotm.roll-dialog .roll-modes-title {
+  font-size: 0.9em;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.lotm.roll-dialog .roll-mode-buttons {
+  display: flex;
+}
+
+.lotm.roll-dialog .roll-mode {
+  width: 32px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.lotm.roll-dialog .roll-mode:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.lotm.roll-dialog .roll-mode:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.lotm.roll-dialog .roll-mode + .roll-mode {
+  margin-left: -1px;
+}
+
+.lotm.roll-dialog .roll-mode:hover {
+  opacity: 0.85;
+}
+
+.lotm.roll-dialog .roll-mode.active {
+  opacity: 1;
+  background: var(--color-warm-2, #c9593f);
+  border-color: var(--color-warm-1, #a33b23);
+  color: #fff;
+  position: relative;
+}
+
+.lotm.roll-dialog .roll-mode-label {
+  font-size: 0.9em;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lotm.roll-dialog .roll-dialog-shift-hint {
+  margin: 4px 0 0;
+  font-size: 0.8em;
+  text-align: center;
+  opacity: 0.6;
+}
+
+/* ---- Chat: Roll Damage / Big Success, and Damage / Heal ---- */
+
+.lotm-damage-buttons,
+.lotm-apply-buttons {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm-damage-buttons button,
+.lotm-apply-buttons button {
+  flex: 1;
+  margin: 0;
+}
+
+.lotm-apply[data-lotm-apply="heal"] {
+  border-color: #3d7a46;
+}
+
+.lotm.chat-big-success {
+  margin: 2px 0;
+  font-size: 0.9em;
+}
+
+.lotm.chat-big-success i {
+  color: #d9a93a;
+}
+
+/* "5 Fire · 3 Cold" under a damage roll with more than one damage type. */
+.lotm.chat-damage-types {
+  margin: 2px 0;
+  font-size: 0.9em;
+}
+
+.lotm.chat-damage-types .chat-damage-type {
+  white-space: nowrap;
+}

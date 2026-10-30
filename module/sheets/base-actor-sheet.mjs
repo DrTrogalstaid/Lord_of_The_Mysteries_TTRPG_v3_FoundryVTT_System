@@ -10,7 +10,8 @@
  *   - drag and drop onto the sheet
  *   - action rows: attack / damage / ammo buttons
  *   - moving entries up / down, sending to chat, opening, creating and deleting Items
- *   - attribute and skill rolls, damage resistance rows, spending Spirituality
+ *   - attribute, skill and action rolls (the roll dialogs in apps/; Shift-click skips the dialog),
+ *     damage resistance rows, spending Spirituality
  *   - hiding granted entries, for actors whose data has a hiddenGrants list (NPCs, see actor-npc.mjs)
  *
  * How the sheets that extend this class add their own things:
@@ -23,10 +24,10 @@
  */
 
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
+import AttributeCheckDialog from "../apps/attribute-check-dialog.mjs";
 import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { autoPlacement, placementUpdate } from "../helpers/inventory.mjs";
 import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
-import { rollCheck } from "../helpers/check-roll.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -53,9 +54,16 @@ export const ACTION_GROUPS_PARTIAL = `${PARTS_FOLDER}/action-groups.hbs`;
 /** The closed "Hidden (3)" list with Restore buttons. Only has rows on actors that can hide grants (NPCs). */
 export const HIDDEN_GRANTS_PARTIAL = `${PARTS_FOLDER}/hidden-grants.hbs`;
 
+/** The roll buttons of an action or spell row (attack, damage, ammo, Spirituality). Used by both row partials. */
+export const ENTRY_ROLLS_PARTIAL = `${PARTS_FOLDER}/entry-rolls.hbs`;
+
+/** The Favorites star of an action or spell row. Used by both row partials. */
+export const ENTRY_FAVORITE_PARTIAL = `${PARTS_FOLDER}/entry-favorite.hbs`;
+
 /** Every partial above, for a part's `templates` list. */
 export const SHARED_PARTIALS = [
   DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL, SECTION_ENTRY_PARTIAL, ACTION_GROUPS_PARTIAL, HIDDEN_GRANTS_PARTIAL,
+  ENTRY_ROLLS_PARTIAL, ENTRY_FAVORITE_PARTIAL,
 ];
 
 /* -------------------------------------------- */
@@ -140,8 +148,11 @@ const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section
 function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
   const system = item.system ?? {};
   const isAction = item.type === "action";
-  // Actions always show a cost (blank counts as 0); for abilities and spells an unset cost is hidden.
-  const cost = isAction ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
+  // Actions and spells roll the same way (helpers/action-roll.mjs), so their rows get the same buttons and stats.
+  const isSpell = item.type === "spell";
+  const isRollable = isAction || isSpell;
+  // Actions and spells always show a cost (blank counts as 0); for abilities an unset cost is hidden.
+  const cost = isRollable ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
   const actionType = system.actionType || "";
   const actionTypeText = actionTypeLabel(actionType);
   const isSequence = item.type === "sequence";
@@ -174,15 +185,17 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     grantedByLabel: "",
     // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
     spellList,
-    // Actions: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
+    // Actions and spells: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
     isAction,
-    rangeLabel: isAction && system.range != null
+    isSpell,
+    isRollable,
+    rangeLabel: isRollable && system.range != null
       ? game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RangeFeet", { range: system.range })
       : "",
-    // The attack and damage buttons. They need the actor, so #addActionButtons fills them in later.
+    // The attack and damage buttons (actions and spells). They need the actor, so #addActionButtons fills them in later.
     attack: null,
     damage: null,
-    spiritButton: null,  // "Spend 2": for an action with a Spirituality Cost but nothing to roll
+    spiritButton: null,  // "Spend 2": for a spell with a Spirituality Cost, or an action with one but nothing to roll
     hasRolls: false,
     // Guns and ammo (helpers/firearms.mjs). gunId is set on actions that come from a gun's own action list.
     gunId: "",
@@ -298,8 +311,15 @@ const FAVORITES_FLAG = "flags.lotm.favoriteActions";
  */
 const COLLAPSED_FLAG = "collapsedActionGroups";
 
+/** Which Spell Lists each player has collapsed on the Spells tab, saved the same way: { [actor id]: [list key, ...] }. */
+const COLLAPSED_SPELLS_FLAG = "collapsedSpellLists";
+
+/** The key a Spell List is collapsed under. The "Other Spells" group has no name of its own. */
+const spellListCollapseKey = (list) => list.key || "unlisted";
+
 /**
  * Split the Actions section into collapsible groups: Favorites first (when turned on), then one per action type.
+ * Favorites can also hold spells (favorited with the star on the Spells tab); they're only listed there and in Favorites.
  *
  * A favorite is shown twice: in Favorites and in its type section (except an action only spells grant,
  * which is only in Favorites; it's also under its spell on the Spells tab). The Favorites copy is a separate object
@@ -311,25 +331,28 @@ const COLLAPSED_FLAG = "collapsedActionGroups";
  * @param {string[]} collapsedKeys  Section keys this player has collapsed (COLLAPSED_FLAG).
  * @param {object}  [options]
  * @param {boolean} [options.favorites=true]  false leaves the Favorites section out (NPC sheet).
+ * @param {object[]} [options.spells]         context.sections.spells, so favorited spells can be listed in Favorites.
  * @returns {{key: string, label: string, favorites: boolean, collapsed: boolean, emptyText: string, entries: object[]}[]}
  *   An empty list when the actor has no actions at all.
  */
-function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: showFavorites = true } = {}) {
-  if (!entries.length) return [];
+function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: showFavorites = true, spells = [] } = {}) {
+  // Nothing to show: no actions, and no favorite spells either.
+  const favoriteSpells = showFavorites ? spells.filter((spell) => favoriteKeys.includes(spell.key)) : [];
+  if (!entries.length && !favoriteSpells.length) return [];
   const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.ActionGroups.${key}`);
 
   // Every favorite gets a filled star, wherever it's listed.
   const favoriteSet = new Set(showFavorites ? favoriteKeys : []);
   for (const entry of entries) entry.favorite = favoriteSet.has(entry.key);
 
-  // Favorites, in the saved order. Keys of actions the actor no longer has are skipped.
-  const byKey = new Map(entries.map((entry) => [entry.key, entry]));
+  // Favorites, in the saved order. Keys of actions and spells the actor no longer has are skipped.
+  const byKey = new Map([...entries, ...favoriteSpells].map((entry) => [entry.key, entry]));
   const favorites = {
     key: "favorites",
     favorites: true,
     label: localize("Favorites"),
     emptyText: localize("FavoritesEmpty"),
-    entries: favoriteKeys.filter((key) => byKey.has(key)).map((key) => ({ ...byKey.get(key) })),
+    entries: favoriteKeys.filter((key) => byKey.has(key)).map((key) => ({ ...byKey.get(key), favorite: true })),
   };
 
   // One section per action type. Actions only spells grant are left out: they're listed under their spell
@@ -502,7 +525,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
       case "actions":
         // Favorites, then one collapsible section per action type (attack, move, ...).
-        context.actionGroups = this._prepareActionGroups(context.sections.actions);
+        context.actionGroups = this._prepareActionGroups(context.sections.actions, context.sections.spells);
         break;
 
       case "spells": {
@@ -510,12 +533,19 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
         // (they keep the spell's own order), and don't change the Actions tab's rows.
         const favorites = new Set(this.constructor.FAVORITES ? (foundry.utils.getProperty(this.actor, FAVORITES_FLAG) ?? []) : []);
         for (const spell of context.sections.spells) {
+          // The spell's own star: a favorite spell is also listed in Favorites on the Actions tab.
+          spell.favorite = favorites.has(spell.key);
           spell.spellActions = spell.spellActions.map((action) => ({
             ...action, favorite: favorites.has(action.key), canMove: false,
           }));
         }
-        // One group per Spell List name
+        // One group per Spell List name. Each one folds open / closed; this player's closed ones stay closed.
+        const collapsed = game.user.getFlag("lotm", `${COLLAPSED_SPELLS_FLAG}.${this.actor.id}`) ?? [];
         context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
+        for (const list of context.spellLists) {
+          list.collapseKey = spellListCollapseKey(list);
+          list.collapsed = collapsed.includes(list.collapseKey);
+        }
         break;
       }
 
@@ -531,16 +561,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   /**
    * The action sections for an Actions list: Favorites (if this sheet has them), then one per action type.
    * Remembers which sections the current player collapsed.
-   * @param {object[]} entries  context.sections.actions
-   * @returns {object[]}        See groupActions.
+   * @param {object[]} entries   context.sections.actions
+   * @param {object[]} [spells]  context.sections.spells: favorited spells are listed in Favorites too.
+   * @returns {object[]}         See groupActions.
    */
-  _prepareActionGroups(entries) {
+  _prepareActionGroups(entries, spells = []) {
     const favorites = this.constructor.FAVORITES;
     return groupActions(
       entries,
       favorites ? (foundry.utils.getProperty(this.actor, FAVORITES_FLAG) ?? []) : [],
       game.user.getFlag("lotm", `${COLLAPSED_FLAG}.${this.actor.id}`) ?? [],
-      { favorites }
+      { favorites, spells }
     );
   }
 
@@ -600,11 +631,16 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       });
     }
 
-    // Action sections: when a player opens or closes one, remember it for them (see #saveCollapsedGroups).
+    // Action sections and Spell Lists: when a player opens or closes one, remember it for them (see #saveCollapsed).
     for (const details of this.element.querySelectorAll("details[data-action-group]")) {
       if (details.dataset.bound) continue;
       details.dataset.bound = "1";
-      details.addEventListener("toggle", () => this.#saveCollapsedGroups());
+      details.addEventListener("toggle", () => this.#saveCollapsed("actionGroup", COLLAPSED_FLAG));
+    }
+    for (const details of this.element.querySelectorAll("details[data-spell-list]")) {
+      if (details.dataset.bound) continue;
+      details.dataset.bound = "1";
+      details.addEventListener("toggle", () => this.#saveCollapsed("spellList", COLLAPSED_SPELLS_FLAG));
     }
 
     // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
@@ -621,25 +657,30 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * Save which action sections this player has collapsed, on their own User (COLLAPSED_FLAG), so the
-   * sheet opens the same way next time and other players aren't affected.
+   * Save which foldable sections this player has collapsed, on their own User, so the sheet opens the same way
+   * next time and other players aren't affected. Used for the action sections (data-action-group, COLLAPSED_FLAG)
+   * and the Spell Lists (data-spell-list, COLLAPSED_SPELLS_FLAG).
    * Sections not on the sheet right now (a type with no actions) keep whatever was saved for them.
    * Nothing is saved when nothing changed: the browser also fires "toggle" when the sheet is drawn.
+   * @param {string} dataKey  The dataset name holding each section's key ("actionGroup" = data-action-group).
+   * @param {string} flag     The User flag to save under.
    */
-  async #saveCollapsedGroups() {
-    const sections = [...this.element.querySelectorAll("details[data-action-group]")];
-    const shown = new Set(sections.map((details) => details.dataset.actionGroup));
-    const key = `${COLLAPSED_FLAG}.${this.actor.id}`;
+  async #saveCollapsed(dataKey, flag) {
+    const attribute = `data-${dataKey.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+    const sections = [...this.element.querySelectorAll(`details[${attribute}]`)];
+    const shown = new Set(sections.map((details) => details.dataset[dataKey]));
+    const key = `${flag}.${this.actor.id}`;
     const saved = game.user.getFlag("lotm", key) ?? [];
 
     const collapsed = [
       ...saved.filter((group) => !shown.has(group)),
-      ...sections.filter((details) => !details.open).map((details) => details.dataset.actionGroup),
+      ...sections.filter((details) => !details.open).map((details) => details.dataset[dataKey]),
     ];
 
     const same = collapsed.length === saved.length && collapsed.every((group) => saved.includes(group));
     if (!same) await game.user.setFlag("lotm", key, collapsed);
   }
+
 
 
   /**
@@ -689,7 +730,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     const abilityByName = new Map(); // lower-case ability name -> entry: an actor has each ability once
     const queue = [];
     const entryByUuid = new Map();  // Item uuid -> its entry, so a spell's actions can be listed under the spell
-    const actionRows = [];          // [entry, action Item] pairs: their roll buttons are filled in at the end
+    const actionRows = [];          // [entry, action or spell Item] pairs: their roll buttons are filled in at the end
     this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
 
     // Hidden grants. Empty for actors that can't hide them (player characters).
@@ -734,7 +775,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       sections[section].push(entry);
       bySource.set(key, entry);
       entryByUuid.set(item.uuid, entry);
-      if (item.type === "action") actionRows.push([entry, item]);
+      if (entry.isRollable) actionRows.push([entry, item]);
       if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
     }
@@ -852,7 +893,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
           entryByUuid.set(doc.uuid, entry);
           sections[section].push(entry);
           noteGrant(entry);
-          if (doc.type === "action") actionRows.push([entry, doc]);
+          if (entry.isRollable) actionRows.push([entry, doc]);
           if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
           // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
           if (!gearAction) queue.push(doc);
@@ -958,10 +999,13 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       }
     }
 
-    // A Spirituality Cost is spent when the attack is rolled (helpers/spirituality.mjs). An action with a cost but
-    // nothing to roll gets a button that just spends it.
+    // A Spirituality Cost is spent when the attack is rolled (the checkbox in the roll dialog, helpers/spirituality.mjs).
+    // A "Spend N" button that just spends it is added to:
+    //   - an action with a cost but nothing to roll
+    //   - every spell with a cost, next to its roll button: spells are often cast without an attack roll,
+    //     and every spell can roll (with Occultism by default), so they'd never get the button otherwise.
     const cost = spiritualityCost(action);
-    entry.spiritButton = (!entry.attack && cost > 0)
+    entry.spiritButton = (cost > 0 && (!entry.attack || entry.isSpell))
       ? { label: game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.UseButton", { cost }) }
       : null;
 
@@ -1172,6 +1216,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
    * Open SkillCheckDialog for the clicked skill. All the data the dialog
    * needs (uuid/name/level/category/attribute) travels in via data-*
    * attributes on the skill row (see character.hbs on the player sheet, npc/main.hbs on the NPC sheet).
+   * Shift-click rolls right away without the dialog.
    */
   static _onRollSkill(event, target) {
     const row = target.closest("[data-skill-uuid]");
@@ -1184,26 +1229,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       attribute: row.dataset.attribute || row.dataset.category,
       level: row.dataset.level,
       flatModifier: Number(row.dataset.flatModifier) || 0
-    });
+    }, { fast: event.shiftKey });
   }
 
 
   /**
-   * Click an attribute's total (data-attribute = the attribute key): roll 1d20 plus that
-   * total, e.g. "1d20 +3[STR]". A plain check through helpers/check-roll.mjs, not the skill check dialog.
+   * Click an attribute's total (data-attribute = the attribute key): open the attribute check dialog,
+   * which rolls 1d20 plus that total plus any modifiers, e.g. "1d20 +3[STR]" (apps/attribute-check-dialog.mjs).
+   * Shift-click rolls right away without the dialog.
    */
   static async #onRollAttribute(event, target) {
-    const key = target.dataset.attribute;
-    const attribute = this.actor.system.attributes?.[key];
-    if (!attribute) return;
-
-    const name = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[key]);
-    const abbr = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributeAbbreviations[key]).toUpperCase();
-    // Falls back to plain text until the key is added to the language file.
-    const flavorKey = "LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor";
-    const flavor = game.i18n.has(flavorKey) ? game.i18n.format(flavorKey, { attribute: name }) : `${name} check`;
-
-    await rollCheck(this.actor, { modifier: attribute.total ?? 0, label: abbr, flavor });
+    await AttributeCheckDialog.prompt(this.actor, target.dataset.attribute, { fast: event.shiftKey });
   }
 
 
@@ -1215,7 +1251,8 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   static async #onRollAction(event, target) {
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
     // gunId: for actions listed under a gun, that gun. rollActionAttack spends the rounds for "Fires rounds" actions.
-    if (action) await rollActionAttack(this.actor, action, { gunId: target.dataset.gunId });
+    // Shift-click rolls right away without the dialog.
+    if (action) await rollActionAttack(this.actor, action, { gunId: target.dataset.gunId, fast: event.shiftKey });
   }
 
 

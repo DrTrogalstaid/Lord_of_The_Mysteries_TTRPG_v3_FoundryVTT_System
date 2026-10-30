@@ -1,0 +1,12 @@
+{{!-- AttributeCheckDialog (module/apps/attribute-check-dialog.mjs): 1d20 + the attribute's total + modifiers. --}}
+<div class="skill-check-dialog-content">
+    <header class="skill-check-header">
+        <span class="skill-name">{{attributeName}}</span>
+        <span class="skill-level">{{localize "LORD_OF_THE_MYSTERIES.AttributeCheck.Total"}} ({{numberFormat attributeTotal decimals=0 sign=true}})</span>
+    </header>
+
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/footer.hbs"}}
+</div>

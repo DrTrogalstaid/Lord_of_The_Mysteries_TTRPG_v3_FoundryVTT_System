@@ -61,17 +61,17 @@ export class LordOfTheMysteriesItem extends Item {
 
     // Initialize chat data.
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
-    const rollMode = game.settings.get('core', 'rollMode');
+    // Who sees it: what the chat sidebar is set to (Foundry v14's "messageMode"; "rollMode" is deprecated).
+    const messageMode = game.settings.get('core', 'messageMode');
     const label = `[${item.type}] ${item.name}`;
 
     // If there's no roll data, send a chat message.
     if (!this.system.formula) {
       ChatMessage.create({
         speaker: speaker,
-        rollMode: rollMode,
         flavor: label,
         content: item.system.description ?? '',
-      });
+      }, { messageMode });
     }
     // Otherwise, create a roll and send a chat message from it.
     else {
@@ -84,9 +84,8 @@ export class LordOfTheMysteriesItem extends Item {
       // const result = await roll.evaluate();
       roll.toMessage({
         speaker: speaker,
-        rollMode: rollMode,
         flavor: label,
-      });
+      }, { messageMode });
       return roll;
     }
   }
