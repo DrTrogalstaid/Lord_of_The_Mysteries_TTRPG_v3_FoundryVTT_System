@@ -29,6 +29,7 @@ export const ROLL_DIALOG_PARTIALS = [
  *   - four toggle buttons for who sees the roll: Public, Private GM, Blind GM, Self (helpers/message-modes.mjs).
  *     They start on the chat sidebar's choice and only change this one roll.
  *   - an optional "Spend N Spirituality" checkbox (helpers/spirituality.mjs)
+ *   - an optional DC: the dialog shows it, and the chat card says whether the roll passed (total >= DC)
  *   - rolling, and posting to chat as the character
  *
  * A dialog that extends this class only fills in its own part:
@@ -71,13 +72,15 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
    * @param {{cost: number, reason: string}} [options.spirituality] A Spirituality cost to offer spending (an action's).
    * @param {{flags?: object, footer?: string}} [options.chat]      Extra chat message flags, and HTML added after the
    *                                                                flavor (an action's Roll Damage buttons).
+   * @param {number|null} [options.dc]                              A DC to beat (Physique 15, ...), or null for none.
    */
-  constructor(actor, { modifiers = [], spirituality = null, chat = {}, ...options } = {}) {
+  constructor(actor, { modifiers = [], spirituality = null, chat = {}, dc = null, ...options } = {}) {
     super(options);
     this.actor = actor;
     this.modifiers = modifiers.filter((m) => m.value).map((m) => ({ id: foundry.utils.randomID(), ...m }));
     this.messageMode = defaultMessageMode();
     this.chat = chat;
+    this.dc = (dc === null || dc === undefined || Number.isNaN(Number(dc))) ? null : Number(dc);
 
     // Spirituality: ticked when the actor has enough, and it can't be ticked when they don't.
     this.spiritCost = Math.max(0, Number(spirituality?.cost) || 0);
@@ -160,6 +163,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
       spiritAffordable: spirit.value >= this.spiritCost,
       spendSpirit: this.spendSpirit,
       totalLabel: this._totalLabel(),
+      dc: this.dc,
     };
   }
 
@@ -204,12 +208,25 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
 
     await postRoll(roll, {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: this._flavor() + spiritualityNote(spent) + (this.chat.footer ?? ""),
+      flavor: this._flavor() + this.#dcNote(roll) + spiritualityNote(spent) + (this.chat.footer ?? ""),
       flags: this.chat.flags ?? {},
     }, this.messageMode);
 
     this.resolve?.(roll);
     return roll;
+  }
+
+  /**
+   * For a roll with a DC: " DC 15: Success" (or Failure) for the chat card. Empty without a DC.
+   * @param {Roll} roll
+   * @returns {string}
+   */
+  #dcNote(roll) {
+    if (this.dc === null) return "";
+    const success = roll.total >= this.dc;
+    const result = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
+    return ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
+      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DCResult", { dc: this.dc, result })}</span>`;
   }
 
   static async #onSubmit(event, form, formData) {

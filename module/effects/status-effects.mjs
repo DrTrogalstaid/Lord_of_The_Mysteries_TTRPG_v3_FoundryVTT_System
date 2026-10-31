@@ -10,6 +10,11 @@
  */
 
 import StatusRule from "./status-rule.mjs";
+import AngryRule from "./rules/angry.mjs";
+import BleedingRule from "./rules/bleeding.mjs";
+import BloodbathRule from "./rules/bloodbath.mjs";
+import DyingRule from "./rules/dying.mjs";
+import FearRule from "./rules/fear.mjs";
 
 /** Foundry's own icons, until the system has its own art. */
 const ICONS = "icons/svg";
@@ -24,7 +29,8 @@ const ICONS = "icons/svg";
  *              modifier added to the Agility + Dodge part (see effects/status-math.mjs).
  *   movement   Movement: agility "half" or "none".
  *   endButton  A button on its Effects tab row that ends it: label, icon, and a chat line ({name} = the actor).
- *   rule       A StatusRule subclass, for a status with its own code. Default: StatusRule.
+ *   turnStartNote  A line on the creature's start-of-turn card while it has the status (effects/turn-start.mjs).
+ *   rule       A StatusRule subclass, for a status with its own code (effects/rules/). Default: StatusRule.
  * Advantage and Disadvantage share one rules page, as do Dying and Dead.
  */
 const STATUSES = {
@@ -64,14 +70,22 @@ const STATUSES = {
     defense: { modifier: -2 },
   },
   bloodbath: {
+    rule: BloodbathRule,
     img: `${ICONS}/degen.svg`,
     page: "xOuGan91ZbOexD9O",
   },
   bleeding: {
+    rule: BleedingRule,
     img: `${ICONS}/blood.svg`,
     page: "RJJ6FFIcAIetLCAZ",
+    endButton: {
+      label: "LORD_OF_THE_MYSTERIES.Status.Buttons.Treated",
+      icon: "fa-solid fa-kit-medical",
+      chat: "LORD_OF_THE_MYSTERIES.Status.Chat.Treated",
+    },
   },
   dying: {
+    rule: DyingRule,
     img: `${ICONS}/bones.svg`,
     page: "Ae5VsAdAb7tiuTNC",
   },
@@ -80,10 +94,12 @@ const STATUSES = {
     page: "Ae5VsAdAb7tiuTNC",
   },
   fear: {
+    rule: FearRule,
     img: `${ICONS}/terror.svg`,
     page: "eTPMolBoiW99BRAH",
   },
   angry: {
+    rule: AngryRule,
     img: `${ICONS}/fire.svg`,
     page: "fayzjgNXjFZvBV1B",
   },
@@ -106,6 +122,7 @@ const STATUSES = {
   shock: {
     img: `${ICONS}/daze.svg`,
     page: "lqrqCDHweAGmyaih",
+    turnStartNote: "LORD_OF_THE_MYSTERIES.Status.TurnStart.Shock",
   },
 };
 

@@ -2,6 +2,7 @@
 import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
 import { LordOfTheMysteriesActiveEffect } from './documents/active-effect.mjs';
+import { LordOfTheMysteriesCombat } from './documents/combat.mjs';
 
 // Import sheet classes.
 // Both actor sheets extend LordOfTheMysteriesActorSheetBase (sheets/base-actor-sheet.mjs).
@@ -22,6 +23,7 @@ import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 import { registerCurrencySettings } from './helpers/currency.mjs';
 import { registerTokenSettings } from './helpers/token-settings.mjs';
 import { STATUS_RULES, registerStatusEffects } from './effects/status-effects.mjs';
+import { registerTurnStartChatListeners } from './effects/turn-start.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -71,6 +73,10 @@ Hooks.once('init', function () {
 
   // Make the "Roll damage" button on action attack messages work.
   registerActionChatListeners();
+
+  // Combat: start-of-turn cards for statuses (documents/combat.mjs), and their roll buttons (effects/turn-start.mjs).
+  CONFIG.Combat.documentClass = LordOfTheMysteriesCombat;
+  registerTurnStartChatListeners();
 
   // World setting read by SkillCheckDialog.prompt(): when off, untrained
   // skills can't be rolled at all.

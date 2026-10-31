@@ -68,8 +68,13 @@ export class LordOfTheMysteriesActiveEffect extends ActiveEffect {
   /** @override */
   _onCreate(data, options, userId) {
     super._onCreate(data, options, userId);
-    // Only the user who made the change creates the linked effects, so they aren't made once per player.
-    if (userId === game.user.id) this.#syncImpliedEffects();
+    // Only the user who made the change does these, so they don't happen once per player.
+    if (userId !== game.user.id) return;
+    this.#syncImpliedEffects();
+    // Each status's own step when it's put on an actor (Bloodbath starts Bleeding).
+    if (this.parent?.documentName === "Actor") {
+      for (const id of this.statuses) statusRule(id)?.onApplied(this);
+    }
   }
 
 

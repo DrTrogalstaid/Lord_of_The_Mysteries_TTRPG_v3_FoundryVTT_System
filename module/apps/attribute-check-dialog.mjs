@@ -23,10 +23,13 @@ export default class AttributeCheckDialog extends LotmRollDialog {
    * @param {Actor} actor
    * @param {string} attributeKey   A key of CONFIG.LORD_OF_THE_MYSTERIES.attributes ("str", "agi", ...).
    * @param {object} [options]
+   * @param {string} [options.reason]  Why it's rolled, shown in front of the chat card's title, e.g. "Bloodbath".
+   * @param {number} [options.dc]      A DC to beat (see LotmRollDialog).
    */
-  constructor(actor, attributeKey, options = {}) {
+  constructor(actor, attributeKey, { reason = "", ...options } = {}) {
     super(actor, options);
     this.attributeKey = attributeKey;
+    this.reason = reason;
   }
 
   /**
@@ -34,12 +37,14 @@ export default class AttributeCheckDialog extends LotmRollDialog {
    * @param {Actor} actor
    * @param {string} attributeKey
    * @param {object} [options]
-   * @param {boolean} [options.fast]  Shift-click: roll right away with no modifiers.
+   * @param {boolean} [options.fast]   Shift-click: roll right away with no modifiers.
+   * @param {number} [options.dc]      A DC to beat: the chat card says whether it passed (status checks).
+   * @param {string} [options.reason]  Why it's rolled, e.g. "Bloodbath": "Bloodbath: Physique Check".
    * @returns {Promise<Roll|null>}
    */
-  static async prompt(actor, attributeKey, { fast = false } = {}) {
+  static async prompt(actor, attributeKey, { fast = false, dc = null, reason = "" } = {}) {
     if (!actor?.system.attributes?.[attributeKey]) return null;
-    return this.show(new this(actor, attributeKey), { fast });
+    return this.show(new this(actor, attributeKey, { dc, reason }), { fast });
   }
 
   /** "Strength" */
@@ -73,8 +78,9 @@ export default class AttributeCheckDialog extends LotmRollDialog {
     return [`1d20`, `${signedTerm(this.attributeTotal)}[${abbr}]`, this.modifierTerms()].filter(Boolean).join(" ");
   }
 
-  /** @override */
+  /** "Physique Check", or "Bloodbath: Physique Check" with a reason. @override */
   _flavor() {
-    return game.i18n.format("LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor", { attribute: this.attributeName });
+    const check = game.i18n.format("LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor", { attribute: this.attributeName });
+    return this.reason ? `${Handlebars.escapeExpression(this.reason)}: ${check}` : check;
   }
 }

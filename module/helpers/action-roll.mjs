@@ -617,7 +617,8 @@ export function reduceDamage(types, reduction = {}) {
  * Damage: each token's damage reduction (its actor's system.damageReduction: the rows on its sheet plus its worn
  * armor, see base-actor.mjs) is taken off each damage type first (reduceDamage). Shift-click applies the damage
  * without any reduction (for attacks that ignore it). Healing is never reduced.
- * Health stays between 0 and its maximum.
+ * Damage can take Health below 0 (Dying at 0 or less, death further down: effects/health-statuses.mjs turns those
+ * statuses on). Healing stops at the maximum.
  * Each token needs to be one the user owns (the GM owns them all), otherwise it's skipped with a warning.
  * Every damaged token gets a chat message with the breakdown (postDamageTaken). The notice the user gets also
  * shows the Health before and after; the chat message doesn't.
@@ -659,7 +660,7 @@ export async function applyDamageFromMessage(message, kind, { ignoreReduction = 
     }
 
     const result = reduceDamage(types, ignoreReduction ? {} : actor.system.damageReduction);
-    const after = Math.max(0, before - result.total);
+    const after = before - result.total;
     await actor.update({ "system.resources.hp.value": after });
     // Tell the table what happened (without the Health that's left).
     await postDamageTaken(token, result, message, { ignoreReduction });

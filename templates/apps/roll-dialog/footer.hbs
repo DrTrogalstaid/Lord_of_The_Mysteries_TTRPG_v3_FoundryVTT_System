@@ -13,6 +13,10 @@
     <span class="roll-mode-label">{{messageModeLabel}}</span>
 </div>
 
+{{#if dc}}
+<p class="roll-dc">{{localize "LORD_OF_THE_MYSTERIES.RollDialog.DC" dc=dc}}</p>
+{{/if}}
+
 <footer>
     <button type="submit">
         <i class="fa-solid fa-dice-d20"></i>

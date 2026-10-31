@@ -5,6 +5,7 @@ import { atLeastLevel, raiseLevel } from "../../helpers/skill-associations.mjs";
 import { educationGrowth } from "../../helpers/skill-learning.mjs";
 import { activeStatusRules } from "../../effects/status-effects.mjs";
 import { combineStatusRules, movementAgility, physicalDefense } from "../../effects/status-math.mjs";
+import { syncHealthStatuses } from "../../effects/health-statuses.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -19,9 +20,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         const schema = {};
 
         // Iterate over resources names and create a new SchemaField for each.
+        // Health can go below 0: Dying starts at 0, and death comes at minus Physique (twice that for Beyonders),
+        // see effects/health-statuses.mjs. The other resources stop at 0.
         schema.resources = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.resources).reduce((obj, resource) => {
             obj[resource] = new fields.SchemaField({
-                value: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0 }),
+                value: new fields.NumberField({ ...requiredInteger, initial: 0, min: resource === "hp" ? undefined : 0 }),
                 max: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
             });
             return obj;
@@ -193,6 +196,15 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                     + (attr.corruption ?? 0) + attr.sequence_bonus + attr.growth_bonus;
         }
 
+        // Beyonder: owns a Sequence. Physical improvement: any Physique gain from a potion (a Sequence's Physique gain,
+        // Beyonder Bonus) or from corruption. The Bloodbath, Dying and Bleeding rules check these
+        // (effects/rules/), and death comes later for Beyonders (effects/health-statuses.mjs).
+        // Display only, not in the schema.
+        const physique = this.attributes.phy;
+        this.isBeyonder = sequences.length > 0;
+        this.hasPhysicalImprovement = (physique.sequence_bonus ?? 0) > 0 || (physique.beyonder_bonus ?? 0) > 0
+            || (physique.corruption ?? 0) > 0;
+
         // Strength Bonus Calculation
         const strengthDamageBonusTable = CONFIG.LORD_OF_THE_MYSTERIES.strengthDamageBonus;
         const strength = this.attributes.str.total;
@@ -233,6 +245,18 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // NOTE: THIS NEEDS TO BE CALLED LAST
         this._prepareSequenceCalculations(sequences);
 
+    }
+
+
+    /**
+     * After the actor is changed: when its Health changed, turn Bloodbath, Dying and Dead on or off to match
+     * (effects/health-statuses.mjs). Only on the client that made the change, so it happens once.
+     * @override
+     */
+    _onUpdate(changed, options, userId) {
+        super._onUpdate(changed, options, userId);
+        if (userId !== game.user.id) return;
+        if (changed.system?.resources?.hp?.value !== undefined) syncHealthStatuses(this.parent);
     }
 
 

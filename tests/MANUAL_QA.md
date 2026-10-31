@@ -206,7 +206,7 @@ Setup: set the chat sidebar's roll mode to Private GM Roll.
       Modifiers field is in the list (removable); its Spirituality Cost has the checkbox
 - [ ] Attack card: "Roll Damage" with "Big Success" to its right. Older attack cards still have a working Roll Damage
 - [ ] Roll Damage: the damage card has "Damage (N)" and "Heal (N)". Select a token and click Damage: its Health
-      drops by N (not below 0). Heal raises it (not above max). With nothing selected: a warning
+      drops by N (it can go below 0, see "Health statuses"). Heal raises it (not above max). With nothing selected: a warning
 - [ ] Big Success: when the roll is below the formula's average, the card says "rolled X, raised to the average (Y)"
       and the buttons use Y; otherwise it says the roll and the average, and the buttons use the roll
 - [ ] As a player, clicking Damage with an enemy token selected warns that only the GM can change its Health
@@ -381,3 +381,58 @@ Blind, Dead and Invisible:
 Initiative:
 
 - [ ] Roll initiative in a combat: 1d20 + the Agility total, no error
+
+## Health statuses and start-of-turn cards (Phase 2)
+
+Setup: a player character with 12 max Health and Physique 4, no Sequence (an ordinary person), and an NPC token.
+A combat with both in it.
+
+Negative Health:
+
+- [ ] Damage can take Health below 0 (Damage button, typing on either sheet, the token bar). Healing stops at the maximum
+
+Automatic statuses (Health 12 max, Physique 4):
+
+- [ ] Health 6: nothing. Health 5: Bloodbath, and Bleeding starts with it (two icons on the token)
+- [ ] Health 0: Dying is added (Bloodbath stays). Health -4: still Dying. Health -5: Dead (big skull over the token,
+      Defeated in the combat tracker), and Dying comes off
+- [ ] Give the character a Sequence (a Beyonder): it only dies below -8
+- [ ] Heal back to 12: Bloodbath and Dying come off; Bleeding stays until it's treated; Dead stays (remove it by hand)
+- [ ] Turning Bloodbath on by hand also starts Bleeding. Already bleeding: no second Bleeding
+- [ ] An unlinked NPC token: its own Health and statuses change, not the NPC in the sidebar
+
+Start-of-turn card (whispered to the creature's owners and the GM; an NPC's only to the GM):
+
+- [ ] A creature with none of these statuses gets no card
+- [ ] Bleeding: "Roll 1d2". Clicking it rolls 1d2 (shown in chat as "Bleeding") and takes it off Health. Internal
+      bleeding, set from the console until the effect sheet gets its LotM tab in Phase 4:
+      `game.actors.getName("<character>").effects.getName("Bleeding").update({ "system.hasInternalBleeding": true })`
+      The next card says only extraordinary medicine or surgery stops it
+- [ ] Fear / Angry toggled from the Token HUD have no source, so the card says "its source". Give one a source:
+      `game.actors.getName("<character>").effects.getName("Fear").update({ "system.source": game.actors.getName("<other>").uuid })`
+      The card and the Effects tab row name that creature
+- [ ] Bloodbath: "Roll Physique (DC 15)" opens the attribute check dialog showing "DC 15". The chat card says
+      "Bloodbath: Physique Check" and "DC 15: Success" or "Failure". Failure: the creature becomes Helpless (and Bound),
+      and chat says it faints (seen by everyone). From its next turn on, the card has no Bloodbath check while it's Helpless
+- [ ] Dying while Helpless (fainted): only "Roll Physique (DC 15)", no "Roll Will to act"
+- [ ] Dying: "Roll Physique (DC 15)": failure kills it (Dead), and chat says it dies (seen by everyone).
+      "Roll Will (DC 15) to act": chat says whether it can take an attack, casting or move action this round (owners and GM only)
+- [ ] Fear: "Roll Will (DC 15)": success marks it resisted; next turn the card only says checks against the source are -4
+- [ ] Angry/Taunted: "Roll Will (DC 20)": success removes the status, and chat says it calms down
+- [ ] Shock: a reminder line, no button
+- [ ] Each button works once: clicking it again warns "already rolled". Reopening chat shows it greyed out.
+      Closing the dialog without rolling leaves the button usable
+- [ ] A player who doesn't own the creature can't use its buttons
+- [ ] Shift-click a card button: rolls without the dialog
+- [ ] Physical improvement (give the character a Physique gain on its Sequence, Beyonder Bonus or Corruption): no Bloodbath
+      check, Bleeding loses no Health, and Dying says it acts normally (no buttons)
+- [ ] A Dead or Defeated combatant gets no card
+
+Effects tab buttons:
+
+- [ ] Bleeding: Treated removes it, chat says the bleeding is treated
+- [ ] Fear: Resist (Will 15) rolls the same check as the card; once resisted, the button is gone
+- [ ] Angry/Taunted: Calm Down (Will 20); Meditation (Full) removes it; Meditation (Half) halves the penalty (the
+      button disappears afterwards; the penalty itself is in the roll dialogs from Phase 3)
+- [ ] Stand Up (Loss of Balance) and the other status chat lines are whispered to the owners and the GM. Only "faints
+      and is Helpless" and "dies" are public

@@ -151,3 +151,70 @@
 .lotm.sheet.actor .status-modified input {
   color: var(--lotm-status-active);
 }
+
+/* -------------------------------------------------------------------- */
+/* Chat: start-of-turn card (effects/turn-start.mjs)                    */
+/* -------------------------------------------------------------------- */
+
+.lotm.chat-turn-start .chat-turn-start-title {
+  margin: 0 0 4px;
+  font-weight: bold;
+}
+
+.lotm.chat-turn-start .turn-start-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lotm.chat-turn-start .turn-start-status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.lotm.chat-turn-start .turn-start-status img {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+}
+
+.lotm.chat-turn-start .turn-start-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm.chat-turn-start .turn-start-buttons button {
+  flex: 1 1 auto;
+  margin: 0;
+  width: auto;
+}
+
+/* -------------------------------------------------------------------- */
+/* Rolls with a DC: the dialog's "DC 15" line, and the chat card's result */
+/* -------------------------------------------------------------------- */
+
+.lotm.roll-dialog .roll-dc {
+  margin: 4px 0;
+  text-align: center;
+  font-weight: bold;
+}
+
+.roll-dc-result {
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.roll-dc-result.success {
+  color: #3d7a46;
+}
+
+.roll-dc-result.failure {
+  color: #b33a3a;
+}
