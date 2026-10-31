@@ -57,8 +57,8 @@
   cursor: default;
 }
 
-/* Effect rows: icon, name and details, time left, buttons. */
-.lotm.sheet.actor .effect-list {
+/* Effect rows: icon, name and details, time left, buttons. Actor Effects tabs and item Effects lists. */
+.lotm.sheet .effect-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -67,70 +67,70 @@
   gap: 4px;
 }
 
-.lotm.sheet.actor .effect-row {
+.lotm.sheet .effect-row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 4px 6px;
-  background: var(--psx-panel);
-  border: 1px solid var(--psx-border);
+  background: var(--psx-panel, rgba(127, 127, 127, 0.12));
+  border: 1px solid var(--psx-border, rgba(0, 0, 0, 0.25));
   border-radius: 4px;
 }
 
 /* Switched off, or suppressed (gear that's stowed). */
-.lotm.sheet.actor .effect-row.inactive {
+.lotm.sheet .effect-row.inactive {
   opacity: 0.55;
 }
 
-.lotm.sheet.actor .effect-img {
+.lotm.sheet .effect-img {
   flex: 0 0 auto;
   width: 28px;
   height: 28px;
   border: none;
 }
 
-.lotm.sheet.actor .effect-info {
+.lotm.sheet .effect-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.lotm.sheet.actor .effect-name {
+.lotm.sheet .effect-name {
   font-weight: bold;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lotm.sheet.actor .effect-detail {
-  color: var(--psx-text-dim);
+.lotm.sheet .effect-detail {
+  color: var(--psx-text-dim, #666);
   font-size: 11px;
 }
 
-.lotm.sheet.actor .effect-duration {
+.lotm.sheet .effect-duration {
   flex: 0 0 auto;
-  color: var(--psx-text-dim);
+  color: var(--psx-text-dim, #666);
   font-size: 11px;
   white-space: nowrap;
 }
 
-.lotm.sheet.actor .effect-controls {
+.lotm.sheet .effect-controls {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.lotm.sheet.actor .effect-control {
-  color: var(--psx-text-dim);
+.lotm.sheet .effect-control {
+  color: var(--psx-text-dim, #666);
 }
 
-.lotm.sheet.actor .effect-control:hover {
-  color: var(--psx-text);
+.lotm.sheet .effect-control:hover {
+  color: var(--psx-text, inherit);
 }
 
-.lotm.sheet.actor .effect-button {
+.lotm.sheet .effect-button {
   flex: 0 0 auto;
   width: auto;
   height: 22px;
@@ -287,4 +287,99 @@
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------- */
+/* Item sheets: the Effects list (templates/item/parts/item-effects.hbs) */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.item .item-effects {
+  margin: 8px 0;
+  padding: 4px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+}
+
+/* An effect dragged over the list. */
+.lotm.sheet.item .item-effects.drag-over {
+  border-color: var(--lotm-status-active, #c9a227);
+}
+
+.lotm.sheet.item .item-effects-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.lotm.sheet.item .item-effects-header .item-effects-create {
+  flex: 0 0 auto;
+  width: auto;
+  height: 24px;
+  line-height: 1;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.lotm.sheet.item .item-effects .effect-row {
+  cursor: grab;
+}
+
+.lotm.sheet.item .item-effects .hint {
+  margin-top: 6px;
+}
+
+/* -------------------------------------------------------------------- */
+/* Effect sheet: the LotM tab (apps/effect-config.mjs)                  */
+/* -------------------------------------------------------------------- */
+
+.lotm-effect-config .lotm-effect-tab .lotm-source-name {
+  flex: 1;
+  font-weight: bold;
+}
+
+.lotm-effect-config .lotm-effect-tab .form-fields button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.lotm-effect-config .lotm-granted-from {
+  font-style: italic;
+}
+
+/* -------------------------------------------------------------------- */
+/* Chat: Apply buttons on attack cards, and "X applies Y to Z"           */
+/* effects/effect-application.mjs                                        */
+/* -------------------------------------------------------------------- */
+
+.lotm-effect-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm-effect-buttons .lotm-apply-effect {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.lotm-effect-buttons .lotm-apply-effect img {
+  border: none;
+}
+
+.lotm.chat-effect-applied {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.chat-effect-applied img {
+  flex: 0 0 auto;
+  border: none;
 }

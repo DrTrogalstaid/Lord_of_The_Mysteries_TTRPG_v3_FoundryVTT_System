@@ -26,7 +26,8 @@
       "Ability": "Ability",
       "Action": "Action",
       "Gear": "Gear Sheet",
-      "Container": "Clothing / Bag Sheet"
+      "Container": "Clothing / Bag Sheet",
+      "ActiveEffect": "LotM Effect Sheet"
     },
 
     "Effects": {
@@ -66,6 +67,48 @@
           "rectangle": "Rectangle",
           "emanation": "Emanation (moves with the user)"
         }
+      },
+      "Use": {
+        "passive": "Passive (lent to the owner)"
+      },
+      "Apply": {
+        "Button": "Apply {name}",
+        "Chat": "{name} applies {effect} to {targets}.",
+        "Passive": "{name} is passive: it applies to the item's owner by itself.",
+        "NoCaster": "Who's using {name}? Select your token, or open the item from a character.",
+        "NoTargets": "Target the tokens that get {name} first.",
+        "AreaLater": "Area and zone effects arrive in the next update. Use Targets for now.",
+        "NoGM": "{name} belongs to someone else, and no GM is logged in to apply the effect.",
+        "GMFailed": "The GM's client couldn't apply the effect to {name}.",
+        "Gone": "That item or its effect no longer exists.",
+        "NotOwner": "Only {name}'s owners and the GM can apply this."
+      },
+      "Item": {
+        "Create": "New Effect",
+        "NewName": "New Effect",
+        "ApplyHint": "Apply: hand it out the way its LotM tab says (targets, self, ...)",
+        "Empty": "No effects. Click New Effect, or drop one here from the Effects compendium.",
+        "Hint": "Passive effects apply to the owner by themselves. The others are handed out with Apply, the Apply button on the attack card, or by dragging them onto a token."
+      },
+      "Config": {
+        "Tab": "LotM",
+        "SourceLabel": "Source",
+        "SourceHint": "Who the effect is about: the source of Fear or Anger, the enemy Advantage is over. Filled in when it's applied.",
+        "SourceMissing": "(no longer exists)",
+        "NoSource": "None",
+        "FromTarget": "My Target",
+        "FromTargetHint": "Set the source to the token you have targeted",
+        "Clear": "Clear the source",
+        "TargetOne": "Target exactly one token to make it the source.",
+        "UseLabel": "Use",
+        "UseHint": "Passive: applies to whoever owns the item. Targets: your targeted tokens. Self: you. Area: everyone in a shape you place, once. Zone: everyone inside a shape that stays on the scene.",
+        "Shape": "Shape",
+        "Size": "Size ({units})",
+        "StatusLabel": "Status",
+        "HasResisted": "Resisted (no more forced movement)",
+        "IsPenaltyHalved": "Penalty halved (Meditation, Half)",
+        "HasInternalBleeding": "Internal bleeding",
+        "GrantedFrom": "Copied from the ability {name}."
       }
     },
 
@@ -557,9 +600,9 @@
       "ReasonPlaceholder": "Optional, e.g. a ritual",
       "InvalidAmount": "Enter an amount of 1 or more.",
       "NotEnough": "{name} has only {value} Spirituality ({cost} needed). Nothing was spent.",
-      "Chat": "{name} spends {amount} Spirituality{reason}: {before} → {after}",
+      "Chat": "{name} spends {amount} Spirituality{reason}.",
       "ChatReason": " on {reason}",
-      "RollNote": "-{amount} Spirituality ({after} left)",
+      "RollNote": "-{amount} Spirituality",
       "ActionCheckbox": "Spend {cost} Spirituality (has {value})",
       "ActionNotEnough": "Not enough Spirituality ({value} of {cost}). It will roll without spending any.",
       "UseButton": "Spend {cost}",

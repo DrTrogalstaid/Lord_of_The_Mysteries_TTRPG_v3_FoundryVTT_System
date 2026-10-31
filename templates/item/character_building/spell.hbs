@@ -4,6 +4,7 @@
   <nav class="sheet-tabs tabs" data-group="sheet">
     <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
     <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
+    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
   </nav>
 
   {{!-- Sheet Body --}}
@@ -157,6 +158,11 @@
         <input id="activeEffectMacro" class="blend-input" type="text" name="system.activeEffectMacro" value="{{system.activeEffectMacro}}" placeholder="ActiveEffectMacro" />
       </fieldset>
 
+    </div>
+
+    {{!-- Effects Tab: the item's effects (templates/item/parts/item-effects.hbs) --}}
+    <div class="tab effects {{tabs.effects.cssClass}}" data-group="sheet" data-tab="effects">
+      {{> "systems/lotm/templates/item/parts/item-effects.hbs"}}
     </div>
 
   </section>

@@ -10,7 +10,7 @@ import {
   BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
 } from "../../../helpers/currency.mjs";
 import { ammoBoxStatus, chamberRound, firearmStatus, reloadGun, unloadGun } from "../../../helpers/firearms.mjs";
-import { LordOfTheMysteriesItemSheetBase } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
 
 /**
@@ -129,8 +129,12 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     },
   };
 
+  /** The Effects list at the bottom of the sheet (sheets/base-item-sheet.mjs). Gear only lends its passive effects
+   *  while it's held or worn (documents/active-effect.mjs). */
+  static HAS_EFFECTS = true;
+
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs" },
+    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
   };
 
   /** @override */

@@ -321,6 +321,9 @@
     </div>
   {{/each}}
 
+  {{!-- The gear's effects (templates/item/parts/item-effects.hbs). Passive ones only apply while it's held or worn. --}}
+  {{> "systems/lotm/templates/item/parts/item-effects.hbs"}}
+
   <div class="form-group stacked">
     <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Description"}}</label>
     <textarea name="system.description" {{#unless editable}}disabled{{/unless}}>{{source.description}}</textarea>

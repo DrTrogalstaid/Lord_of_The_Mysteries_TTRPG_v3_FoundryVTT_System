@@ -15,6 +15,7 @@ import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building
 import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
 import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
 import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
+import LotmActiveEffectConfig from './apps/effect-config.mjs';
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
@@ -24,6 +25,7 @@ import { registerCurrencySettings } from './helpers/currency.mjs';
 import { registerTokenSettings } from './helpers/token-settings.mjs';
 import { STATUS_RULES, registerStatusEffects } from './effects/status-effects.mjs';
 import { registerTurnStartChatListeners } from './effects/turn-start.mjs';
+import { registerEffectQueries } from './effects/effect-application.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -124,6 +126,8 @@ Hooks.once('init', function () {
   CONFIG.ActiveEffect.defaultType = 'effect';
   // An effect whose duration has run out is deleted (Foundry's effect registry checks durations as time passes).
   CONFIG.ActiveEffect.expiryAction = 'delete';
+  // Players' Apply buttons ask the GM to put effects on actors they don't own (effects/effect-application.mjs).
+  registerEffectQueries();
 
   // World setting: Invisible hides the token like Foundry's own invisibility, or is only a status icon.
   // Read once here, when the statuses are registered, so changing it needs a reload.
@@ -192,6 +196,12 @@ Hooks.once('init', function () {
     types: ['container'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Container'
+  });
+
+  // The effect sheet: Foundry's, plus a LotM tab (Source, Use, Shape and Size; apps/effect-config.mjs).
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(ActiveEffect, 'lotm', LotmActiveEffectConfig, {
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.ActiveEffect',
   });
 
   // Preload Handlebars templates.

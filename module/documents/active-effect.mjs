@@ -1,4 +1,5 @@
 import { statusRule, withImpliedStatuses } from "../effects/status-effects.mjs";
+import { effectUse } from "../effects/effect-application.mjs";
 
 /**
  * The system's Active Effect document. Statuses (Bound, Fear, ...), spell effects and the effects Items lend their
@@ -13,6 +14,12 @@ import { statusRule, withImpliedStatuses } from "../effects/status-effects.mjs";
  *   - can't be removed on its own while that effect is still there
  * Only effects on an actor get linked effects. An effect an Item lends its owner doesn't; its implied statuses
  * still count for the rules (activeStatusIds), they just have no icon of their own.
+ *
+ * Effects on Items (spells, actions, abilities, gear): each is either passive (lent to the Item's owner) or handed
+ * out when the Item is used (effects/effect-application.mjs). Two things are filled in when an effect is created:
+ *   - on an Item: its origin is that Item, so copies handed out from it remember where they came from
+ *   - on an actor, with no source yet: the source is whoever owns the Item it came from. Dragging Terrify's effect
+ *     from Klein's spell onto a goblin's token makes Klein the one the goblin fears.
  *
  * The effect's own data (system.source, system.impliedBy, ...) is described in data/effect/effect.mjs.
  * @extends {ActiveEffect}
@@ -51,6 +58,22 @@ export class LordOfTheMysteriesActiveEffect extends ActiveEffect {
 
 
   /**
+   * How this effect is used: "passive" (an Item lends it to its owner) or how it's handed out: "targets", "self",
+   * "area" or "zone" (effects/effect-application.mjs).
+   * @type {string}
+   */
+  get use() {
+    return effectUse(this);
+  }
+
+
+  /** Lent to the owner of the Item it's on (core's transfer), rather than handed out when the Item is used. */
+  get isPassive() {
+    return this.use === "passive";
+  }
+
+
+  /**
    * Gear only lends its effects (its own, and the ones copied from abilities it grants) while it's held or worn.
    * Stowed in a coat or bag, they stop applying until it's taken out again; the effects stay on the gear.
    * @override
@@ -59,6 +82,30 @@ export class LordOfTheMysteriesActiveEffect extends ActiveEffect {
     const item = this.parent;
     if (item?.documentName === "Item" && item.type === "gear" && item.system.carry === "stowed") return true;
     return super.isSuppressed;
+  }
+
+  /* -------------------------------------------- */
+  /*  Origin and source                            */
+  /* -------------------------------------------- */
+
+  /**
+   * Fill in where the effect came from, and who it's about, when that can be told:
+   *   - on an Item: origin = the Item
+   *   - on an actor, with no source: source = the owner of its origin Item, when that's another actor
+   * @override
+   */
+  async _preCreate(data, options, user) {
+    if ((await super._preCreate(data, options, user)) === false) return false;
+    const parent = this.parent;
+
+    if (parent?.documentName === "Item" && !this.origin) {
+      this.updateSource({ origin: parent.uuid });
+    }
+
+    if (parent?.documentName === "Actor" && !this.system?.source && this.origin) {
+      const owner = originOwner(this.origin);
+      if (owner && owner.uuid !== parent.uuid) this.updateSource({ "system.source": owner.uuid });
+    }
   }
 
   /* -------------------------------------------- */
@@ -161,4 +208,23 @@ export class LordOfTheMysteriesActiveEffect extends ActiveEffect {
     if (toUpdate.length) await actor.updateEmbeddedDocuments("ActiveEffect", toUpdate);
     if (toCreate.length) await actor.createEmbeddedDocuments("ActiveEffect", toCreate);
   }
+}
+
+
+/**
+ * The actor who owns the document an origin UUID points to: the actor itself, or the owner of an Item.
+ * null when it can't be found right away, or nobody owns it (a world or compendium Item).
+ * @param {string} uuid
+ * @returns {Actor|null}
+ */
+function originOwner(uuid) {
+  let doc = null;
+  try {
+    doc = fromUuidSync(uuid, { strict: false });
+  } catch {
+    return null;
+  }
+  if (!doc) return null;
+  if (doc.documentName === "Actor") return doc;
+  return doc.actor ?? null;
 }

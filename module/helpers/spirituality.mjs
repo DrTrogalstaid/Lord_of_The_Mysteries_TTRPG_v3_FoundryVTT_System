@@ -38,8 +38,8 @@ export function currentSpirituality(actor) {
  * @param {number} amount
  * @param {object} [options]
  * @param {string} [options.reason]   What it was spent on, for the warning and chat message (an action's name).
- * @param {boolean} [options.chat]    Post "X spends 3 Spirituality on Y. 10 → 7" to chat. Rolls put a note in their
- *                                    own message instead (spiritualityNote), so they pass false.
+ * @param {boolean} [options.chat]    Post "X spends 3 Spirituality on Y." to chat (how much is left isn't shown).
+ *                                    Rolls put a note in their own message instead (spiritualityNote), so they pass false.
  * @returns {Promise<{amount: number, before: number, after: number}|null>}
  *   What happened, or null when nothing was spent (not enough, or nothing to spend).
  */
@@ -66,8 +66,6 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
       reason: reason
         ? game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.ChatReason", { reason: Handlebars.escapeExpression(reason) })
         : "",
-      before: value,
-      after,
     });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
@@ -78,13 +76,13 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
 }
 
 /**
- * The line a roll's chat message gets when it spent Spirituality: "-2 Spirituality (8 left)".
+ * The line a roll's chat message gets when it spent Spirituality: "-2 Spirituality" (how much is left isn't shown).
  * @param {{amount: number, after: number}|null} spent  What spendSpirituality returned.
  * @returns {string}  HTML, or "" when nothing was spent.
  */
 export function spiritualityNote(spent) {
   if (!spent) return "";
-  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.RollNote", { amount: spent.amount, after: spent.after });
+  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.RollNote", { amount: spent.amount });
   return `<div class="lotm chat-spirituality"><i class="fa-solid fa-sparkles"></i> ${text}</div>`;
 }
 

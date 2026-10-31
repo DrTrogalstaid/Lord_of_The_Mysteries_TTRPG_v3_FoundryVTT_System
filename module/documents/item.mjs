@@ -14,6 +14,22 @@ export class LordOfTheMysteriesItem extends Item {
   }
 
   /**
+   * A copied Item (dropped on a character, duplicated, imported from a compendium) brings its effects along, still
+   * naming the Item they were copied from as their origin. Point them at this Item, so effects handed out from it
+   * know whose they are (documents/active-effect.mjs fills in their source from that).
+   * Only the user who created the Item does this.
+   * @override
+   */
+  _onCreate(data, options, userId) {
+    super._onCreate(data, options, userId);
+    if (userId !== game.user.id) return;
+    const updates = this.effects
+      .filter((effect) => effect.origin !== this.uuid)
+      .map((effect) => ({ _id: effect.id, origin: this.uuid }));
+    if (updates.length) this.updateEmbeddedDocuments("ActiveEffect", updates);
+  }
+
+  /**
    * Prepare a data object which defines the data schema used by dice roll commands against this Item
    * @override
    */

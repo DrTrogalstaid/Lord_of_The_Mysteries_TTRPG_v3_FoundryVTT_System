@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
 import { AMMO_USES } from "../../../helpers/firearms.mjs";
 
@@ -16,10 +16,16 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
     },
   };
 
+  /** The Effects tab (sheets/base-item-sheet.mjs). */
+  static HAS_EFFECTS = true;
+
+  /** @override */
+  static TABS = LordOfTheMysteriesItemSheetBase.EFFECTS_TABS;
+
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/action.hbs", templates: [ACTION_TRAITS_PARTIAL] },
+    form: { template: "systems/lotm/templates/item/character_building/action.hbs", templates: [ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL] },
   };
 
   /* -------------------------------------------- */

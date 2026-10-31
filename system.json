@@ -127,6 +127,18 @@
         "ASSISTANT": "OWNER"
       },
       "flags": {}
+    },
+    {
+      "name": "effects",
+      "label": "Effects",
+      "path": "packs/effects",
+      "type": "ActiveEffect",
+      "system": "lotm",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
     }
   ],
   "packFolders": [],

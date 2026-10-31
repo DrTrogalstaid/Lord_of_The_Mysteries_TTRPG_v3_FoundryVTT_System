@@ -7,6 +7,7 @@ import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 import { canFire, fireGun, gunFor } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
+import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
 
 /**
  * Action rolls
@@ -217,7 +218,8 @@ function getUnskilledAttackSummary(actor, action) {
 
 /**
  * What every action attack adds to its chat message: which action/character it was (for the
- * damage button), and the "Roll Damage" button itself when the action has a damage formula.
+ * damage button), the "Roll Damage" button itself when the action has a damage formula, and an Apply button
+ * for each effect the action hands out (effects/effect-application.mjs).
  * @param {Actor} actor
  * @param {Item} action
  * @param {object} [options]
@@ -227,7 +229,7 @@ function getUnskilledAttackSummary(actor, action) {
 function actionChatExtras(actor, action, { note = "" } = {}) {
   return {
     flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid } },
-    footer: note + (getDamageFormula(action) ? damageButtonHTML() : ""),
+    footer: note + (getDamageFormula(action) ? damageButtonHTML() : "") + effectButtonsHTML(action),
   };
 }
 
@@ -753,7 +755,8 @@ async function postDamageTaken(token, result, source, { ignoreReduction = false 
 
 /**
  * Make the chat buttons work. Called once from the init hook in lotm.mjs.
- *   Attack messages:  "Roll Damage" and "Big Success" (older messages have only the one damage button)
+ *   Attack messages:  "Roll Damage" and "Big Success" (older messages have only the one damage button),
+ *                     and "Apply <effect>" for each effect the action hands out
  *   Damage messages:  "Damage" and "Heal"
  * The buttons are written into the message's flavor, which Foundry shows above the roll, so they're moved
  * below it into the message's content.
@@ -769,6 +772,16 @@ export function registerActionChatListeners() {
       content?.append(holder);
       for (const button of rollButtons) {
         button.addEventListener("click", () => onRollDamageButton(message, button.dataset.lotmAction === "bigSuccess"));
+      }
+    }
+
+    // Apply <effect> (effects/effect-application.mjs)
+    const effectButtons = html.querySelectorAll("button[data-lotm-apply-effect]");
+    if (effectButtons.length) {
+      const holder = html.querySelector(".lotm-effect-buttons");
+      if (holder) content?.append(holder);
+      for (const button of effectButtons) {
+        button.addEventListener("click", () => applyEffectFromMessage(message, button.dataset.lotmApplyEffect));
       }
     }
 

@@ -1,0 +1,84 @@
+{{!-- The effect sheet's LotM tab (apps/effect-config.mjs). --}}
+<section class="tab lotm-effect-tab {{tab.cssClass}}" data-group="sheet" data-tab="lotm">
+
+  <fieldset>
+    <legend>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.SourceLabel"}}</legend>
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.SourceLabel"}}</label>
+      <div class="form-fields">
+        <span class="lotm-source-name" data-lotm-source-name>{{#if lotm.sourceName}}{{lotm.sourceName}}{{else}}{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.NoSource"}}{{/if}}</span>
+        {{#if lotm.editable}}
+        <button type="button" data-action="sourceFromTarget" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.FromTargetHint'}}">
+          <i class="fa-solid fa-crosshairs"></i> {{localize "LORD_OF_THE_MYSTERIES.Effects.Config.FromTarget"}}
+        </button>
+        <button type="button" data-action="clearSource" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Clear'}}"
+                data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Clear'}}">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        {{/if}}
+      </div>
+      <input type="hidden" name="system.source" value="{{lotm.sourceUuid}}" />
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.SourceHint"}}</p>
+    </div>
+  </fieldset>
+
+  {{#if lotm.onItem}}
+  <fieldset>
+    <legend>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.UseLabel"}}</legend>
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.UseLabel"}}</label>
+      <div class="form-fields">
+        <select name="lotmUse" {{#unless lotm.editable}}disabled{{/unless}}>
+          {{selectOptions lotm.uses selected=lotm.use}}
+        </select>
+      </div>
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.UseHint"}}</p>
+    </div>
+
+    <div data-lotm-area-fields {{#unless lotm.isArea}}hidden{{/unless}}>
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Shape"}}</label>
+        <div class="form-fields">
+          <select name="system.application.shape" {{#unless lotm.editable}}disabled{{/unless}}>
+            {{selectOptions lotm.shapes selected=lotm.shape}}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>{{lotm.sizeLabel}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.application.size" value="{{lotm.size}}" min="0" step="any" {{#unless lotm.editable}}disabled{{/unless}} />
+        </div>
+      </div>
+    </div>
+  </fieldset>
+  {{/if}}
+
+  {{#if (or lotm.showResisted lotm.showHalved lotm.showInternal)}}
+  <fieldset>
+    <legend>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.StatusLabel"}}</legend>
+    {{#if lotm.showResisted}}
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.HasResisted"}}</label>
+      <div class="form-fields"><input type="checkbox" name="system.hasResisted" {{checked lotm.hasResisted}} {{#unless lotm.editable}}disabled{{/unless}} /></div>
+    </div>
+    {{/if}}
+    {{#if lotm.showHalved}}
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.IsPenaltyHalved"}}</label>
+      <div class="form-fields"><input type="checkbox" name="system.isPenaltyHalved" {{checked lotm.isPenaltyHalved}} {{#unless lotm.editable}}disabled{{/unless}} /></div>
+    </div>
+    {{/if}}
+    {{#if lotm.showInternal}}
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.HasInternalBleeding"}}</label>
+      <div class="form-fields"><input type="checkbox" name="system.hasInternalBleeding" {{checked lotm.hasInternalBleeding}} {{#unless lotm.editable}}disabled{{/unless}} /></div>
+    </div>
+    {{/if}}
+  </fieldset>
+  {{/if}}
+
+  {{#if lotm.grantedFrom}}
+  <p class="hint lotm-granted-from">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.GrantedFrom" name=lotm.grantedFrom}}</p>
+  {{/if}}
+</section>

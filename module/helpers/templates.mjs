@@ -36,5 +36,6 @@ export const preloadHandlebarsTemplates = async function () {
     // Item partials
     'systems/lotm/templates/item/parts/item-header.hbs',
     'systems/lotm/templates/item/parts/action-traits.hbs',
+    'systems/lotm/templates/item/parts/item-effects.hbs',
   ]);
 };

@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
 /**
  * The lists an Item can be dropped on, keyed by the [data-drop-zone] they're shown in (ability.hbs).
@@ -49,10 +49,16 @@ export class LordOfTheMysteriesAbilitySheet extends LordOfTheMysteriesItemSheetB
     },
   };
 
+  /** The Effects tab (sheets/base-item-sheet.mjs). */
+  static HAS_EFFECTS = true;
+
+  /** @override */
+  static TABS = LordOfTheMysteriesItemSheetBase.EFFECTS_TABS;
+
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/ability.hbs" },
+    form: { template: "systems/lotm/templates/item/character_building/ability.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
   };
 
   /* -------------------------------------------- */

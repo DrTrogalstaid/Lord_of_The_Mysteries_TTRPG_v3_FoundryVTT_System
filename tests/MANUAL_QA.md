@@ -176,10 +176,10 @@ Setup: a Sequence whose skill increases include a compendium skill (e.g. Pistol)
 ## Spending Spirituality (player and NPC sheets)
 
 - [ ] Sidebar Spend button (player and NPC): a dialog shows current / max Spirituality and asks for an amount and
-      an optional reason. Spending lowers Spirituality and posts "X spends 3 Spirituality on Y: 10 → 7" to chat
+      an optional reason. Spending lowers Spirituality and posts "X spends 3 Spirituality on Y." to chat (no amount left)
 - [ ] Spending more than the actor has: a warning, nothing changes. Closing the dialog spends nothing
 - [ ] An action with a skill and a Spirituality Cost: the roll dialog has a "Spend N Spirituality" box, ticked.
-      Rolling spends it and the chat card says "-N Spirituality (X left)". Untick it: nothing is spent.
+      Rolling spends it and the chat card says "-N Spirituality" (no amount left). Untick it: nothing is spent.
       Closing the dialog without rolling spends nothing. Changing the attribute keeps the box as you set it
 - [ ] Not enough Spirituality: the box is greyed out with a warning, and the roll happens without spending
 - [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends the cost (note on the chat card)
@@ -492,3 +492,73 @@ Use Anyway warnings (the dialog lists every status that stops it; Cancel does no
 - [ ] Hotbar macro for a restricted action: the warning shows too
 - [ ] Blind with an empty gun: "Click. Revolver is empty." straight away, with no warning (nothing to use anyway)
 - [ ] Blind with a loaded gun: the warning; Use Anyway rolls and uses the round; Cancel keeps the round
+
+## Effects on items, the effect sheet and Apply buttons (Phase 4a)
+
+Setup: restart Foundry (system.json gained the Effects compendium), then reload the world. Run `npm test` (80 tests).
+Use a character who owns a spell, an NPC token to target, and a second player account if you can.
+
+Effects compendium:
+
+- [ ] The compendium sidebar has "Effects" with 17 entries, one per status, each with its status icon
+- [ ] Opening one shows a link to its rules page in the description
+- [ ] As the GM, drag Fear from the compendium onto an NPC token: the token shows the Fear icon and the NPC's
+      Effects tab lists it (no source)
+- [ ] Drag Helpless onto a token: Helpless and its linked Bound both appear, as before
+
+Item Effects tab (Ability, Action, Spell, Sequence) and the gear sheet's Effects list (at the bottom):
+
+- [ ] Each of those sheets has an Effects tab; gear shows the list above its description. Containers have none
+- [ ] New Effect on a spell or action: a new "New Effect" opens; its LotM tab says Use: Targets
+- [ ] New Effect on an ability, Sequence or gear: Use: Passive (lent to the owner)
+- [ ] Rows show the use ("Targets", "Passive (lent to the owner)", "Area (once): Circle, 1 ft") and their statuses
+- [ ] On/Off, Edit and Delete work (Delete asks first; Shift-click skips that)
+- [ ] Drag Fear from the Effects compendium onto a spell's Effects tab: it's copied in as Targets. Onto an ability:
+      as Passive. Drag an effect from one spell to another: it keeps its Use
+- [ ] A compendium item you can't edit shows its effects without New / On/Off / Delete
+- [ ] A passive effect with a change (Changes tab: `system.attributes.ins.beyonder_bonus`, Add, 2) on an ability the
+      character owns: the character's Effects tab lists it as "From <ability>", and Inspiration's total goes up by 2
+- [ ] Gear with a passive effect: held or worn, it applies; stowed, the character's Effects tab says "Not active while stowed"
+
+Effect sheet, LotM tab:
+
+- [ ] Every effect sheet has a LotM tab after Foundry's own tabs
+- [ ] Source: "None" at first. Target one token and click My Target: its name shows; Clear sets it back to None.
+      Save, reopen: it stuck. With no target, or two, My Target warns
+- [ ] Use (effects on items only): switching to Area or Zone shows Shape and Size; Targets / Self / Passive hide them
+- [ ] Switching Use to Passive and back on a spell's effect changes the row's label on the spell sheet
+- [ ] Fear effects show "Resisted", Angry effects "Penalty halved", Bleeding effects "Internal bleeding"; other
+      effects don't show that box. Ticking Resisted on a creature's Fear: the next turn-start card says it's resisted
+- [ ] An effect on an actor has no Use dropdown
+
+Apply (item sheet button, and the chat card):
+
+- [ ] Give a spell an effect "Terrified" (Fear status, 3 rounds, Use: Targets). Roll the spell's attack: the chat card
+      has "Apply Terrified" under the damage buttons
+- [ ] Target two goblins, click it: both get Terrified, the chat says "Klein applies Terrified to Goblin, Goblin 2.",
+      and each goblin's effect names Klein as the source (Fear's −4 shows as "Fear vs. Klein" in their dialogs)
+- [ ] Clicking with nothing targeted warns and gives nothing
+- [ ] Two tokens of the same linked actor targeted: that actor gets one copy
+- [ ] Apply from the spell's Effects tab does the same (the caster is the spell's owner; for a compendium spell, your
+      selected token or your character)
+- [ ] Self: an effect with Use: Self (e.g. Advantage on Raid). Target one enemy and Apply: the caster gets Advantage
+      with that enemy as the source ("Advantage vs. <enemy>"). With no target: Advantage with no source
+- [ ] Area / Zone effects: Apply says they arrive in the next update (Phase 4b)
+- [ ] Passive effects have no Apply button and no chat button
+- [ ] The copy starts fresh: its duration counts from now, and a Fear copy isn't "resisted" even if the spell's was
+- [ ] Copies on goblins don't change the spell: deleting a goblin's Terrified leaves the spell's effect alone
+
+Players (log in as a player who owns the caster, with the GM logged in too):
+
+- [ ] The player targets an NPC they don't own and clicks Apply: the GM's client adds it, the NPC gets it, chat says so
+- [ ] With no GM logged in: a warning that no GM is logged in, and nothing is applied to the NPC
+- [ ] A player who doesn't own the caster clicks someone else's Apply button: a warning, nothing happens
+- [ ] Dragging an effect onto a token the player doesn't own is refused by Foundry (use the Apply button instead)
+
+Source from dragging:
+
+- [ ] As the GM, open Klein's spell (on Klein's sheet), drag its Terrified row onto a goblin token: the goblin's
+      Terrified names Klein as its source
+- [ ] Drag the same effect from a spell in the sidebar (no owner) onto a token: no source
+- [ ] Drag a spell with effects from the sidebar onto Klein, then drag its effect from Klein's copy onto a token:
+      the source is Klein (the copy's effects point at Klein's spell)

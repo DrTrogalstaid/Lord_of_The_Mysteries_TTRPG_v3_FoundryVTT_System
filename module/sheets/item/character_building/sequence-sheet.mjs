@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
 
 export class LordOfTheMysteriesSequenceSheet extends LordOfTheMysteriesItemSheetBase {
@@ -21,10 +21,16 @@ export class LordOfTheMysteriesSequenceSheet extends LordOfTheMysteriesItemSheet
     }
   };
 
+  /** The Effects tab (sheets/base-item-sheet.mjs). */
+  static HAS_EFFECTS = true;
+
+  /** @override */
+  static TABS = LordOfTheMysteriesItemSheetBase.EFFECTS_TABS;
+
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/sequence.hbs" },
+    form: { template: "systems/lotm/templates/item/character_building/sequence.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
   };
 
   /* -------------------------------------------- */
