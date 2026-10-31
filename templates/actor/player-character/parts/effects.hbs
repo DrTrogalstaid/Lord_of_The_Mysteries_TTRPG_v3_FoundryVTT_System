@@ -17,6 +17,16 @@
 
   <div class="effects-section">
     <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Effects.List"}}</div>
+    {{#if effectsPanel.grantedOutOfDate}}
+    <div class="granted-out-of-date">
+      <span>{{localize "LORD_OF_THE_MYSTERIES.Effects.Granted.Notice"}}</span>
+      {{#if @root.editable}}
+      <button type="button" class="effect-button" data-action="refreshGrantedEffects">
+        <i class="fa-solid fa-rotate"></i> {{localize "LORD_OF_THE_MYSTERIES.Effects.Granted.Refresh"}}
+      </button>
+      {{/if}}
+    </div>
+    {{/if}}
     <ol class="effect-list">
       {{#each effectsPanel.effects as |effect|}}
       <li class="effect-row{{#if effect.inactive}} inactive{{/if}}" data-effect-uuid="{{effect.uuid}}">

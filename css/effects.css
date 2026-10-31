@@ -413,3 +413,19 @@
   border: none;
   object-fit: contain;
 }
+
+/* -------------------------------------------------------------------- */
+/* Effects tab: granted abilities' effects out of date (granted-effects.mjs) */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .granted-out-of-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--lotm-status-active, #c9a227);
+  border-radius: 4px;
+  font-size: 12px;
+}

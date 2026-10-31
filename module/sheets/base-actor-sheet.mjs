@@ -32,6 +32,7 @@ import { autoPlacement, placementUpdate } from "../helpers/inventory.mjs";
 import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
 import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
+import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -482,6 +483,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       deleteEffect: LordOfTheMysteriesActorSheetBase.#onDeleteEffect,
       openEffectRules: LordOfTheMysteriesActorSheetBase.#onOpenEffectRules,
       effectButton: LordOfTheMysteriesActorSheetBase.#onEffectButton,
+      refreshGrantedEffects: LordOfTheMysteriesActorSheetBase.#onRefreshGrantedEffects,
     },
   };
 
@@ -581,7 +583,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
         break;
 
       case "effects":
-        context.effectsPanel = this._prepareEffectsPanel();
+        context.effectsPanel = await this._prepareEffectsPanel();
         break;
     }
 
@@ -1528,11 +1530,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
    * The Effects tab (player and NPC sheets): a toggle for every status, then every effect on the actor, including
    * the ones its Items lend it (a charm's effect). Each row says where the effect came from, how long it has left,
    * whether it's switched off or suppressed (gear that's stowed), and has its statuses' buttons (Stand Up).
-   * @returns {{statuses: object[], effects: object[]}}
+   * Copies of granted abilities' passive effects (effects/granted-effects.mjs) say which ability they're from, and
+   * when they're out of date (or some are missing), the list gets a Refresh button.
+   * @returns {Promise<{statuses: object[], effects: object[], grantedOutOfDate: boolean}>}
    */
-  _prepareEffectsPanel() {
+  async _prepareEffectsPanel() {
     const localize = (key) => game.i18n.localize(key);
     const active = activeStatusIds(this.actor);
+
+    // Granted-ability copies: which are out of date, and whether any are missing or extra.
+    const granted = await grantedEffectsDiff(this.actor).catch(() => null);
+    const staleIds = new Set((granted?.remove ?? []).map((entry) => entry.id));
 
     const statuses = Object.values(STATUS_RULES).map((rule) => ({
       id: rule.id,
@@ -1553,7 +1561,14 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       const details = [];
       const source = effect.sourceActor?.name;
       if (source) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Source", { name: source }));
-      if (!owned) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
+      const grantedFrom = effect.system?.grantedFrom;
+      if (grantedFrom) {
+        const ability = granted?.names.get(grantedFrom) ?? fromUuidSync(grantedFrom)?.name ?? "?";
+        details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Granted.Via", { ability, name: effect.parent.name }));
+        if (staleIds.has(effect.id)) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Granted.OutOfDate"));
+      } else if (!owned) {
+        details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
+      }
       if (bringer) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: bringer.name }));
       if (effect.system?.zone) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Zone.MarkerDetail"));
       if (effect.disabled) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
@@ -1583,7 +1598,8 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       });
     }
 
-    return { statuses, effects };
+    const grantedOutOfDate = !!(granted && (granted.create.length || granted.remove.length));
+    return { statuses, effects, grantedOutOfDate };
   }
 
 
@@ -1680,6 +1696,21 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     }
 
     await effect.delete();
+  }
+
+
+  /**
+   * Refresh: make the copies of granted abilities' passive effects match the abilities again
+   * (effects/granted-effects.mjs), after the abilities were edited.
+   */
+  static async #onRefreshGrantedEffects(event, target) {
+    if (!this.isEditable) return;
+    const result = await syncGrantedEffects(this.actor);
+    if (result) {
+      ui.notifications.info(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Granted.Refreshed", {
+        name: this.actor.name, created: result.created, removed: result.removed,
+      }));
+    }
   }
 
 

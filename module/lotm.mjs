@@ -28,6 +28,7 @@ import { registerTurnStartChatListeners } from './effects/turn-start.mjs';
 import { registerEffectQueries } from './effects/effect-application.mjs';
 import { ZONE_BEHAVIOR_TYPE, registerZones } from './effects/effect-areas.mjs';
 import LotmApplyEffectBehavior from './data/region-behavior/apply-effect.mjs';
+import { syncGrantedEffects } from './effects/granted-effects.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -51,6 +52,9 @@ Hooks.once('init', function () {
     rollItemMacro,
     // Every status's rules, by id (effects/status-effects.mjs), e.g. game.lotm.statusRules.bound
     statusRules: STATUS_RULES,
+    // Bring an actor's copies of granted abilities' passive effects up to date (effects/granted-effects.mjs).
+    // Used by module/macros/sync-granted-effects.js.
+    syncGrantedEffects,
   };
 
   // Add custom constants for configuration.

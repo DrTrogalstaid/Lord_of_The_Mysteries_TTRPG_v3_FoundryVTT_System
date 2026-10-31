@@ -93,6 +93,14 @@
         "Cancel": "Cancel",
         "NoCasterToken": "{name} has no token on this scene to center the emanation on."
       },
+      "Granted": {
+        "Via": "From {ability} ({name})",
+        "CopiedFrom": "Copied from the ability {name}: edit the ability instead",
+        "OutOfDate": "Out of date",
+        "Notice": "Some effects from granted abilities are out of date or missing.",
+        "Refresh": "Refresh",
+        "Refreshed": "{name}: {created} granted effect(s) made, {removed} removed."
+      },
       "Zone": {
         "Chat": "{name} creates {effect}.",
         "RegionName": "{effect} ({name})",

@@ -6,6 +6,7 @@ import { educationGrowth } from "../../helpers/skill-learning.mjs";
 import { activeStatusRules } from "../../effects/status-effects.mjs";
 import { combineStatusRules, movementAgility, physicalDefense } from "../../effects/status-math.mjs";
 import { syncHealthStatuses } from "../../effects/health-statuses.mjs";
+import { syncGrantedEffects } from "../../effects/granted-effects.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -257,6 +258,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         super._onUpdate(changed, options, userId);
         if (userId !== game.user.id) return;
         if (changed.system?.resources?.hp?.value !== undefined) syncHealthStatuses(this.parent);
+        // An NPC's hidden grants changed: hidden abilities' passive effects stop applying (effects/granted-effects.mjs).
+        if (changed.system?.hiddenGrants !== undefined) syncGrantedEffects(this.parent);
     }
 
 

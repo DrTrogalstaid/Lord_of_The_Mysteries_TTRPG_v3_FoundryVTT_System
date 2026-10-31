@@ -14,7 +14,11 @@
  *   hasResisted          Fear: passed the Will test, so no more forced movement.
  *   isPenaltyHalved      Angry: Meditation (Half) halved the penalty.
  *   hasInternalBleeding  Bleeding: internal bleeding, which only extraordinary medicine or surgery stops.
- *   grantedFrom          On a copy made from an ability that a Sequence or gear grants: that ability's UUID.
+ *   grantedFrom          On a copy made from an ability that a Sequence or gear grants: that ability's UUID
+ *                        (effects/granted-effects.mjs).
+ *   grantedEffectId      On such a copy: the id of the ability's effect it copies.
+ *   grantedModifiedTime  On such a copy: when that effect was last edited, at the time it was copied. A copy whose
+ *                        effect has been edited since is out of date, and is replaced the next time it's synced.
  *   impliedBy            On an effect another one brought with it (the Bound that comes with Helpless): the id of
  *                        that effect, on the same actor. It's removed, turned off and on together with that effect.
  *   turnChecks           The start-of-turn card buttons already used for this effect, as "<card id>:<check>", so each
@@ -48,6 +52,8 @@ export default class LordOfTheMysteriesEffect extends foundry.data.ActiveEffectT
     schema.hasInternalBleeding = new fields.BooleanField({ required: true, initial: false });
 
     schema.grantedFrom = new fields.DocumentUUIDField({ type: "Item", required: true, nullable: true, initial: null });
+    schema.grantedEffectId = new fields.StringField({ required: true, blank: true, initial: "" });
+    schema.grantedModifiedTime = new fields.NumberField({ required: true, nullable: true, initial: null });
     schema.impliedBy = new fields.StringField({ required: true, blank: true, initial: "" });
     schema.turnChecks = new fields.ArrayField(new fields.StringField({ required: true, blank: false }));
     schema.zone = new fields.DocumentUUIDField({ type: "Region", required: true, nullable: true, initial: null });

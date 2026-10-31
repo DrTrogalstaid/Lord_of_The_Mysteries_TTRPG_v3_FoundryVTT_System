@@ -1,611 +1,535 @@
-# Manual QA — Skill Check Dialog
+# Manual QA
 
-The dialog itself (`module/apps/skill-check-dialog.mjs`) is an `ApplicationV2` that
-needs the live Foundry API and DOM — it isn't unit-testable the way
-`skill-modifiers.mjs`/`skill-check-formula.mjs` are (see `tests/*.test.mjs`,
-run via `npm test`). This checklist covers everything the automated tests
-can't: the click wiring, the rendered dialog, and the chat output.
+`npm test` covers the rules that can be checked without Foundry: skill formulas, status math, Health thresholds, roll
+modifiers, restrictions, effect copies, area shapes. This checklist covers what needs Foundry running: the sheets,
+dialogs, chat cards, tokens and scenes.
+
+## How to use it
+
+- **Every update:** do **Setup** and the **Smoke test**.
+- **Then the sections for what the update touched.** Each section starts with the files it covers, to help you pick.
+- Watch the console (F12) the whole time: any red error is a failure, even if everything looks right.
+- In the steps, "Klein" is a player character and "the goblins" are NPC tokens on the same scene.
 
 ## Setup
 
-- [ ] Apply the change (patch or file copy) to a local copy of the system
-- [ ] Launch/restart Foundry so the system reloads
-- [ ] Load a world using this system with at least one Player Character actor
-- [ ] The actor has at least one skill with a level other than "untrained" recorded
-      (so the level bonus and any override are visible as something other than the
-      default -4)
-- [ ] Ideally, one skill in the compendium has a nonzero `system.modifier` set, to
-      exercise the "Item Modifier" line — if none do, this one case can be skipped
-      but note it as untested rather than assumed passing
+- [ ] Copy the changed files into the system folder. If `system.json` changed (a new compendium, document type or
+      region behavior), restart Foundry; otherwise reloading the world is enough
+- [ ] Run `npm test` in the system folder: every test passes
+- [ ] A test world with:
+  - Klein: a player character with skills at a few levels (not only Untrained), a Sequence that grants abilities and
+    skills, a gun with Shoot / Reload actions, a spell, an action with a Spirituality Cost, and a coat or bag
+  - an NPC, with a token on a scene that has a grid, plus three goblin tokens and Klein's token on the same scene
+  - a second user (a player who owns Klein but not the goblins), for the permission checks. Log in with them in a
+    second browser where a step says "as a player"
 
-## Basic roll — no override, no ad-hoc modifiers
+## Smoke test (every update)
 
-- [ ] Open the Player Character sheet, go to the Character tab
-- [ ] Click a skill's modifier number (the `+N` link next to a skill name)
-- [ ] A window titled "Skill Check" opens, showing the skill's name and level
-- [ ] The "Linked Attribute" dropdown is pre-selected to the skill's actual linked
-      attribute (check this against the skill's own item sheet, not the tab it's
-      filed under — they can differ, see the rundown's open question)
-- [ ] The number on the Roll button matches: attribute total + level bonus (+ item
-      modifier, if any)
-- [ ] Click Roll
-- [ ] Dialog closes; a chat message appears with the correct total and a flavor
-      line reading "`<Skill>` Check (`<Attribute>`)"
-- [ ] The dice tooltip/breakdown in the chat card shows labeled terms (attribute
-      name, level name), not raw unlabeled numbers
+- [ ] The world loads with no errors in the console
+- [ ] Run the item sheet smoke test macro (see **Maintenance macros**): no new problems compared with before the update
+- [ ] Open Klein's sheet and the NPC's sheet, and click through every tab
+- [ ] Roll a skill check, an attribute check, Shoot's attack, and its damage; apply the damage to a goblin
+- [ ] Toggle a status on a token from the Token HUD, then off again
+- [ ] Start a combat and advance a turn; a creature with Bleeding gets a start-of-turn card
+- [ ] An inline roll (`[[/r 1d6]]`) in a journal or description still rolls and posts to chat
 
-## Attribute override
+## Maintenance macros
 
-- [ ] Reopen the dialog for the same skill
-- [ ] Change the "Linked Attribute" dropdown to a different attribute
-- [ ] The Roll button's total updates immediately to reflect the new attribute's
-      total
-- [ ] A hint line appears noting this is an override for this roll
-- [ ] Click Roll
-- [ ] Chat flavor reads "`<Skill>` Check (`<NewAttribute>` instead of `<DefaultAttribute>`)"
-- [ ] Reopen the dialog again (same skill) — it defaults back to the skill's normal
-      attribute, confirming the override didn't persist anywhere
+Each is in `module/macros/`. Make a Script macro with the file's code and run it as the GM. The ones that change
+things start in report-only mode (`APPLY = false`): check the report, then set `APPLY = true` and run it again.
 
-## Ad-hoc modifiers
+| Macro | What it does | When to run it |
+|---|---|---|
+| `smoke-test-item-sheets.js` | Opens every kind of item sheet (new, compendium and owned Items), reports any errors, closes them, and deletes the blank Items it made | Before and after an update that touches item sheets; compare the two reports |
+| `check-leftover-effects.js` | Lists effects with statuses the system doesn't know (Foundry's old Prone, Poisoned, ...), and old-type effects. `APPLY` deletes the old Token HUD ones | After importing old actors or removing a module that added statuses |
+| `tag-action-traits.js` | Adds Traits (speech, reaction, grapple, parry, aimed) to actions and spells by name, in the compendiums, world Items and owned Items | After adding actions or spells that should have Traits; edit its list first |
+| `sync-granted-effects.js` | Brings every actor's copies of granted abilities' passive effects up to date (world actors and unlinked tokens) | After editing abilities in a compendium or the sidebar |
+| `assign-skill-categories.js` | Gives the Skills compendium's skills the rulebook's related-skill categories | After adding skills to the compendium |
 
-- [ ] Open the dialog, type a label and a positive value into the "add modifier"
-      row, click Add (or press Enter in the value field)
-- [ ] The modifier appears in the list with a remove (×) control; total updates
-- [ ] Add a second modifier with a negative value; total updates again
-- [ ] Click the × on one modifier; it disappears and the total updates back
-- [ ] Try adding a modifier with the value field blank or 0 — a warning appears
-      and nothing is added to the list
-- [ ] Roll with at least one modifier present; confirm the chat card's formula
-      breakdown includes each modifier's label
+---
 
-## Item modifier (skip if no compendium skill has one set)
+# Character sheets
 
-- [ ] Open the dialog for a skill whose item has a nonzero `system.modifier`
-- [ ] An "Item Modifier" line appears in the dialog header showing that value
-- [ ] The Roll button's total and the final chat total both include it
+## Player sheet
 
-## Cancel / close without rolling
+Files: `module/sheets/player-character-sheet.mjs`, `module/sheets/base-actor-sheet.mjs`, `templates/actor/player-character/`
 
-- [ ] Open the dialog, then close it via the window's close button (not Roll)
-- [ ] No chat message is posted
-- [ ] Reopening the dialog for the same skill starts fresh (no leftover ad-hoc
-      modifiers from the cancelled attempt)
-
-## Untrained skill checks and the GM setting
-
-- [ ] Open a skill the actor has no recorded level for (shows as "Untrained" with
-      a -4-inclusive modifier) — with the default setting, the dialog opens and
-      rolls normally, same as any other skill
-- [ ] As GM, open Configure Settings → System Settings, find "Allow Untrained
-      Skill Checks", and turn it off
-- [ ] Click that same untrained skill's modifier again — the dialog should NOT
-      open; a warning notification appears instead naming the skill
-- [ ] A trained/proficient/etc. skill on the same actor still opens and rolls
-      normally with the setting off (the block is untrained-only)
-- [ ] Turn the setting back on — the previously-blocked untrained skill opens
-      and rolls again
-
-## Regression checks (things this change should NOT have affected)
-
-- [ ] Non-skill sheet interactions still work: editing attribute base/beyonder
-      bonus/corruption fields, changing a skill's proficiency-level dropdown,
-      short/long rest and spend-luck/spirituality buttons, editing the portrait
-- [ ] The NPC sheet's existing `.rollable` clicks (if any NPC has rollable items)
-      still work unchanged
-- [ ] Any other system roll that goes through `new Roll(...)` or an inline
-      `[[/r ...]]` in biography/description text still evaluates and posts to
-      chat correctly (this confirms registering `LOTM_VTTRoll` as the default
-      `CONFIG.Dice.rolls[0]` didn't break anything else that rolls)
-
-## Skills granted by abilities (Extraordinary Knowledge)
-
-- [ ] Open "Extraordinary Knowledge" in the Abilities compendium, Details tab: "Grants Skills"
-      and the analyze checkbox are ticked, and Skill Options lists the 21 Knowledges.
-      Dropping a non-skill item onto Skill Options is refused with a warning
-- [ ] On a character without the ability: no extra skill tab, no Analyze buttons
-- [ ] Drag the ability onto the sheet: it appears on the Abilities tab, and a new
-      "Extraordinary Knowledge" skill tab appears after Education
-- [ ] In that tab, add a Knowledge from the dropdown: it appears with an Education-based
-      modifier and leaves the dropdown
-- [ ] Add a custom skill (e.g. "Reading Knowledge", attribute Education) with Enter or +:
-      it appears; adding the same name again warns
-- [ ] Granted skills: + next to Analyses adds 1; typing a number saves; changing the level
-      updates the modifier and keeps the count; the trash icon (after confirming) removes it
-- [ ] Agility tab: click Stealth's magnifying glass. Stealth appears in the Extraordinary
-      Knowledge tab as an EDU skill with 1 analysis; clicking again makes it 2 (no duplicate)
-- [ ] Education tab: each skill shows an analysis box. Clicking History's magnifying glass
-      raises History's own count and does NOT add it to the Extraordinary Knowledge tab
-- [ ] Change an Education skill's level or an attribute: the analysis counts are unchanged
-- [ ] Click a granted skill's modifier: the Skill Check dialog opens with its attribute/level
-- [ ] Remove the ability while its tab is open: the tab disappears, the sheet falls back to
-      Strength, and the Analyze buttons and Education analysis boxes are hidden
-- [ ] Drag the character's copy of the ability onto another character: the granted skills
-      (with levels and counts) come along
+- [ ] Every tab works: drops, move arrows, Favorites, collapsing action sections, Spell List groups, inventory containers
+      and money, study / success buttons, granted-skill tabs, rests, languages, damage resistance
+- [ ] Editing attribute base / Beyonder Bonus / corruption, a skill's level, the portrait, and the Spend Luck and
+      Spirituality buttons all work
+- [ ] Granted rows (from a Sequence, ability or gear) have no remove or hide button, and no "Hidden" lists appear
 
 ## NPC sheet
 
-Setup: create an NPC actor. Have a Sequence with abilities (one with actions and a Spell List), a gun with a
-Shoot action, and a few skills from the Skills compendium ready to drag.
+Files: `module/sheets/npc-sheet.mjs`, `module/data/actor/actor-npc.mjs`, `templates/actor/npc/`
 
-- [ ] The NPC sheet opens with tabs Main, Abilities, Spells, Inventory, Sequences, Notes
+Setup: an NPC, a Sequence with abilities (one with actions and a Spell List), a gun with a Shoot action, and a few
+skills from the Skills compendium ready to drag.
+
+- [ ] Tabs: Main, Abilities, Spells, Inventory, Sequences, Effects, Notes
 - [ ] Header: change the name and Organization; both save. With no Sequence the header says "No Sequence"
-- [ ] Drop a Sequence: the header shows "Sequence N · Name (Pathway)", Health / Spirituality maximums and the
-      defenses go up the same as they would on a player character with the same attributes and Sequence
-- [ ] Change an attribute's base on the Main tab: the total, defenses and maximums update. Hover a box for the breakdown.
+- [ ] Drop a Sequence: the header shows "Sequence N · Name (Pathway)", and Health / Spirituality maximums and the
+      defenses go up the same as a player character's with the same attributes and Sequence
+- [ ] Change an attribute's base on Main: the total, defenses and maximums update. Hover a box for the breakdown.
       Click a total: an attribute check posts to chat
 - [ ] Skills: the list starts empty (or with only skills the Sequence raises, tinted, "Raised by ..."). Drag Pistol
       onto the Skills box: it appears at Trained. Dropping it again warns it's already there
-- [ ] Change a skill's level: the modifier updates and other skills keep their levels. Edit another field (an attribute):
-      the skill levels are still there
+- [ ] Change a skill's level: the modifier updates and other skills keep theirs. Edit another field: the levels stay
 - [ ] Click a skill's modifier: the Skill Check dialog opens at the right level. Trash a dropped skill: it's removed
-- [ ] An action that uses a skill the NPC has (e.g. Shoot with Pistol) shows the same bonus as the skill row
+- [ ] An action using a skill the NPC has (Shoot with Pistol) shows the same bonus as the skill row
 - [ ] Actions on Main: collapsible sections by type, no Favorites section, no stars
-- [ ] Granted rows (from the Sequence, an ability or gear) have an eye-slash button; owned rows have the trash can
+- [ ] Granted rows have an eye-slash button; owned rows have the trash can
 - [ ] Hide a granted ability: it leaves the Abilities tab, its actions leave Main and its spells leave Spells.
-      "Hidden (1)" appears at the bottom of the Abilities box; Restore brings all of it back
-- [ ] Give the NPC two copies of the same gun. Hide Shoot on one: the other gun's Shoot stays
-- [ ] Hide a skill only a Sequence gives: it leaves the list and its raise no longer counts (actions using it roll lower);
-      Restore puts it back. Changing that skill's level first gives the NPC its own level and a trash can instead
-- [ ] Open the Sequence item itself after hiding things: nothing in it changed. A player with the same Sequence still has everything
-- [ ] Inventory: drop gear; set it Held / Worn / Stowed and change the quantity. "+" makes blank gear.
-      Worn armor adds to Physical defense and damage resistance. No slots, pockets or money panel show
-- [ ] Give the NPC far more gear than its Strength allows: its Agility doesn't drop
-- [ ] Notes: type in the editor, close and reopen the sheet: the text is still there
-- [ ] Drag the NPC onto a scene (unlinked token): things hidden on the NPC are hidden on the token too; hiding more on
-      the token doesn't change the NPC in the sidebar
-
-## Player sheet after the shared base sheet (regression)
-
-- [ ] Every tab still works as before: drops, move arrows, Favorites, collapsing action sections, Spell List groups,
-      inventory containers and money, study / success buttons, granted-skill tabs, rests, languages, damage resistance
-- [ ] Granted rows on the player sheet still have no remove or hide button, and no "Hidden" lists appear anywhere
+      "Hidden (1)" appears at the bottom of the Abilities box; Restore brings it all back
+- [ ] Two copies of the same gun: hiding Shoot on one leaves the other's
+- [ ] Hide a skill only a Sequence gives: it leaves the list and its raise stops counting; Restore puts it back.
+      Changing that skill's level first gives the NPC its own level and a trash can instead
+- [ ] The Sequence item itself is unchanged by hiding. A player with the same Sequence still has everything
+- [ ] Inventory: drop gear; Held / Worn / Stowed and quantity work; "+" makes blank gear. Worn armor adds to Physical
+      Defense and damage resistance. No slots, pockets or money panel
+- [ ] Far more gear than its Strength allows: its Agility doesn't drop
+- [ ] Notes: type, close and reopen: the text is still there
+- [ ] An unlinked token: things hidden on the NPC are hidden on the token; hiding more on the token doesn't change the NPC
 
 ## Granted Skills box (Character tab)
 
-Setup: a Sequence whose skill increases include a compendium skill (e.g. Pistol) and a skill from the world.
+Files: `module/sheets/player-character-sheet.mjs`, `templates/actor/player-character/parts/`
 
-- [ ] Each row in the Granted Skills box has a roll modifier, a level dropdown and the study (book) button, plus
-      the ✋ button when a Sequence ability teaches that skill
-- [ ] The row's modifier and link badge match the same skill's row on its attribute tab
-- [ ] Change the level in the box: it saves, and the attribute tab's dropdown shows the new level. Change it on the
-      attribute tab: the box shows it too. Neither change undoes the other
+Setup: a Sequence whose skill increases include a compendium skill (Pistol) and a world skill.
+
+- [ ] Each row has a roll modifier, a level dropdown and the study (book) button, plus ✋ when a Sequence ability teaches it
+- [ ] The modifier and link badge match the same skill's row on its attribute tab
+- [ ] Change the level in the box: the attribute tab shows it too, and the other way round. Neither undoes the other
 - [ ] Click the modifier: the Skill Check dialog opens at the raised level. The book and ✋ buttons open their dialogs
-- [ ] The world skill: it has controls in the box but isn't on a tab until you change its level; then it's also
-      listed on its attribute's tab
+- [ ] The world skill has controls in the box but isn't on a tab until its level changes; then it's on its attribute tab too
 
-## Spending Spirituality (player and NPC sheets)
+## Skills granted by abilities (Extraordinary Knowledge)
 
-- [ ] Sidebar Spend button (player and NPC): a dialog shows current / max Spirituality and asks for an amount and
-      an optional reason. Spending lowers Spirituality and posts "X spends 3 Spirituality on Y." to chat (no amount left)
-- [ ] Spending more than the actor has: a warning, nothing changes. Closing the dialog spends nothing
-- [ ] An action with a skill and a Spirituality Cost: the roll dialog has a "Spend N Spirituality" box, ticked.
-      Rolling spends it and the chat card says "-N Spirituality" (no amount left). Untick it: nothing is spent.
-      Closing the dialog without rolling spends nothing. Changing the attribute keeps the box as you set it
-- [ ] Not enough Spirituality: the box is greyed out with a warning, and the roll happens without spending
-- [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends the cost (note on the chat card)
-- [ ] An action with a cost but nothing to roll: its row has a blue "Spend N" button that spends it and posts to chat
-- [ ] A spell with a cost: its row has the roll button AND "Spend N". Spend spends without rolling. (Rolling with the
-      dialog's Spirituality box ticked spends it too, so cast one way or the other, not both.)
-- [ ] An action with a cost and a roll: no "Spend N" button; the cost is paid through the roll dialog
-- [ ] The same from a hotbar macro of the action
+Files: `module/data/item/character_building/ability.mjs`, `module/sheets/player-character-sheet.mjs`; design notes in
+`docs/extraordinary-knowledge.md`
 
-## Roll dialogs and damage buttons
+- [ ] "Extraordinary Knowledge" in the Abilities compendium, Details tab: "Grants Skills" and the analyze checkbox are
+      ticked, and Skill Options lists the 21 Knowledges. Dropping a non-skill onto Skill Options is refused
+- [ ] A character without the ability: no extra skill tab, no Analyze buttons
+- [ ] Drag the ability onto the sheet: it's on the Abilities tab, and an "Extraordinary Knowledge" tab appears after Education
+- [ ] Add a Knowledge from the dropdown: it appears with an Education-based modifier and leaves the dropdown
+- [ ] Add a custom skill (e.g. "Reading Knowledge", Education) with Enter or +; the same name again warns
+- [ ] Granted skills: + adds an analysis; typing a number saves; changing the level keeps the count; trash (after
+      confirming) removes it
+- [ ] Agility tab, Stealth's magnifying glass: Stealth appears in the tab as an EDU skill with 1 analysis; again makes 2
+- [ ] Education tab: each skill has an analysis box. History's magnifying glass raises History's own count, not a new row
+- [ ] Changing an Education skill's level or an attribute leaves the analysis counts alone
+- [ ] A granted skill's modifier opens the Skill Check dialog with its attribute and level
+- [ ] Remove the ability while its tab is open: the tab goes, the sheet falls back to Strength, and the Analyze buttons
+      and Education analysis boxes hide
+- [ ] Drag the character's copy of the ability onto another character: the granted skills (levels and counts) come along
 
-Setup: set the chat sidebar's roll mode to Private GM Roll.
+---
 
-- [ ] Skill rolls, attribute checks (click an attribute total) and actions without a skill all open a roll dialog
-      with the modifiers list, four who-sees-it buttons (Public, Private GM, Blind GM, Self) and a Roll button
-- [ ] The buttons start on Private GM Roll (the sidebar's choice). Pick Blind GM and roll: only the GM sees it.
-      The sidebar is still on Private GM Roll, and the next dialog starts there again
-- [ ] Public: the roll is posted as the character, for everyone
-- [ ] Pick a mode, then add a modifier: the mode stays. Change a skill roll's attribute: the mode and the
-      Spirituality box stay as you set them
-- [ ] Shift-click a skill, an attribute total and an action's roll button: each rolls right away, no window,
-      using the sidebar's mode
-- [ ] An action without a skill: the dialog shows its formula with the character's numbers filled in; its
-      Modifiers field is in the list (removable); its Spirituality Cost has the checkbox
-- [ ] Attack card: "Roll Damage" with "Big Success" to its right. Older attack cards still have a working Roll Damage
-- [ ] Roll Damage: the damage card has "Damage (N)" and "Heal (N)". Select a token and click Damage: its Health
-      drops by N (it can go below 0, see "Health statuses"). Heal raises it (not above max). With nothing selected: a warning
-- [ ] Big Success: when the roll is below the formula's average, the card says "rolled X, raised to the average (Y)"
-      and the buttons use Y; otherwise it says the roll and the average, and the buttons use the roll
-- [ ] As a player, clicking Damage with an enemy token selected warns that only the GM can change its Health
-- [ ] The sheet's own Damage button still rolls normal damage, and its card has the Damage / Heal buttons too
+# Item sheets
 
-## Spells roll like actions
+Files: `module/sheets/base-item-sheet.mjs`, `module/sheets/item/`, `templates/item/`
 
-- [ ] Open a spell's sheet, Details tab: Skill slot (empty says it rolls with Occultism), Attack Roll Macro, Modifiers,
-      Damage Roll Macro (with the damage-types hint) and Damage Type. A spell that had something in the old Attack
-      field shows it in Attack Roll Macro
-- [ ] Spells tab (player and NPC): every spell row has "[d20 Occultism +N]" and, with a damage formula, a Damage button.
-      Rolling opens the skill check dialog with the spell's Spirituality checkbox; the attack card has Roll Damage /
-      Big Success. Drop another skill on the spell: the button and roll use that skill instead
-- [ ] Spell Lists fold open and closed by clicking their title, and start open. Close one, close and reopen the sheet:
-      still closed for you, open for another player
-- [ ] Player sheet: each spell row has a star. Star one: it shows in Favorites on the Actions tab (with its roll buttons),
-      but not in the Attack / Move / ... sections. Unstar it from either place: it leaves Favorites.
-      NPC spell rows have no star
-- [ ] A hotbar macro of a spell rolls it
-
-## Damage types in the formula
-
-- [ ] Action set to Physical with damage "2d6[fire] + 1d4 + 2": the damage card's title says (Fire, Physical) and a line
-      shows e.g. "7 Fire · 5 Physical"
-- [ ] "2d6" on a Fire action: the title says (Fire), no breakdown line
-- [ ] The Damage button's hover on the sheet shows the formula with the types in it (no extra type added at the end)
-
-## Damage reduction when applying damage
-
-Setup: a target with Damage Resistance rows Physical 3 and Fire 2 in its sidebar (or worn armor that reduces them).
-
-- [ ] Roll "5[physical] + 6[fire]" (or any roll that comes out 5 physical, 6 fire), select the target, click Damage:
-      it loses 6 Health, and the notice says "takes 6 damage (11 - 5 reduction: Physical 3, Fire 2)"
-- [ ] A type it has no reduction against (cold), and untyped damage, go through in full
-- [ ] A type's damage never goes below 0 (2 physical against Physical 3 is 0, not -1)
-- [ ] Shift-click Damage: the full 11 is taken, no reduction
-- [ ] Heal is never reduced
-- [ ] A Physical row on the sidebar and worn armor that reduces physical add together (both count)
-- [ ] Big Success that's raised to the average: the card's per-type line shows each type at its own average,
-      and reduction is taken off those
-- [ ] Damage cards from before this change still apply their full amount (they have no types saved)
-
-## Item sheets after the shared base sheet (regression)
-
-All item sheets now extend LordOfTheMysteriesItemSheetBase (`module/sheets/base-item-sheet.mjs`). Nothing should look
-or work differently. Test with an Item in the Items sidebar (editable), one in a locked compendium (read-only), and one
-owned by a character.
-
-Smoke test first:
-
-- [ ] Before installing the update, run the "Sheet smoke test" macro (`module/macros/smoke-test-item-sheets.js`) and
-      keep its chat report. Run it again after the update: no new problems in the report
-- [ ] The macro's "Sheet smoke test" folder is gone from the Items sidebar afterwards
+Test with an Item in the Items sidebar (editable), one in a locked compendium (read-only), and one owned by Klein.
 
 Every sheet:
 
-- [ ] Opens at the same size as before (520 × 480; gear 520 × 720; clothing / bags as tall as their contents) and can be resized
-- [ ] Changing a field saves straight away (close and reopen the sheet: the change is still there)
+- [ ] Opens at its usual size (520 × 480; gear 520 × 720; clothing / bags as tall as their contents) and can be resized
+- [ ] Changing a field saves straight away (close and reopen: still there)
 - [ ] A description box: Edit, type, Save. The text is kept, and @UUID links in it can be clicked
-- [ ] A locked compendium Item opens read-only: no editing, no add / remove buttons that work
-- [ ] No errors in the console (F12) while opening, switching tabs and editing
+- [ ] A locked compendium Item is read-only: no editing, no add / remove buttons that work
+- [ ] No console errors while opening, switching tabs and editing
 
 Ability:
 
-- [ ] Description and Details tabs switch
+- [ ] Description, Details and Effects tabs switch
 - [ ] Sequence Upgrades: add a row, type in it, remove it
-- [ ] Drop a spell on the Spell List, an action on the Action List: they're listed with their image. Drop the same one
-      again: "… is already in the Spell List." / "… Action List." Remove each with its button
-- [ ] Skill Options: drop a skill (added), drop it again (already in the Skill Options), drop an action
-      ("Only Skills can be added to Skill Options.")
-- [ ] Learning by Doing: add a category, change it, remove it. Drop a skill (added), a non-skill (the "not a skill"
-      warning), the same skill again (already taught by this ability). Remove a skill
-- [ ] An entry whose Item was deleted shows as "Unknown Item" with the hazard icon, and can still be removed
+- [ ] Drop a spell on the Spell List and an action on the Action List: listed with their image. The same one again:
+      "… is already in the Spell List." / "… Action List." Remove each
+- [ ] Skill Options: drop a skill (added), again (already there), an action ("Only Skills can be added to Skill Options.")
+- [ ] Learning by Doing: add, change and remove a category. Drop a skill (added), a non-skill (warning), the same skill
+      again (already taught). Remove a skill
+- [ ] An entry whose Item was deleted shows "Unknown Item" with the hazard icon, and can still be removed
 - [ ] Dropping an Item on the sheet outside the lists does nothing
 
 Action:
 
-- [ ] Description and Details tabs switch; Action Type, Uses Ammo and the other fields save
+- [ ] Description, Details and Effects tabs switch; Action Type, Uses Ammo and the other fields save
 - [ ] Skill slot: drop a skill, open it, remove it
+- [ ] Special Results (Description tab): saved ones show one row each; "Add Special Result" adds a blank row whose text
+      sticks; the trash button removes only that row. On a locked compendium action the buttons do nothing
+- [ ] Traits box under Action Type: Speech, Reaction, Grapple, Parry, Aimed at someone. Ticking saves straight away; on
+      a locked compendium action the boxes are greyed out
 
 Spell:
 
-- [ ] Description and Details tabs; Special text box; Sequence Upgrades add / remove
+- [ ] Description, Details and Effects tabs; Special text box; Sequence Upgrades add / remove
+- [ ] The same Traits box as actions
 - [ ] Skill slot: drop a skill, open it, remove it. Dropping any other Item on the sheet does nothing
 
 Sequence:
 
 - [ ] Description and Acting Principles boxes save
-- [ ] Attribute Gain: add a row, change the attribute and value, remove it
-- [ ] Skill Increase: drop a skill (value 1), drop it again ("… is already in Skill Increase."), change the value, remove it
-- [ ] Abilities Gained: drop an ability, drop it again (already in Abilities Gained), remove it
-- [ ] Knowledge and Training: drop a skill, a non-skill ("… is not a skill."), the same skill again (already in Knowledge
-      and Training). A skill dragged from the Items sidebar that came from the compendium saves the compendium skill
-      (the character's study speed-up still applies to it)
+- [ ] Attribute Gain: add a row, change attribute and value, remove it
+- [ ] Skill Increase: drop a skill (value 1), again ("… is already in Skill Increase."), change the value, remove it
+- [ ] Abilities Gained: drop an ability, again (already there), remove it
+- [ ] Knowledge and Training: drop a skill, a non-skill ("… is not a skill."), the same skill again. A sidebar skill that
+      came from the compendium saves the compendium skill (the study speed-up still applies)
 - [ ] Dropping an Item outside the lists does nothing
 
 Skill:
 
-- [ ] Related-skill categories: add one, change category and mode, remove it. With every category used: "all used" message
+- [ ] Related-skill categories: add, change category and mode, remove. With every category used: "all used"
 
 Gear and clothing / bags:
 
-- [ ] No tabs (same as before). Click the image: the file picker opens and the new image is saved
-- [ ] Value "£3 10s" saves and shows again as £3 10s; "nonsense" warns and keeps the old value. A purse's money boxes the same
-- [ ] On a character: the carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
+- [ ] No tabs. Click the image: the file picker opens and the new image saves
+- [ ] Value "£3 10s" saves and shows as £3 10s; "nonsense" warns and keeps the old value. A purse's money boxes the same
+- [ ] On a character: carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
       remove, open), and a gun's Reload / Chamber / Unload buttons work
 - [ ] A coat or bag on a character lists what's inside and how full it is
+- [ ] Gear has an Effects list above its description; containers don't
 
-## Statuses and the Effects tab (Phase 1b)
+---
 
-Setup: install the update and reload. Have a player character and an NPC, each with a token on a scene.
-Note their Physical Defense and Movement first (e.g. Agility 5, Armor 3, Dodge Trained +2: Physical 20).
+# Rolls
 
-Leftover effects (run once):
+## Skill check dialog
 
-- [ ] Run the "Leftover effects" macro (`module/macros/check-leftover-effects.js`). It whispers a report and changes
-      nothing. Old Token HUD statuses (Prone, Poisoned, ...) are listed as OLD STATUS
-- [ ] With APPLY set to true it deletes the OLD STATUS effects; running it again reports none
+Files: `module/apps/skill-check-dialog.mjs`, `module/apps/roll-dialog.mjs`, `module/helpers/skill-check-formula.mjs`
 
-Status list:
+- [ ] Click a skill's `+N` on the Character tab: "Skill Check" opens with the skill's name and level
+- [ ] "Linked Attribute" starts on the skill's own linked attribute (check it against the skill's item sheet)
+- [ ] The Roll button's number is attribute total + level bonus (+ the skill item's modifier, if it has one)
+- [ ] Roll: the dialog closes; the chat card has the right total and "`<Skill>` Check (`<Attribute>`)"
+- [ ] The card's breakdown shows labelled rows (attribute, level), and penalties show with a minus sign
+- [ ] Change "Linked Attribute": the total updates and a hint says it's for this roll only. The card says
+      "`<Skill>` Check (`<New>` instead of `<Default>`)". Reopen: back to the normal attribute
+- [ ] Add a modifier (label and value, Add or Enter): it's listed with ×, the total updates. A negative one too.
+      × removes one. A blank or 0 value warns and adds nothing. The card's breakdown lists each modifier's label
+- [ ] A skill item with a nonzero `system.modifier`: an "Item Modifier" line shows, and both totals include it
+- [ ] Close without rolling: nothing posted; reopening starts fresh
+- [ ] Untrained skills: with the default setting they roll. Turn off "Allow Untrained Skill Checks" (System Settings):
+      the dialog doesn't open and a warning names the skill; trained skills still roll. Turn it back on: rolls again
 
-- [ ] The Token HUD's status icons are the 17 system statuses (Loss of Balance ... Shock), not Foundry's old list
-- [ ] Hovering one shows its name; turning one on puts its icon on the token and a row on the Effects tab
-- [ ] No errors in the console (F12) on load, opening sheets, toggling statuses
+## Roll dialogs, who sees it, and Shift-click
 
-Effects tab (player sheet, and the new Effects tab on the NPC sheet between Sequences and Notes):
+Files: `module/apps/roll-dialog.mjs`, `module/helpers/message-modes.mjs`
 
-- [ ] A grid of the 17 statuses: off ones faded, on ones in colour with a gold ring. Click toggles, and the Token HUD agrees
+Setup: set the chat sidebar's roll mode to Private GM Roll.
+
+- [ ] Skill rolls, attribute checks and actions without a skill all open a roll dialog with the modifiers list, four
+      who-sees-it buttons (Public, Private GM, Blind GM, Self) and a Roll button
+- [ ] The buttons start on Private GM (the sidebar's choice). Pick Blind GM and roll: only the GM sees it. The sidebar
+      is unchanged, and the next dialog starts on Private GM again
+- [ ] Public: posted as the character, for everyone
+- [ ] Pick a mode, then add a modifier: the mode stays. Change a skill roll's attribute: the mode and the Spirituality
+      box stay
+- [ ] Shift-click a skill, an attribute total and an action's roll button: each rolls straight away with the sidebar's mode
+- [ ] A roll with a DC (a status check from a start-of-turn card) shows "DC 15" in the dialog, and the card says
+      "DC 15: Success" or "Failure" (a total equal to the DC succeeds)
+
+## Actions, spells and damage
+
+Files: `module/helpers/action-roll.mjs`, `module/apps/action-roll-dialog.mjs`, `module/data/item/character_building/`
+
+- [ ] An action without a skill: the dialog shows its formula with the character's numbers filled in; its Modifiers
+      field is in the list (removable); its Spirituality Cost has the checkbox
+- [ ] Attack card: "Roll Damage" with "Big Success" to its right
+- [ ] Roll Damage: the damage card has "Damage (N)" and "Heal (N)". Select a token and click Damage: Health drops by N
+      (it can go below 0). Heal raises it (not above max). With nothing selected: a warning
+- [ ] Big Success: below the formula's average, the card says "rolled X, raised to the average (Y)" and the buttons use
+      Y; otherwise it shows the roll and the average, and the buttons use the roll
+- [ ] As a player, Damage with a goblin selected warns that only the GM can change its Health
+- [ ] The sheet's own Damage button rolls normal damage, with the same Damage / Heal buttons
+- [ ] A hotbar macro of an action or a spell rolls its attack
+
+Spells:
+
+- [ ] Spell sheet, Details tab: Skill slot (empty says it rolls with Occultism), Attack Roll Macro, Modifiers, Damage
+      Roll Macro (with the damage-types hint) and Damage Type
+- [ ] Spells tab (player and NPC): each row has "[d20 Occultism +N]" and, with a damage formula, a Damage button.
+      Rolling opens the skill check dialog with the Spirituality checkbox; the card has Roll Damage / Big Success.
+      Another skill on the spell: the button and roll use it
+- [ ] Spell Lists fold by clicking their title and start open. Closed stays closed for you, open for another player
+- [ ] Player sheet: star a spell: it's in Favorites on the Actions tab (with its roll buttons), not in the type
+      sections. Unstar from either place. NPC spell rows have no star
+
+Damage types and reduction:
+
+- [ ] A Physical action with "2d6[fire] + 1d4 + 2": the card's title says (Fire, Physical) and a line shows e.g.
+      "7 Fire · 5 Physical". "2d6" on a Fire action: (Fire), no breakdown line
+- [ ] The sheet's Damage hover shows the formula with its types
+- [ ] A target with Physical 3 and Fire 2 resistance: "5[physical] + 6[fire]" takes 6 ("11 - 5 reduction: Physical 3,
+      Fire 2"). Untyped damage and types it doesn't resist go through in full. A type never goes below 0
+- [ ] Shift-click Damage: the full amount, no reduction. Heal is never reduced
+- [ ] A Physical resistance row and worn armor that reduces physical add together
+- [ ] Big Success raised to the average: each type at its own average, reduction taken off those
+
+## Spending Spirituality
+
+Files: `module/helpers/spirituality.mjs`, `module/apps/roll-dialog.mjs`
+
+- [ ] Sidebar Spend button (player and NPC): a dialog with current / max Spirituality, an amount and an optional reason.
+      Spending lowers it and posts "X spends 3 Spirituality on Y." (how much is left isn't shown)
+- [ ] More than the actor has: a warning, nothing changes. Closing the dialog spends nothing
+- [ ] An action with a skill and a cost: the roll dialog has a ticked "Spend N Spirituality" box. Rolling spends it and
+      the card says "-N Spirituality". Unticked, or closing without rolling: nothing spent
+- [ ] Not enough Spirituality: the box is greyed out with a warning; the roll happens without spending
+- [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends it (note on the card)
+- [ ] An action with a cost and nothing to roll: a blue "Spend N" button that spends and posts to chat
+- [ ] A spell with a cost: the roll button AND "Spend N" (cast one way or the other, not both)
+- [ ] An action with a cost and a roll: no "Spend N"; the cost goes through the roll dialog
+- [ ] The same from a hotbar macro
+
+---
+
+# Statuses
+
+## Status list, Token HUD and the Effects tab
+
+Files: `module/effects/status-effects.mjs`, `module/effects/status-rule.mjs`, `module/documents/active-effect.mjs`,
+`templates/actor/player-character/parts/effects.hbs`
+
+- [ ] The Token HUD's status icons are the 17 system statuses (Loss of Balance ... Shock); hovering shows the name;
+      turning one on puts its icon on the token and a row on the Effects tab
+- [ ] Effects tab (player and NPC): a grid of the 17 statuses, off ones faded, on ones in colour with a gold ring.
+      Clicking toggles, and the Token HUD agrees
 - [ ] Each effect row has its icon, name, Rules (book), Turn off / on, Edit and Delete
-- [ ] Rules opens that status's page in LOTM Rules > Status Effects (Advantage and Disadvantage open the same page;
-      Dying and Dead too)
-- [ ] Turn off: the row fades and the status stops counting (Physical Defense goes back); Turn on brings it back
-- [ ] Edit opens the effect's own sheet. Give it a duration of 2 rounds in a combat: the row shows the time left,
-      and when it runs out the effect is deleted
-- [ ] Delete asks first (Shift-click skips the question)
-- [ ] Drop an effect (e.g. from an Item's or another actor's effects) on the sheet: it's added
-- [ ] A player who only observes the actor sees the tab but can't toggle, turn off or delete anything
+- [ ] Rules opens that status's page in LOTM Rules > Status Effects (Advantage and Disadvantage share a page, as do Dying
+      and Dead)
+- [ ] Turn off: the row fades and the status stops counting; Turn on brings it back
+- [ ] Edit opens the effect sheet. A duration of 2 rounds in combat: the row shows the time left, and the effect is
+      deleted when it runs out
+- [ ] Delete asks first (Shift-click skips it)
+- [ ] Drop an effect from another actor or an item onto the sheet: it's added
+- [ ] A player who only observes the actor sees the tab but can't toggle, turn off or delete
+- [ ] Helpless: a linked Bound comes with it. The token shows both icons, the HUD lights both, and the tab has a
+      "Bound · From Helpless" row with no Turn off or Delete. Clicking Bound while Helpless is on: "Bound comes from
+      Helpless. Remove Helpless instead." Turning Helpless off or on, or removing it, does the same to its Bound.
+      A creature already Bound keeps that Bound when a Helpless comes and goes
+- [ ] Blind: the token loses its sight. Dead: the combat tracker marks the combatant Defeated
+- [ ] "Invisible Hides Tokens" (Game Settings) is off by default: Invisible is just an icon. On (the world reloads):
+      invisible tokens are hidden from players who can't see invisible creatures
+- [ ] Initiative: 1d20 + the Agility total
 
-Physical Defense and Movement:
+## Physical Defense and Movement
 
-- [ ] Bound (or Off Guard): Physical Defense loses Agility and Dodge (20 -> 13). The box turns gold, and hovering it
-      says "Bound: no Agility, no Dodge"
-- [ ] Helpless: a Bound effect is added with it. The token shows both icons, the Token HUD lights up both, and the
-      Effects tab has a "Bound · From Helpless" row with no Turn off or Delete button. Physical Defense is the same as Bound
-- [ ] Clicking Bound (Token HUD or Effects tab) while Helpless is on: "Bound comes from Helpless. Remove Helpless instead."
-      and nothing changes
-- [ ] Turning Helpless off on the Effects tab turns its Bound off too, and back on together. Removing Helpless (or it
-      running out) removes its Bound
-- [ ] A creature that was already Bound (tied up) keeps that Bound when a Helpless is added and removed
-- [ ] Loss of Balance: Agility halved, rounded up, for Physical Defense and Movement only (Agility 5 counts as 3:
-      Physical 18, Movement drops). The Agility total and Agility checks don't change. Both boxes have hover text
-- [ ] Loss of Balance's row has a Stand Up button: it removes the status and posts "<name> stands up (1 movement action)."
-- [ ] Disadvantage: Physical Defense -2 (20 -> 18). Disadvantage together with Bound: just Bound's 13
-- [ ] The other statuses (Fear, Silence, Bleeding, ...) don't change Physical Defense or Movement yet (Phases 2 and 3)
-- [ ] An NPC works the same way as a player character
+Files: `module/effects/status-math.mjs`, `module/data/actor/base-actor.mjs`, the sidebar templates
 
-Gear lends effects only while held or worn:
+Setup: note Klein's Physical Defense and Movement (e.g. Agility 5, Armor 3, Dodge Trained +2: Physical 20).
 
-- [ ] Item sheets get their Effects section in Phase 4, so for now give a character's gear an effect from the console
-      (F12), with the gear's name in place of "Charm":
-      `game.actors.getName("<character>").items.getName("Charm").createEmbeddedDocuments("ActiveEffect", [{ name: "Charm of Dread", img: "icons/svg/downgrade.svg", statuses: ["disadvantage"], transfer: true }])`
-- [ ] Held or Worn: the effect is listed as "From Charm" and counts (Physical -2). Stowed in a coat: the row says
-      "Not active while stowed" and it doesn't count. It has no Delete button on the actor (it belongs to the gear)
+- [ ] Bound or Off Guard: Physical Defense loses Agility and Dodge (20 → 13). The box turns gold, and hovering it says
+      "Bound: no Agility, no Dodge". Helpless: the same as Bound
+- [ ] Loss of Balance: Agility halved, rounded up, for Physical Defense and Movement only (5 counts as 3: Physical 18,
+      Movement drops). The Agility total and Agility checks don't change. Both boxes have hover text
+- [ ] Loss of Balance's row has Stand Up: it removes the status and posts "<name> stands up (1 movement action)."
+- [ ] Disadvantage: Physical −2 (20 → 18). With Bound too: just Bound's 13
+- [ ] The NPC works the same way
 
-Blind, Dead and Invisible:
+## Health statuses
 
-- [ ] Blind: the token loses its sight (Foundry's blindness)
-- [ ] Dead: the combat tracker marks the combatant Defeated
-- [ ] Game Settings: "Invisible Hides Tokens" is off by default. Off: Invisible is just an icon. Turn it on (the world
-      reloads): an invisible token is hidden from players who can't see invisible creatures
+Files: `module/effects/health-statuses.mjs`, `module/data/actor/base-actor.mjs`
 
-Initiative:
+Setup: Klein with 12 max Health and Physique 4, no Sequence (an ordinary person).
 
-- [ ] Roll initiative in a combat: 1d20 + the Agility total, no error
-
-## Health statuses and start-of-turn cards (Phase 2)
-
-Setup: a player character with 12 max Health and Physique 4, no Sequence (an ordinary person), and an NPC token.
-A combat with both in it.
-
-Negative Health:
-
-- [ ] Damage can take Health below 0 (Damage button, typing on either sheet, the token bar). Healing stops at the maximum
-
-Automatic statuses (Health 12 max, Physique 4):
-
-- [ ] Health 6: nothing. Health 5: Bloodbath, and Bleeding starts with it (two icons on the token)
-- [ ] Health 0: Dying is added (Bloodbath stays). Health -4: still Dying. Health -5: Dead (big skull over the token,
-      Defeated in the combat tracker), and Dying comes off
-- [ ] Give the character a Sequence (a Beyonder): it only dies below -8
-- [ ] Heal back to 12: Bloodbath and Dying come off; Bleeding stays until it's treated; Dead stays (remove it by hand)
-- [ ] Turning Bloodbath on by hand also starts Bleeding. Already bleeding: no second Bleeding
+- [ ] Health can go below 0 (Damage button, typing on either sheet, the token bar). Healing stops at the maximum
+- [ ] Health 6: nothing. Health 5: Bloodbath, and Bleeding starts with it (two icons)
+- [ ] Health 0: Dying (Bloodbath stays). −4: still Dying. −5: Dead (big skull, Defeated in the tracker), Dying comes off
+- [ ] With a Sequence (a Beyonder): death only below −8
+- [ ] Heal back to 12: Bloodbath and Dying come off; Bleeding stays until treated; Dead stays (remove it by hand)
+- [ ] Bloodbath turned on by hand also starts Bleeding; already bleeding: no second Bleeding
 - [ ] An unlinked NPC token: its own Health and statuses change, not the NPC in the sidebar
 
-Start-of-turn card (whispered to the creature's owners and the GM; an NPC's only to the GM):
+## Start-of-turn cards and status buttons
 
-- [ ] A creature with none of these statuses gets no card
-- [ ] Bleeding: "Roll 1d2". Clicking it rolls 1d2 (shown in chat as "Bleeding") and takes it off Health. Internal
-      bleeding, set from the console until the effect sheet gets its LotM tab in Phase 4:
-      `game.actors.getName("<character>").effects.getName("Bleeding").update({ "system.hasInternalBleeding": true })`
-      The next card says only extraordinary medicine or surgery stops it
-- [ ] Fear / Angry toggled from the Token HUD have no source, so the card says "its source". Give one a source:
-      `game.actors.getName("<character>").effects.getName("Fear").update({ "system.source": game.actors.getName("<other>").uuid })`
-      The card and the Effects tab row name that creature
-- [ ] Bloodbath: "Roll Physique (DC 15)" opens the attribute check dialog showing "DC 15". The chat card says
-      "Bloodbath: Physique Check" and "DC 15: Success" or "Failure". Failure: the creature becomes Helpless (and Bound),
-      and chat says it faints (seen by everyone). From its next turn on, the card has no Bloodbath check while it's Helpless
-- [ ] Dying while Helpless (fainted): only "Roll Physique (DC 15)", no "Roll Will to act"
-- [ ] Dying: "Roll Physique (DC 15)": failure kills it (Dead), and chat says it dies (seen by everyone).
-      "Roll Will (DC 15) to act": chat says whether it can take an attack, casting or move action this round (owners and GM only)
-- [ ] Fear: "Roll Will (DC 15)": success marks it resisted; next turn the card only says checks against the source are -4
-- [ ] Angry/Taunted: "Roll Will (DC 20)": success removes the status, and chat says it calms down
+Files: `module/effects/turn-start.mjs`, `module/effects/rules/`, `module/documents/combat.mjs`
+
+Setup: a combat with Klein and a goblin. Cards are whispered to the creature's owners and the GM (an NPC's only to the GM).
+
+- [ ] A creature with none of these statuses gets no card. A Dead or Defeated combatant gets none either
+- [ ] Bleeding: "Roll 1d2" rolls 1d2 (shown as "Bleeding") and takes it off Health. With Internal bleeding ticked on the
+      effect's LotM tab, the card says only extraordinary medicine or surgery stops it
+- [ ] Fear / Angry with no source say "its source". Set the source on the LotM tab (My Target): the card and the
+      Effects tab row name that creature
+- [ ] Bloodbath: "Roll Physique (DC 15)". Failure: Helpless (and Bound), and a public "faints and is Helpless". While
+      Helpless, later cards have no Bloodbath check
+- [ ] Dying: "Roll Physique (DC 15)": failure kills it, with a public "dies". "Roll Will (DC 15) to act": chat says
+      whether it can take an attack, casting or move action this round (owners and GM). While Helpless, only the Physique roll
+- [ ] Fear: "Roll Will (DC 15)": success marks it resisted; later cards only say checks against the source are −4
+- [ ] Angry/Taunted: "Roll Will (DC 20)": success removes it, and chat says it calms down
 - [ ] Shock: a reminder line, no button
-- [ ] Each button works once: clicking it again warns "already rolled". Reopening chat shows it greyed out.
-      Closing the dialog without rolling leaves the button usable
-- [ ] A player who doesn't own the creature can't use its buttons
-- [ ] Shift-click a card button: rolls without the dialog
-- [ ] Physical improvement (give the character a Physique gain on its Sequence, Beyonder Bonus or Corruption): no Bloodbath
-      check, Bleeding loses no Health, and Dying says it acts normally (no buttons)
-- [ ] A Dead or Defeated combatant gets no card
+- [ ] Each button works once (again: "already rolled"; reopening chat shows it greyed out). Closing the dialog without
+      rolling leaves it usable. Someone who doesn't own the creature can't use its buttons. Shift-click skips the dialog
+- [ ] Physical improvement (a Physique gain on the Sequence, Beyonder Bonus or Corruption): no Bloodbath check, Bleeding
+      loses no Health, and Dying says it acts normally
+- [ ] Effects tab buttons: Bleeding's Treated removes it; Fear's Resist (Will 15) rolls the card's check and goes once
+      resisted; Angry's Calm Down (Will 20), Meditation (Full) removes it, Meditation (Half) halves its penalty and
+      disappears
+- [ ] Status chat lines are whispered to the owners and the GM; only "faints and is Helpless" and "dies" are public
 
-Effects tab buttons:
+## Statuses in rolls
 
-- [ ] Bleeding: Treated removes it, chat says the bleeding is treated
-- [ ] Fear: Resist (Will 15) rolls the same check as the card; once resisted, the button is gone
-- [ ] Angry/Taunted: Calm Down (Will 20); Meditation (Full) removes it; Meditation (Half) halves the penalty (the
-      button disappears afterwards; the penalty itself is in the roll dialogs from Phase 3)
-- [ ] Stand Up (Loss of Balance) and the other status chat lines are whispered to the owners and the GM. Only "faints
-      and is Helpless" and "dies" are public
+Files: `module/effects/status-rolls.mjs`, `module/apps/roll-dialog.mjs`, `module/dice/lotm-roll.mjs`
 
-## Statuses in rolls, action Traits and Use Anyway (Phase 3)
+Each status modifier is a row with the status icon, and can be removed for that roll.
 
-Setup: run `npm test` first (68 tests). Then make a Script macro from `module/macros/tag-action-traits.js`, run it as
-the GM (report only), check the list, set `APPLY = true` and run it again. Use a character with Grapple, Limb parry,
-Intimidate and a gun with Shoot / Reload, and an NPC token to target.
-
-Traits on the item sheets:
-
-- [ ] Action sheet, Details tab: a Traits box under Action Type with Speech, Reaction, Grapple, Parry, Aimed at someone
-- [ ] Spell sheet, Details tab: the same box
-- [ ] Ticking and unticking saves straight away; closing and reopening keeps it
-- [ ] A compendium action you can't edit shows the boxes greyed out
-- [ ] After the macro: Grapple has Grapple + Aimed, Limb parry has Parry + Reaction, Intimidate has Speech + Aimed,
-      Shoot has Aimed. Running the macro again reports nothing to change
-
-Modifiers in the roll dialogs (each one is a row with the status icon, and can be removed for this roll):
-
-- [ ] Angry/Taunted: every skill check, attribute check and action roll starts with "Angry/Taunted -4"
-- [ ] Angry/Taunted after Meditation (Half) on the Effects tab: -2
-- [ ] Fear with a source (see Phase 2 for the console line): "Fear vs. <source> -4". Target the source: still there.
-      Target only someone else: gone. Nothing targeted: there (take it out if the roll has nothing to do with them)
+- [ ] Angry/Taunted: every skill check, attribute check and action roll starts with "Angry/Taunted −4"; −2 after
+      Meditation (Half)
+- [ ] Fear with a source: "Fear vs. <source> −4". Targeting the source: still there. Only someone else targeted: gone.
+      Nothing targeted: there
 - [ ] Advantage with a source: "Advantage vs. <source> +2", the same way
-- [ ] Target a Helpless creature and roll an action: "Advantage: target is Helpless +2". Not on a plain skill check.
-      With Advantage against that creature as well: only one +2
-- [ ] The modifiers are in the chat card's breakdown, and the total in the Roll button matches the card
+- [ ] Target a Helpless creature and roll an action: "Advantage: target is Helpless +2" (not on a plain skill check).
+      With Advantage against it as well: only one +2
+- [ ] The card's breakdown shows each modifier, penalties with a minus sign, and the Roll button's total matches
+- [ ] Notes above the Roll button and on the card: Deaf on Listen checks only; Blind on action rolls (Inspiration check,
+      no critical strikes); an Invisible target on actions and skill checks (find it first); a Bound or Helpless
+      target on actions (Vital Strike isn't at a disadvantage). No statuses: no notes box
 
-Notes (in the dialog above the Roll button, and on the chat card):
+## Use Anyway warnings and Traits
 
-- [ ] Deaf: a Listen check notes that hearing checks fail. Other skills: no note
-- [ ] Blind: action rolls note the Inspiration check (DC 15) and no critical strikes
-- [ ] Target an Invisible creature: action rolls and skill checks note that it has to be found first (Spot / Listen
-      against its Stealth)
-- [ ] Target a Bound creature (or a Helpless one, which brings Bound): action rolls note that Vital Strike isn't at a
-      disadvantage
-- [ ] No statuses: no notes box at all
+Files: `module/effects/status-restrictions.mjs`, `module/helpers/action-roll.mjs`, `module/helpers/spirituality.mjs`,
+`module/helpers/firearms.mjs`
 
-Use Anyway warnings (the dialog lists every status that stops it; Cancel does nothing, Use Anyway goes ahead):
+Setup: actions with Traits (Grapple: grapple + aimed, Limb parry: parry + reaction, Intimidate: speech + aimed,
+Shoot: aimed; see `tag-action-traits.js`). The warning lists every status that stops the action; Cancel does
+nothing, Use Anyway goes ahead.
 
-- [ ] Bound: Grapple, Limb parry and any move action warn. Shoot doesn't
-- [ ] Helpless: warns as Bound
-- [ ] Loss of Balance: move actions warn
-- [ ] Off Guard: Limb parry (reaction) warns
-- [ ] Silence: Intimidate (speech) warns
-- [ ] Blind: Shoot (aimed) warns
-- [ ] Dying: attack, move and full actions warn, free and quick actions don't. With physical improvement: no warning
+- [ ] Bound: Grapple, Limb parry and move actions warn; Shoot doesn't. Helpless warns as Bound
+- [ ] Loss of Balance: move actions. Off Guard: reactions. Silence: speech. Blind: aimed
+- [ ] Dying: attack, move and full actions warn, free and quick don't; with physical improvement, no warning
 - [ ] Dead: everything warns
-- [ ] Use Anyway on a roll: the chat card says "Used despite: Bound" above the damage button
-- [ ] Use Anyway on "Spend N" (an action with only a Spirituality cost): it spends, then a chat line says it was used
-      despite the status. Cancel: nothing is spent
-- [ ] Use Anyway on Reload / Chamber / Unload (e.g. Reload while Dying): it reloads, then the "Used despite" line.
-      Cancel: the gun doesn't change. A reload that can't happen (no ammo) posts no "Used despite" line
-- [ ] Shift-click (fast roll) still shows the warning first
-- [ ] Hotbar macro for a restricted action: the warning shows too
-- [ ] Blind with an empty gun: "Click. Revolver is empty." straight away, with no warning (nothing to use anyway)
-- [ ] Blind with a loaded gun: the warning; Use Anyway rolls and uses the round; Cancel keeps the round
+- [ ] Use Anyway on a roll: the card says "Used despite: Bound" above the damage button
+- [ ] Use Anyway on "Spend N": it spends, then a chat line says it was used despite the status. Cancel spends nothing
+- [ ] Reload / Chamber / Unload (e.g. Reload while Dying): Use Anyway reloads, then the "Used despite" line; Cancel
+      leaves the gun alone; a reload that can't happen (no ammo) posts no "Used despite" line
+- [ ] Shift-click and hotbar macros show the warning too
+- [ ] Blind with an empty gun: "Click. Revolver is empty." with no warning. Loaded: the warning; Use Anyway rolls and
+      uses the round; Cancel keeps it
 
-## Effects on items, the effect sheet and Apply buttons (Phase 4a)
+---
 
-Setup: restart Foundry (system.json gained the Effects compendium), then reload the world. Run `npm test` (80 tests).
-Use a character who owns a spell, an NPC token to target, and a second player account if you can.
+# Effects on items
 
-Effects compendium:
+## Effects compendium
 
-- [ ] The compendium sidebar has "Effects" with 17 entries, one per status, each with its status icon
-- [ ] Opening one shows a link to its rules page in the description
-- [ ] As the GM, drag Fear from the compendium onto an NPC token: the token shows the Fear icon and the NPC's
-      Effects tab lists it (no source)
-- [ ] Drag Helpless onto a token: Helpless and its linked Bound both appear, as before
+Files: `packs/effects/`, `system.json`
 
-Item Effects tab (Ability, Action, Spell, Sequence) and the gear sheet's Effects list (at the bottom):
+- [ ] The Effects compendium has 17 entries, one per status, each with its icon and a link to its rules page
+- [ ] As the GM, drag Fear onto a goblin: the token shows Fear and its Effects tab lists it (no source)
+- [ ] Drag Helpless onto a token: Helpless and its linked Bound both appear
 
-- [ ] Each of those sheets has an Effects tab; gear shows the list above its description. Containers have none
-- [ ] New Effect on a spell or action: a new "New Effect" opens; its LotM tab says Use: Targets
-- [ ] New Effect on an ability, Sequence or gear: Use: Passive (lent to the owner)
-- [ ] Rows show the use ("Targets", "Passive (lent to the owner)", "Area (once): Circle, 1 ft") and their statuses
-- [ ] On/Off, Edit and Delete work (Delete asks first; Shift-click skips that)
-- [ ] Drag Fear from the Effects compendium onto a spell's Effects tab: it's copied in as Targets. Onto an ability:
-      as Passive. Drag an effect from one spell to another: it keeps its Use
-- [ ] A compendium item you can't edit shows its effects without New / On/Off / Delete
-- [ ] A passive effect with a change (Changes tab: `system.attributes.ins.beyonder_bonus`, Add, 2) on an ability the
-      character owns: the character's Effects tab lists it as "From <ability>", and Inspiration's total goes up by 2
-- [ ] Gear with a passive effect: held or worn, it applies; stowed, the character's Effects tab says "Not active while stowed"
+## Item Effects tab and the effect sheet
 
-Effect sheet, LotM tab:
+Files: `module/sheets/base-item-sheet.mjs`, `templates/item/parts/item-effects.hbs`, `module/apps/effect-config.mjs`,
+`templates/effects/effect-lotm.hbs`
 
-- [ ] Every effect sheet has a LotM tab after Foundry's own tabs
-- [ ] Source: "None" at first. Target one token and click My Target: its name shows; Clear sets it back to None.
-      Save, reopen: it stuck. With no target, or two, My Target warns
-- [ ] Use (effects on items only): switching to Area or Zone shows Shape and Size; Targets / Self / Passive hide them
-- [ ] Switching Use to Passive and back on a spell's effect changes the row's label on the spell sheet
-- [ ] Fear effects show "Resisted", Angry effects "Penalty halved", Bleeding effects "Internal bleeding"; other
-      effects don't show that box. Ticking Resisted on a creature's Fear: the next turn-start card says it's resisted
-- [ ] An effect on an actor has no Use dropdown
+- [ ] Ability, Action, Spell and Sequence sheets have an Effects tab; gear has the list above its description
+- [ ] New Effect on a spell or action: "New Effect" opens with Use: Targets. On an ability, Sequence or gear: Passive
+- [ ] Rows show the use ("Targets", "Passive (lent to the owner)", "Area (once): Circle, 10 ft") and statuses
+- [ ] On / Off, Edit and Delete work (Delete asks first; Shift-click skips it)
+- [ ] Drag Fear from the compendium onto a spell's Effects tab: copied in as Targets; onto an ability: as Passive.
+      From one spell to another: it keeps its Use
+- [ ] A locked compendium item shows its effects without New / On / Off / Delete
+- [ ] Every effect sheet has a LotM tab after Foundry's own (Details, Duration, Changes)
+- [ ] Source: "None" at first. Target one token, My Target: its name shows; Clear: None again. Save and reopen: it
+      stuck. With no target, or two, My Target warns
+- [ ] Use (effects on items only): Area or Zone shows Shape and Size; Targets / Self / Passive hide them. Changing it
+      changes the row's label on the item sheet. An effect on an actor has no Use
+- [ ] Fear effects show "Resisted", Angry ones "Penalty halved", Bleeding ones "Internal bleeding"; others don't
 
-Apply (item sheet button, and the chat card):
+## Passive effects
 
-- [ ] Give a spell an effect "Terrified" (Fear status, 3 rounds, Use: Targets). Roll the spell's attack: the chat card
-      has "Apply Terrified" under the damage buttons
-- [ ] Target two goblins, click it: both get Terrified, the chat says "Klein applies Terrified to Goblin, Goblin 2.",
-      and each goblin's effect names Klein as the source (Fear's −4 shows as "Fear vs. Klein" in their dialogs)
-- [ ] Clicking with nothing targeted warns and gives nothing
-- [ ] Two tokens of the same linked actor targeted: that actor gets one copy
+Files: `module/documents/active-effect.mjs`, `module/effects/granted-effects.mjs`, `module/documents/item.mjs`
+
+Setup: an ability with a passive effect (Changes: `system.attributes.ins.beyonder_bonus`, Add, 2).
+
+- [ ] Klein owns the ability: his Effects tab lists it as "From <ability>", and Inspiration's total goes up by 2
+- [ ] Gear with a passive effect: held or worn, it counts; stowed, the row says "Not active while stowed" and it doesn't.
+      It has no Delete button on the actor (it belongs to the gear)
+
+Granted abilities (the ability is in a Sequence's or gear's granted abilities, not owned):
+
+- [ ] Add the Sequence to Klein: his Effects tab lists "From <ability> (<Sequence>)" and Inspiration goes up by 2. The
+      Sequence's own Effects tab shows the copy as "Copied from the ability <ability>: edit the ability instead"
+- [ ] Effects the ability hands out (Targets / Self / Area / Zone) aren't copied
+- [ ] Gear granting the same ability too: still one copy (on the Sequence), +2 not +4
+- [ ] Take the ability off the Sequence: the copy moves to the gear. Stow the gear: it stops counting; hold it: back on
+- [ ] Drop the ability itself on Klein: the copies go (his own ability counts instead). Delete it: the copy comes back
+- [ ] Delete the Sequence and the gear: the copies go with them
+- [ ] NPC: hide the granted ability: its copy goes and the number drops; Restore: back
+- [ ] Edit the ability's effect (+2 to +3): Klein's tab marks the copy "Out of date" and shows "Some effects from granted
+      abilities are out of date or missing" with Refresh. Refresh: +3 and the notice goes. A copy turned off stays off
+- [ ] A second passive effect on the ability: the notice appears; Refresh adds it
+- [ ] `sync-granted-effects.js` lists the actors it changed; running it again says everything is up to date
+- [ ] Refresh shows for owners only
+
+## Applying effects: Targets and Self
+
+Files: `module/effects/effect-application.mjs`, `module/helpers/action-roll.mjs`
+
+Setup: a spell of Klein's with an effect "Terrified" (Fear, 3 rounds, Use: Targets).
+
+- [ ] Roll the spell's attack: the card has "Apply Terrified" under the damage buttons. Passive effects get no button
+- [ ] Target two goblins, click it: both get Terrified, chat says "Klein applies Terrified to Goblin, Goblin 2.", and
+      their dialogs show "Fear vs. Klein −4"
+- [ ] Nothing targeted: a warning, nothing applied. Two tokens of one linked actor: one copy
 - [ ] Apply from the spell's Effects tab does the same (the caster is the spell's owner; for a compendium spell, your
       selected token or your character)
-- [ ] Self: an effect with Use: Self (e.g. Advantage on Raid). Target one enemy and Apply: the caster gets Advantage
-      with that enemy as the source ("Advantage vs. <enemy>"). With no target: Advantage with no source
-- [ ] Area / Zone effects: Apply says they arrive in the next update (Phase 4b)
-- [ ] Passive effects have no Apply button and no chat button
-- [ ] The copy starts fresh: its duration counts from now, and a Fear copy isn't "resisted" even if the spell's was
-- [ ] Copies on goblins don't change the spell: deleting a goblin's Terrified leaves the spell's effect alone
+- [ ] Use: Self (e.g. Advantage on Raid). One enemy targeted: Klein gets Advantage with that enemy as source. None
+      targeted: no source
+- [ ] A copy starts fresh: its duration counts from now, and it isn't "resisted" even if the spell's effect was
+- [ ] Deleting a goblin's copy leaves the spell's effect alone
 
-Players (log in as a player who owns the caster, with the GM logged in too):
+As a player who owns Klein, with the GM logged in:
 
-- [ ] The player targets an NPC they don't own and clicks Apply: the GM's client adds it, the NPC gets it, chat says so
-- [ ] With no GM logged in: a warning that no GM is logged in, and nothing is applied to the NPC
-- [ ] A player who doesn't own the caster clicks someone else's Apply button: a warning, nothing happens
-- [ ] Dragging an effect onto a token the player doesn't own is refused by Foundry (use the Apply button instead)
+- [ ] Apply on goblins the player doesn't own: the GM's client adds them, chat says so. No GM logged in: a warning, nothing
+- [ ] Someone who doesn't own Klein clicks his Apply button: a warning, nothing
+- [ ] Dragging an effect onto a token the player doesn't own is refused by Foundry (the Apply button is the way)
 
-Source from dragging:
+Source from dragging (as the GM):
 
-- [ ] As the GM, open Klein's spell (on Klein's sheet), drag its Terrified row onto a goblin token: the goblin's
-      Terrified names Klein as its source
-- [ ] Drag the same effect from a spell in the sidebar (no owner) onto a token: no source
-- [ ] Drag a spell with effects from the sidebar onto Klein, then drag its effect from Klein's copy onto a token:
-      the source is Klein (the copy's effects point at Klein's spell)
+- [ ] Drag Terrified from the spell on Klein's sheet onto a goblin: the goblin's copy names Klein as the source
+- [ ] From a spell in the sidebar (no owner): no source
+- [ ] Drag a spell with effects from the sidebar onto Klein, then drag the effect from Klein's copy: the source is Klein
 
-## Area and zone effects (Phase 4b)
+## Area and zone effects
 
-Setup: restart Foundry (system.json gained the "Apply LotM Effect" region behavior), then reload the world. Run
-`npm test` (90 tests). Use a scene with a grid, Klein's token, three goblin tokens, and a spell of Klein's with a
-"Terrified" effect (Fear status, 3 rounds). Change its Use on the LotM tab for each test.
+Files: `module/effects/effect-areas.mjs`, `module/data/region-behavior/apply-effect.mjs`
 
-Area (Use: Area, Shape: Circle, Size 10):
+Change Terrified's Use, Shape and Size on its LotM tab for each test.
 
-- [ ] Apply (spell's Effects tab or the attack card): a notice says how to place it; a circle 10 ft in radius follows
-      the cursor with its measurements; the mouse wheel turns shapes that can turn; right-click cancels with nothing
-      applied
-- [ ] Left-click: a list of every token inside comes up. Everyone is ticked except Klein ("the caster")
-- [ ] Apply: the ticked goblins get Terrified (source: Klein), chat says who. Nothing is left on the scene
-- [ ] Untick one goblin first: that goblin gets nothing. Untick everyone, or Cancel: nobody gets it
-- [ ] Place it where nobody is: "Nobody is inside"
-- [ ] Cone, Ray and Rectangle place the right shape and size (a ray is one grid space wide)
-- [ ] Emanation: no placing; the list has everyone within the size of Klein's token edge. With Klein's token not on
-      this scene: a warning
-- [ ] Tokens on another level of the scene (V14 levels) aren't in the list
-- [ ] As a player who owns Klein (GM logged in): placing works, and the goblins get it through the GM
+Area (Circle, 10):
 
-Zone (Use: Zone, Shape: Circle, Size 10):
+- [ ] Apply: a notice says how to place it; a 10 ft circle follows the cursor with its measurements; the mouse wheel
+      turns shapes that turn; right-click cancels with nothing applied
+- [ ] Left-click: a list of everyone inside, all ticked except Klein ("the caster"). Apply: the ticked goblins get
+      Terrified (source Klein); chat says who; nothing is left on the scene
+- [ ] Unticked goblins get nothing. Untick everyone, or Cancel: nobody does. Placed where nobody is: "Nobody is inside"
+- [ ] Cone, Ray and Rectangle have the right shape and size (a ray is one grid space wide)
+- [ ] Emanation: no placing; the list has everyone within the size of Klein's token edge. Klein not on the scene: a warning
+- [ ] Tokens on another level of the scene aren't in the list
+- [ ] As a player who owns Klein: placing works, and the goblins get it through the GM
 
-- [ ] Apply and place it: a Region stays on the scene named "Terrified (Klein)", in your user colour, with an
-      "Apply LotM Effect" behavior (Region config > Behaviors)
+Zone (Circle, 10):
+
+- [ ] Apply and place: a Region named "Terrified (Klein)" in your user colour stays, with an "Apply LotM Effect" behavior
 - [ ] Goblins already inside get Terrified at once; Klein doesn't (the caster isn't affected by their own zone)
-- [ ] Klein's Effects tab has "Zone: Terrified" with 3 rounds, detail "Zone on the scene: remove this to end it".
-      Chat says "Klein creates Terrified."
-- [ ] Move a goblin out: its Terrified goes. Move it back in: it gets it again (once, not twice)
-- [ ] A goblin that comes in has Klein as its source ("Fear vs. Klein" in its dialogs)
-- [ ] Delete "Zone: Terrified" from Klein's Effects tab: the Region is gone, and the goblins inside lose Terrified
-- [ ] Make another zone and delete the Region from the scene instead: Klein's marker goes, and so do the goblins' copies
-- [ ] In combat, let 3 rounds pass: the marker runs out, and the zone goes with it
-- [ ] Emanation zone: no placing; the zone is centered on Klein's token. Move Klein: the zone moves with him, goblins
-      it passes over get Terrified, and lose it when it moves off them
-- [ ] As a player who owns Klein (GM logged in): the zone is made (by the GM's client), Klein gets the marker, and
-      the player can remove the marker to end it. With no GM logged in: a warning, and no zone
+- [ ] Klein's tab has "Zone: Terrified" with 3 rounds, "Zone on the scene: remove this to end it". Chat: "Klein creates
+      Terrified."
+- [ ] A goblin walking out loses it; walking back in gets it once, with Klein as source
+- [ ] Delete Klein's marker: the Region goes, and the goblins inside lose Terrified
+- [ ] Delete the Region instead: Klein's marker goes, and so do the goblins' copies
+- [ ] In combat, after 3 rounds the marker runs out and the zone goes with it
+- [ ] Emanation zone: centered on Klein's token, no placing; it moves with him, giving and taking Terrified as it passes
+- [ ] As a player who owns Klein: the GM's client makes the zone, Klein gets the marker, and the player can remove the
+      marker to end it. No GM logged in: a warning, no zone
 
 Zones made by hand (GM):
 
-- [ ] Draw a Region, add the behavior "Apply LotM Effect", drop Fear from the Effects compendium into its Effects box,
-      leave Source empty. Tokens walking in get Fear (no source) and lose it walking out
-- [ ] Give it a Source (an actor's UUID): copies name that actor; that actor isn't affected unless
-      "Affects its source too" is ticked
-- [ ] Change the behavior's effects while tokens are inside: they lose the old copies and get the new ones
-- [ ] Foundry's own "Apply Active Effect" behavior still works too (its copies have no source)
+- [ ] Draw a Region, add "Apply LotM Effect", drop Fear from the Effects compendium into its Effects box, Source empty:
+      tokens walking in get Fear (no source) and lose it walking out
+- [ ] With a Source: copies name that actor, and it isn't affected unless "Affects its source too" is ticked
+- [ ] Changing the behavior's effects while tokens are inside swaps their copies
+- [ ] Foundry's own "Apply Active Effect" behavior still works (its copies have no source)

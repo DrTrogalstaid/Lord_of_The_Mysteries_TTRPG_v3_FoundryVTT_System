@@ -1,5 +1,5 @@
 /**
- * One-time macro: give the existing actions (and spells) their Traits.
+ * Macro: give actions (and spells) their Traits, by name.
  *
  * Statuses check an action's Traits before it's used (effects/status-restrictions.mjs):
  *   speech    Silence           (language-related actions and spells)
@@ -7,7 +7,8 @@
  *   grapple   Bound             (can't grapple)
  *   parry     Bound             (can't parry)
  *   aimed     Blind             (anything aimed at someone: an Inspiration check first)
- * New actions get their Traits on the Details tab. This macro tags the ones that already exist, by name.
+ * Traits can be ticked on an action's Details tab. This macro tags many at once, by name: run it after adding
+ * actions or spells that should have Traits (add them to the TRAITS list first).
  *
  * It only ADDS traits: an action keeps any it already has. It looks at:
  *   - the Actions and Spells & Rituals compendiums (unlocked for the update, locked again after)
@@ -16,12 +17,11 @@
  *   (Unlinked tokens on scenes keep their own copies: drag the action onto them again, or tick the boxes.)
  *
  * How to use:
- *   1. Install the update with action Traits and reload.
- *   2. Check the TRAITS list below. Add, take out or change names to match your game. The rituals are commented
+ *   1. Check the TRAITS list below. Add, take out or change names to match your game. The rituals are commented
  *      out: take the "//" off any that need speech.
- *   3. Make a Script macro with this code and run it as the GM. It only REPORTS what it would change (console, F12,
+ *   2. Make a Script macro with this code and run it as the GM. It only REPORTS what it would change (console, F12,
  *      and a chat message only you see).
- *   4. If the report looks right, change APPLY to true and run it again.
+ *   3. If the report looks right, change APPLY to true and run it again.
  */
 
 const APPLY = false;

@@ -263,6 +263,12 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
       .map((effect) => {
         const statuses = (effect.statusRules ?? []).map((rule) => game.i18n.localize(rule.name));
         const details = [useLabel(effect), ...statuses];
+        // A copy of a granted ability's passive effect (effects/granted-effects.mjs): edit the ability instead.
+        const grantedFrom = effect.system?.grantedFrom;
+        if (grantedFrom) {
+          const name = fromUuidSync(grantedFrom)?.name ?? grantedFrom;
+          details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Granted.CopiedFrom", { name }));
+        }
         if (effect.disabled) details.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
         const duration = effect.duration;
         const finite = duration && (Number.isFinite(duration.value) || duration.expiry);
