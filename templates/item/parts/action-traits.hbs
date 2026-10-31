@@ -1,0 +1,12 @@
+{{!-- Traits of an action or spell: speech, reaction, grapple, parry, aimed.
+      Shared by action.hbs and spell.hbs. traitOptions comes from _traitOptions() in sheets/base-item-sheet.mjs.
+      Statuses check these before the action is used (effects/status-restrictions.mjs). --}}
+<fieldset class="action-traits">
+  <legend>{{localize "LORD_OF_THE_MYSTERIES.Traits.Label"}}</legend>
+  <multi-checkbox name="system.traits" {{#unless editable}}disabled{{/unless}}>
+    {{#each traitOptions as |trait|}}
+      <option value="{{trait.value}}" {{#if trait.selected}}selected{{/if}}>{{trait.label}}</option>
+    {{/each}}
+  </multi-checkbox>
+  <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Traits.Hint"}}</p>
+</fieldset>

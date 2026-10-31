@@ -218,3 +218,73 @@
 .roll-dc-result.failure {
   color: #b33a3a;
 }
+
+/* -------------------------------------------------------------------- */
+/* Statuses in rolls: status modifier rows, notes, and "Used despite"   */
+/* apps/roll-dialog.mjs, effects/status-rolls.mjs, status-restrictions.mjs */
+/* -------------------------------------------------------------------- */
+
+/* A modifier row that came from a status: its icon before the name. */
+.lotm.roll-dialog .modifiers li.status-modifier .mod-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.roll-dialog .modifiers .mod-status-img {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: none;
+}
+
+/* Notes from statuses (Deaf, Blind, an Invisible target): in the dialog and on the chat card. */
+.lotm.roll-dialog ul.roll-status-notes {
+  list-style: none;
+  margin: 6px 0;
+  padding: 4px 6px;
+  border-left: 3px solid var(--lotm-status-active, #c9a227);
+  font-size: 0.9em;
+}
+
+.lotm.roll-dialog ul.roll-status-notes li + li {
+  margin-top: 2px;
+}
+
+.lotm.roll-status-notes {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border-left: 3px solid #c9a227;
+  font-size: 0.9em;
+}
+
+.lotm.roll-status-notes p {
+  margin: 2px 0;
+}
+
+/* "Used despite: Bound" on the chat card of an action used after the warning. */
+.lotm.chat-used-despite {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border-left: 3px solid #b33a3a;
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.lotm-restriction-list {
+  margin: 4px 0 8px;
+}
+
+/* Item sheets: the Traits checkboxes (templates/item/parts/action-traits.hbs). */
+.lotm.sheet.item .action-traits multi-checkbox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.lotm.sheet.item .action-traits multi-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}

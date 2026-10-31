@@ -2,12 +2,13 @@
  * The rules of one status (Bound, Fear, Bleeding, ...).
  *
  *   StatusRule       (this file) everything a status can do with settings alone: change Physical Defense and
- *                    movement, link to its rules page, show a button that ends it, a line on the start-of-turn card
+ *                    movement, link to its rules page, show a button that ends it, a line on the start-of-turn card,
+ *                    modifiers and notes in roll dialogs, and the actions it stops (a warning with Use Anyway)
  *     ├─ BleedingRule  (rules/bleeding.mjs)  start of turn: roll 1d2 Health lost; Treated button
  *     ├─ BloodbathRule (rules/bloodbath.mjs) starts Bleeding; start of turn: Physique 15 or faint (Helpless)
- *     ├─ DyingRule     (rules/dying.mjs)     start of turn: Physique 15 or die; Will 15 to act
+ *     ├─ DyingRule     (rules/dying.mjs)     start of turn: Physique 15 or die; Will 15 to act; only free / quick actions
  *     ├─ FearRule      (rules/fear.mjs)      start of turn and Effects tab: Will 15 to resist the forced movement
- *     └─ AngryRule     (rules/angry.mjs)     start of turn and Effects tab: Will 20 to calm down; meditation
+ *     └─ AngryRule     (rules/angry.mjs)     start of turn and Effects tab: Will 20 to calm down; meditation; -4 (or -2)
  *
  * One StatusRule is made for every entry in STATUSES (status-effects.mjs). Rules are looked up by status id, so a
  * status works the same however it got onto the actor: toggled from the Token HUD or the Effects tab, added
@@ -19,6 +20,13 @@
  *   toStatusEffect()    Foundry's status list, CONFIG.statusEffects (registerStatusEffects in status-effects.mjs)
  *   onApplied()         when an effect with the status is put on an actor (documents/active-effect.mjs)
  *   turnStart(), onTurnCheck()  the start-of-turn card (effects/turn-start.mjs)
+ *   rollModifier(), rollNote(), targetRollModifier(), targetRollNote()
+ *                       the roll dialogs (effects/status-rolls.mjs, apps/roll-dialog.mjs)
+ *   restriction()       using an action or spell (effects/status-restrictions.mjs)
+ *
+ * Roll settings: roll and targetRoll (modifiers), note and targetNote (notes); see the constructor.
+ * A roll's "kind" is "skill" (a skill check), "attribute" (an attribute check) or "action" (an action's or spell's
+ * attack roll, with or without a skill).
  */
 
 import { statusChat } from "./status-checks.mjs";
@@ -57,6 +65,147 @@ export default class StatusRule {
     this.endButton = config.endButton ?? null;
     /** A line on the start-of-turn card while the creature has this status (language key; {name}, {source}), or null. */
     this.turnStartNote = config.turnStartNote ?? null;
+    /**
+     * A modifier on the creature's own rolls: { modifier, kinds, scope }, or null.
+     *   kinds  which rolls ("skill", "attribute", "action"); default all three
+     *   scope  "all", or "source": only rolls against the effect's source (see rollModifier)
+     */
+    this.roll = config.roll ?? null;
+    /** A modifier on rolls made against a creature with this status: { modifier, kinds, label }, or null. */
+    this.targetRoll = config.targetRoll ?? null;
+    /** A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks), or null. */
+    this.note = config.note ?? null;
+    /** A note on rolls made against a creature with this status: { key, kinds }, or null. */
+    this.targetNote = config.targetNote ?? null;
+    /**
+     * What it stops the creature doing: { actionTypes, traits, all, reason }, or null.
+     *   actionTypes  action types it rules out ("move"); traits  action traits it rules out ("speech");
+     *   all          every action; reason  language key of the warning.
+     */
+    this.restrict = config.restrict ?? null;
+  }
+
+
+  /* -------------------------------------------- */
+  /*  Rolls                                        */
+  /* -------------------------------------------- */
+
+  /**
+   * Whether a roll setting (roll, targetRoll, rollNote, targetNote) covers this kind of roll.
+   * @param {{kinds?: string[]}} setting
+   * @param {string} kind
+   * @returns {boolean}
+   */
+  static coversKind(setting, kind) {
+    return !setting?.kinds?.length || setting.kinds.includes(kind);
+  }
+
+
+  /**
+   * The modifier this status puts in the creature's own roll dialog, or null.
+   * A "source" modifier (Fear's -4, Advantage's +2) only counts against the effect's source: it's left out when
+   * the roller has targets and none of them is the source. With no targets it's added, named after the source,
+   * so the player can take it out if the roll has nothing to do with that creature.
+   * @param {Actor} actor
+   * @param {ActiveEffect} effect
+   * @param {{kind: string, targets: Actor[]}} context
+   * @returns {{key: string, label: string, value: number, img: string}|null}   key: two the same aren't both added.
+   */
+  rollModifier(actor, effect, { kind, targets = [] }) {
+    if (!this.roll || !StatusRule.coversKind(this.roll, kind)) return null;
+    const value = this.rollValue(effect);
+    if (!value) return null;
+
+    const name = game.i18n.localize(this.name);
+    if (this.roll.scope !== "source") return { key: this.id, label: name, value, img: this.img };
+
+    const sourceUuid = effect.system?.source;
+    if (!sourceUuid) return { key: this.id, label: name, value, img: this.img };
+    if (targets.length && !targets.some((target) => target?.uuid === sourceUuid)) return null;
+    const source = effect.sourceActor?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Status.TheSource");
+    return {
+      key: `${this.id}:${sourceUuid}`,
+      label: game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Rolls.Against", { status: name, source }),
+      value,
+      img: this.img,
+    };
+  }
+
+
+  /**
+   * The size of this status's roll modifier for one effect. Angry overrides it (halved by Meditation).
+   * @param {ActiveEffect} effect
+   * @returns {number}
+   */
+  rollValue(effect) {
+    return Number(this.roll?.modifier) || 0;
+  }
+
+
+  /**
+   * The modifier on a roll made against a creature with this status (attacking a Helpless creature: +2), or null.
+   * @param {Actor} target
+   * @param {ActiveEffect} effect
+   * @param {{kind: string}} context
+   * @returns {{key: string, label: string, value: number}|null}
+   */
+  targetRollModifier(target, effect, { kind }) {
+    if (!this.targetRoll || !StatusRule.coversKind(this.targetRoll, kind)) return null;
+    const value = Number(this.targetRoll.modifier) || 0;
+    if (!value) return null;
+    return { key: `target:${this.id}`, label: game.i18n.localize(this.targetRoll.label), value, img: this.img };
+  }
+
+
+  /**
+   * A note in the creature's own roll dialog and on its chat card (Deaf on a Listen check), or null.
+   * @param {Actor} actor
+   * @param {ActiveEffect} effect
+   * @param {{kind: string, skillUuid?: string}} context
+   * @returns {string|null}  HTML (escaped).
+   */
+  rollNote(actor, effect, { kind, skillUuid = null }) {
+    const note = this.note;
+    if (!note || !StatusRule.coversKind(note, kind)) return null;
+    if (note.skill && note.skill !== skillUuid) return null;
+    return this.text(note.key, actor, effect);
+  }
+
+
+  /**
+   * A note on a roll made against a creature with this status (Invisible: find it first), or null.
+   * @param {Actor} target
+   * @param {ActiveEffect} effect
+   * @param {{kind: string}} context
+   * @returns {string|null}  HTML (escaped). {name} is the target.
+   */
+  targetRollNote(target, effect, { kind }) {
+    if (!this.targetNote || !StatusRule.coversKind(this.targetNote, kind)) return null;
+    return this.text(this.targetNote.key, target, effect);
+  }
+
+
+  /* -------------------------------------------- */
+  /*  Actions                                      */
+  /* -------------------------------------------- */
+
+  /**
+   * Why this status stops the creature using an action or spell right now, or null when it doesn't.
+   * The player can still use it after the warning (Use Anyway), so the GM and players can talk it over.
+   * @param {Item} item       The action or spell.
+   * @param {Actor} actor
+   * @param {ActiveEffect} effect
+   * @returns {string|null}   The warning (plain text).
+   */
+  restriction(item, actor, effect) {
+    const rule = this.restrict;
+    if (!rule) return null;
+    const type = item?.system?.actionType ?? "";
+    const traits = new Set(item?.system?.traits ?? []);
+    const stopped = rule.all
+      || (rule.actionTypes ?? []).includes(type)
+      || (rule.traits ?? []).some((trait) => traits.has(trait));
+    return stopped ? game.i18n.localize(rule.reason) : null;
   }
 
 

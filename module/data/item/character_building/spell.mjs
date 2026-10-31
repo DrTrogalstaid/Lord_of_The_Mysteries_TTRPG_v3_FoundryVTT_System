@@ -15,6 +15,13 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     //Action Type (e.i. Attack/Spell, quick action, free action)
     schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
 
+    // What kind of action it is, beyond its Action Type: speech, reaction, grapple, parry, aimed
+    // (CONFIG.LORD_OF_THE_MYSTERIES.actionTraits). Statuses check these before it's used
+    // (effects/status-restrictions.mjs): Silence stops speech, Off Guard stops reactions, Blind stops aimed...
+    schema.traits = new fields.SetField(new fields.StringField({
+      required: true, blank: false, choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTraits),
+    }));
+
     schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.special = new fields.StringField({ required: true, initial: "na" });
     

@@ -6,6 +6,7 @@ import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
 import { canFire, fireGun, gunFor } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
+import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 
 /**
  * Action rolls
@@ -219,12 +220,14 @@ function getUnskilledAttackSummary(actor, action) {
  * damage button), and the "Roll Damage" button itself when the action has a damage formula.
  * @param {Actor} actor
  * @param {Item} action
+ * @param {object} [options]
+ * @param {string} [options.note]  HTML put above the damage button: "Used despite: Bound" (effects/status-restrictions.mjs).
  * @returns {{flags: object, footer: string}}
  */
-function actionChatExtras(actor, action) {
+function actionChatExtras(actor, action, { note = "" } = {}) {
   return {
     flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid } },
-    footer: getDamageFormula(action) ? damageButtonHTML() : "",
+    footer: note + (getDamageFormula(action) ? damageButtonHTML() : ""),
   };
 }
 
@@ -236,6 +239,9 @@ function actionChatExtras(actor, action) {
  * Actions set to "Fires rounds" (system.ammoUse, see helpers/firearms.mjs) also use up ammo:
  *   - before rolling, the gun must have the rounds ready, otherwise nothing is rolled ("Click. Revolver is empty.")
  *   - the rounds are only taken out once the attack is actually rolled, so closing the dialog costs nothing.
+ *
+ * If one of the character's statuses stops the action (Bound and a movement action, Silence and a speech action...),
+ * a warning comes first, with Use Anyway (effects/status-restrictions.mjs). Used anyway: the chat card says so.
  * @param {Actor} actor   The character rolling.
  * @param {Item} action   The action item.
  * @param {object} [options]
@@ -250,16 +256,18 @@ export async function rollActionAttack(actor, action, { gunId, fast = false } = 
     return null;
   }
 
-  // Not a gun shot: just roll.
-  if (action.system.ammoUse !== "fire") return rollAttackDice(actor, action, { fast });
-
-  // A gun shot. No rounds ready = no roll.
-  const gun = gunFor(actor, gunId);
+  // A gun shot: no rounds ready = no roll ("Click. Revolver is empty."). Checked before any status warning.
+  const isShot = action.system.ammoUse === "fire";
+  const gun = isShot ? gunFor(actor, gunId) : null;
   const amount = Math.max(1, action.system.ammoAmount ?? 0);
-  if (!gun || !canFire(gun, amount)) return null;
+  if (isShot && (!gun || !canFire(gun, amount))) return null;
 
-  const roll = await rollAttackDice(actor, action, { fast });
-  if (roll) await fireGun(actor, gun, { amount });   // null = the dialog was closed, so nothing was fired
+  // A status that stops this action: warn first. Cancelled = nothing happens.
+  const { proceed, note } = await confirmStatusRestrictions(actor, action);
+  if (!proceed) return null;
+
+  const roll = await rollAttackDice(actor, action, { fast, note });
+  if (roll && isShot) await fireGun(actor, gun, { amount });   // null = the dialog was closed, so nothing was fired
   return roll;
 }
 
@@ -269,10 +277,11 @@ export async function rollActionAttack(actor, action, { gunId, fast = false } = 
  * @param {Item} action
  * @param {object} [options]
  * @param {boolean} [options.fast]  Shift-click: skip the dialog.
+ * @param {string} [options.note]   "Used despite: ..." for the chat card (see rollActionAttack).
  * @returns {Promise<Roll|null>}
  */
-async function rollAttackDice(actor, action, { fast = false } = {}) {
-  if (!(await rollSkillUuid(action))) return rollActionWithoutSkill(actor, action, { fast });
+async function rollAttackDice(actor, action, { fast = false, note = "" } = {}) {
+  if (!(await rollSkillUuid(action))) return rollActionWithoutSkill(actor, action, { fast, note });
 
   const info = await resolveActionSkill(actor, action);
   if (!info) {
@@ -290,7 +299,7 @@ async function rollAttackDice(actor, action, { fast = false } = {}) {
     // The action item itself. The dialog reads its fields straight from action.system.
     action,
     // Added to the chat message: the flags and damage buttons (see actionChatExtras).
-    chat: actionChatExtras(actor, action),
+    chat: actionChatExtras(actor, action, { note }),
   }, { fast });
 }
 
@@ -302,15 +311,16 @@ async function rollAttackDice(actor, action, { fast = false } = {}) {
  * @param {Item} action
  * @param {object} [options]
  * @param {boolean} [options.fast]  Shift-click: skip the dialog.
+ * @param {string} [options.note]   "Used despite: ..." for the chat card (see rollActionAttack).
  * @returns {Promise<Roll|null>}
  */
-async function rollActionWithoutSkill(actor, action, { fast = false } = {}) {
+async function rollActionWithoutSkill(actor, action, { fast = false, note = "" } = {}) {
   const formula = getAttackFormula(action);
   if (!formula || !Roll.validate(formula)) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidAttack", { name: action.name }));
     return null;
   }
-  return ActionRollDialog.prompt(actor, action, formula, { chat: actionChatExtras(actor, action), fast });
+  return ActionRollDialog.prompt(actor, action, formula, { chat: actionChatExtras(actor, action, { note }), fast });
 }
 
 /* -------------------------------------------- */

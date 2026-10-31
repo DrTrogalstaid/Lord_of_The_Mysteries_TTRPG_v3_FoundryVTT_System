@@ -54,6 +54,11 @@ export default class ActionRollDialog extends LotmRollDialog {
     return this.show(new this(actor, action, formula, { chat }), { fast });
   }
 
+  /** @override */
+  get rollKind() {
+    return "action";
+  }
+
   /** The formula with the actor's numbers filled in, e.g. "1d20 +3[AGI]", for showing in the dialog. */
   get filledFormula() {
     return Roll.replaceFormulaData(this.baseFormula, this.actor.getRollData(), { missing: "0" });

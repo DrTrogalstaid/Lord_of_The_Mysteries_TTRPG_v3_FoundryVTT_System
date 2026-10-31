@@ -94,6 +94,16 @@ export default class SkillCheckDialog extends LotmRollDialog {
         return this.show(new this(actor, skillEntry), { fast });
     }
 
+    /** An action's attack roll, or a skill check. @override */
+    get rollKind() {
+        return this.action ? "action" : "skill";
+    }
+
+    /** @override */
+    get rollSkillUuid() {
+        return this.skillEntry.uuid ?? null;
+    }
+
     /**
      * Window title: "Shoot (Pistol)" when rolling an action, the usual skill check title otherwise.
      * @override

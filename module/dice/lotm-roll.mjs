@@ -26,24 +26,40 @@
  * no extra template needed.
  */
 export default class LOTM_VTTRoll extends Roll {
+    /**
+     * The collapsible breakdown on the chat card: one row per die, and one per flat modifier ("STR  3").
+     * A term after a minus sign shows as negative ("Angry/Taunted  -4"), so penalties don't look like bonuses.
+     */
     async getTooltip() {
         const parts = [];
+        const { DiceTerm, NumericTerm, FunctionTerm, ParentheticalTerm, OperatorTerm } = foundry.dice.terms;
+        const isA = (term, cls) => foundry.utils.isSubclass(term.constructor, cls);
+
+        // -1 when the term just after it is subtracted ("- 4[Angry]"), otherwise 1.
+        let sign = 1;
+        const signed = (total) => (typeof total === "number" ? sign * total : total);
 
         for ( const term of this.terms ) {
-            if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.DiceTerm) ) {
-                parts.push(term.getTooltipData());
+            if ( isA(term, OperatorTerm) ) {
+                // "+ -4" stays negative, "- -4" becomes positive; * and / don't change the sign.
+                if ( term.operator === "-" ) sign = -sign;
+                continue;
             }
-            else if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.NumericTerm) ) {
+
+            if ( isA(term, DiceTerm) ) {
+                const data = term.getTooltipData();
+                parts.push({ ...data, total: signed(data.total) });
+            }
+            else if ( isA(term, NumericTerm) ) {
                 parts.push({
                     formula: term.flavor,
-                    total: term.total,
+                    total: signed(term.total),
                     faces: null,
                     flavor: "",
                     rolls: []
                 });
             }
-            else if ( foundry.utils.isSubclass(term.constructor, foundry.dice.terms.FunctionTerm)
-                || foundry.utils.isSubclass(term.constructor, foundry.dice.terms.ParentheticalTerm) ) {
+            else if ( isA(term, FunctionTerm) || isA(term, ParentheticalTerm) ) {
                 // Dice inside floor(...) or (...) get their own rows, like top-level dice (the 1d6).
                 for ( const die of term.dice ?? [] ) {
                     parts.push(die.getTooltipData());
@@ -51,12 +67,14 @@ export default class LOTM_VTTRoll extends Roll {
                 // Then one row for the result, labelled like the attack's STR row (e.g. "Half STR  1").
                 parts.push({
                     formula: term.flavor || term.formula,
-                    total: term.total,
+                    total: signed(term.total),
                     faces: null,
                     flavor: "",
                     rolls: []
                 });
             }
+            // The sign only applies to the term right after the operator.
+            sign = 1;
         }
 
         return foundry.applications.handlebars.renderTemplate(this.constructor.TOOLTIP_TEMPLATE, { parts });

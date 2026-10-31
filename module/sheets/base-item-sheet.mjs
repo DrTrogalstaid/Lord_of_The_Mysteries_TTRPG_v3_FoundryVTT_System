@@ -19,6 +19,7 @@
  *   - _linkedItemRows()  a list of Item UUIDs looked up for display (name, image, or "missing")
  *   - _dropOnList()      a dropped Item added to one of this Item's UUID lists
  *   - _removeFromList()  one entry taken out of a list field by its position
+ *   - _traitOptions()    the Traits checkboxes for actions and spells (partial: ACTION_TRAITS_PARTIAL)
  *
  * How the sheets that extend this class add their own things (the same rules as the actor sheets):
  *   - DEFAULT_OPTIONS is merged by Foundry down the chain, so a sheet only lists what's new for it:
@@ -36,6 +37,14 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 
 /** The item header (image and name). Put it first in a sheet's PARTS: `header: ITEM_HEADER_PART`. */
 export const ITEM_HEADER_PART = { template: "systems/lotm/templates/item/parts/item-header.hbs" };
+
+/**
+ * The Traits checkboxes (speech, reaction, grapple, parry, aimed), shared by the action and spell sheets.
+ * In a template: `{{> "systems/lotm/templates/item/parts/action-traits.hbs"}}`, with `traitOptions` in the context
+ * (from _traitOptions below). List it in the sheet's PARTS so it's loaded first:
+ * `form: { template: "...", templates: [ACTION_TRAITS_PARTIAL] }`.
+ */
+export const ACTION_TRAITS_PARTIAL = "systems/lotm/templates/item/parts/action-traits.hbs";
 
 /** Name and image shown for a linked Item that can't be found (deleted, or its compendium is gone). */
 const MISSING_NAME = "Unknown Item";
@@ -106,6 +115,21 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
   /* -------------------------------------------- */
   /*  Helpers for the sheets that extend this one  */
   /* -------------------------------------------- */
+
+  /**
+   * The Traits checkboxes for ACTION_TRAITS_PARTIAL: one per trait in CONFIG.LORD_OF_THE_MYSTERIES.actionTraits,
+   * ticked when the item has it. Statuses read these (effects/status-restrictions.mjs).
+   * @returns {{value: string, label: string, selected: boolean}[]}
+   */
+  _traitOptions() {
+    const traits = new Set(this.item.system.traits ?? []);
+    return Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.actionTraits).map(([value, label]) => ({
+      value,
+      label: game.i18n.localize(label),
+      selected: traits.has(value),
+    }));
+  }
+
 
   /**
    * Turn a text field into HTML for a description box: @UUID links, inline rolls, and secret blocks

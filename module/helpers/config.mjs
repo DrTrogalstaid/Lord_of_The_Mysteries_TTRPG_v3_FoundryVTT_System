@@ -212,3 +212,19 @@ LORD_OF_THE_MYSTERIES.effectAreaShapes = {
     rectangle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.rectangle',
     emanation: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.emanation',
 };
+
+/**
+ * Action traits (system.traits on actions and spells): what kind of action it is, for the statuses that stop it
+ * (effects/status-effects.mjs `restrict`). Silence stops speech, Off Guard reactions, Bound grapples and parries,
+ * and Blind needs an Inspiration check first for anything aimed at someone.
+ */
+LORD_OF_THE_MYSTERIES.actionTraits = {
+    speech: 'LORD_OF_THE_MYSTERIES.Traits.speech',
+    reaction: 'LORD_OF_THE_MYSTERIES.Traits.reaction',
+    grapple: 'LORD_OF_THE_MYSTERIES.Traits.grapple',
+    parry: 'LORD_OF_THE_MYSTERIES.Traits.parry',
+    aimed: 'LORD_OF_THE_MYSTERIES.Traits.aimed',
+};
+
+/** The Listen skill in the Skills compendium: Deaf adds a note to its checks (effects/status-effects.mjs). */
+LORD_OF_THE_MYSTERIES.listenSkillUuid = 'Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP';

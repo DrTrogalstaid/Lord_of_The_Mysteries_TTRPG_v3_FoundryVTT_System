@@ -1,3 +1,5 @@
+import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
+
 /**
  * Spending Spirituality.
  *
@@ -136,10 +138,16 @@ export async function openSpendSpiritualityDialog(actor) {
 /**
  * The "Spend N" button on an action that has a Spirituality Cost but nothing to roll
  * (no skill and no Attack Roll Macro): spend the cost and say so in chat.
+ * A status that stops the action (Silence and a speech action...) warns first, with Use Anyway
+ * (effects/status-restrictions.mjs). Used anyway: the chat says so.
  * @param {Actor} actor
  * @param {Item} action
  * @returns {Promise<object|null>}
  */
 export async function useActionSpirituality(actor, action) {
-  return spendSpirituality(actor, spiritualityCost(action), { reason: action.name });
+  const { proceed, note } = await confirmStatusRestrictions(actor, action);
+  if (!proceed) return null;
+  const result = await spendSpirituality(actor, spiritualityCost(action), { reason: action.name });
+  if (result) await postUsedDespite(actor, action, note);
+  return result;
 }

@@ -30,6 +30,13 @@ const ICONS = "icons/svg";
  *   movement   Movement: agility "half" or "none".
  *   endButton  A button on its Effects tab row that ends it: label, icon, and a chat line ({name} = the actor).
  *   turnStartNote  A line on the creature's start-of-turn card while it has the status (effects/turn-start.mjs).
+ *   roll       A modifier on the creature's own rolls: { modifier, kinds, scope } (scope "source": only against
+ *              the effect's source). kinds: "skill", "attribute", "action"; default all.
+ *   targetRoll A modifier on rolls made against the creature: { modifier, kinds, label }.
+ *   note       A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks).
+ *   targetNote A note on rolls made against the creature: { key, kinds }.
+ *   restrict   What it stops the creature doing: { actionTypes, traits, all, reason }. Using it warns first,
+ *              with Use Anyway (effects/status-restrictions.mjs). Traits are in CONFIG.LORD_OF_THE_MYSTERIES.actionTraits.
  *   rule       A StatusRule subclass, for a status with its own code (effects/rules/). Default: StatusRule.
  * Advantage and Disadvantage share one rules page, as do Dying and Dead.
  */
@@ -39,6 +46,7 @@ const STATUSES = {
     page: "dlTI58Stc85NPx2c",
     defense: { agility: "half" },
     movement: { agility: "half" },
+    restrict: { actionTypes: ["move"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.lossOfBalance" },
     endButton: {
       label: "LORD_OF_THE_MYSTERIES.Status.Buttons.StandUp",
       icon: "fa-solid fa-person-arrow-up-from-line",
@@ -49,20 +57,27 @@ const STATUSES = {
     img: `${ICONS}/target.svg`,
     page: "0lDCV0NPovGsVpuo",
     defense: { agility: "none", dodge: "none" },
+    restrict: { traits: ["reaction"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.offGuard" },
   },
   helpless: {
     img: `${ICONS}/unconscious.svg`,
     page: "isNdxAmKglOLYL6b",
     implies: ["bound"],
+    // Attacking a Helpless creature gives Advantage (+2).
+    targetRoll: { modifier: 2, kinds: ["action"], label: "LORD_OF_THE_MYSTERIES.Status.Rolls.HelplessTarget" },
   },
   bound: {
     img: `${ICONS}/net.svg`,
     page: "l3r635tKgr7cILRL",
     defense: { agility: "none", dodge: "none" },
+    restrict: { actionTypes: ["move"], traits: ["grapple", "parry"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.bound" },
+    targetNote: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.TargetBound", kinds: ["action"] },
   },
   advantage: {
     img: `${ICONS}/upgrade.svg`,
     page: "1HY7jhTwh5hqhKW1",
+    // +2 to skill and attribute checks against the enemy (the effect's source).
+    roll: { modifier: 2, scope: "source" },
   },
   disadvantage: {
     img: `${ICONS}/downgrade.svg`,
@@ -92,32 +107,43 @@ const STATUSES = {
   dead: {
     img: `${ICONS}/skull.svg`,
     page: "Ae5VsAdAb7tiuTNC",
+    restrict: { all: true, reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.dead" },
   },
   fear: {
     rule: FearRule,
     img: `${ICONS}/terror.svg`,
     page: "eTPMolBoiW99BRAH",
+    // -4 to checks related to the source of the fear.
+    roll: { modifier: -4, scope: "source" },
   },
   angry: {
     rule: AngryRule,
     img: `${ICONS}/fire.svg`,
     page: "fayzjgNXjFZvBV1B",
+    // -4 to every skill and attribute check (-2 after Meditation (Half), see rules/angry.mjs).
+    roll: { modifier: -4 },
   },
   silence: {
     img: `${ICONS}/silenced.svg`,
     page: "WStitnA2uoXTsLrw",
+    restrict: { traits: ["speech"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.silence" },
   },
   invisible: {
     img: `${ICONS}/invisible.svg`,
     page: "pUHQzg0XGTg1OKhM",
+    targetNote: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.TargetInvisible", kinds: ["action", "skill"] },
   },
   blind: {
     img: `${ICONS}/blind.svg`,
     page: "Y4uaYfoMn45r6p3l",
+    restrict: { traits: ["aimed"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.blind" },
+    note: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.Blind", kinds: ["action"] },
   },
   deaf: {
     img: `${ICONS}/deaf.svg`,
     page: "LnKIsSLeDHsM9uoB",
+    // Only on Listen checks (the skill in CONFIG.LORD_OF_THE_MYSTERIES.listenSkillUuid).
+    note: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.Deaf", kinds: ["skill"], skill: "Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP" },
   },
   shock: {
     img: `${ICONS}/daze.svg`,

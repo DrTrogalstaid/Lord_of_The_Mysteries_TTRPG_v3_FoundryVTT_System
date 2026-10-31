@@ -436,3 +436,59 @@ Effects tab buttons:
       button disappears afterwards; the penalty itself is in the roll dialogs from Phase 3)
 - [ ] Stand Up (Loss of Balance) and the other status chat lines are whispered to the owners and the GM. Only "faints
       and is Helpless" and "dies" are public
+
+## Statuses in rolls, action Traits and Use Anyway (Phase 3)
+
+Setup: run `npm test` first (68 tests). Then make a Script macro from `module/macros/tag-action-traits.js`, run it as
+the GM (report only), check the list, set `APPLY = true` and run it again. Use a character with Grapple, Limb parry,
+Intimidate and a gun with Shoot / Reload, and an NPC token to target.
+
+Traits on the item sheets:
+
+- [ ] Action sheet, Details tab: a Traits box under Action Type with Speech, Reaction, Grapple, Parry, Aimed at someone
+- [ ] Spell sheet, Details tab: the same box
+- [ ] Ticking and unticking saves straight away; closing and reopening keeps it
+- [ ] A compendium action you can't edit shows the boxes greyed out
+- [ ] After the macro: Grapple has Grapple + Aimed, Limb parry has Parry + Reaction, Intimidate has Speech + Aimed,
+      Shoot has Aimed. Running the macro again reports nothing to change
+
+Modifiers in the roll dialogs (each one is a row with the status icon, and can be removed for this roll):
+
+- [ ] Angry/Taunted: every skill check, attribute check and action roll starts with "Angry/Taunted -4"
+- [ ] Angry/Taunted after Meditation (Half) on the Effects tab: -2
+- [ ] Fear with a source (see Phase 2 for the console line): "Fear vs. <source> -4". Target the source: still there.
+      Target only someone else: gone. Nothing targeted: there (take it out if the roll has nothing to do with them)
+- [ ] Advantage with a source: "Advantage vs. <source> +2", the same way
+- [ ] Target a Helpless creature and roll an action: "Advantage: target is Helpless +2". Not on a plain skill check.
+      With Advantage against that creature as well: only one +2
+- [ ] The modifiers are in the chat card's breakdown, and the total in the Roll button matches the card
+
+Notes (in the dialog above the Roll button, and on the chat card):
+
+- [ ] Deaf: a Listen check notes that hearing checks fail. Other skills: no note
+- [ ] Blind: action rolls note the Inspiration check (DC 15) and no critical strikes
+- [ ] Target an Invisible creature: action rolls and skill checks note that it has to be found first (Spot / Listen
+      against its Stealth)
+- [ ] Target a Bound creature (or a Helpless one, which brings Bound): action rolls note that Vital Strike isn't at a
+      disadvantage
+- [ ] No statuses: no notes box at all
+
+Use Anyway warnings (the dialog lists every status that stops it; Cancel does nothing, Use Anyway goes ahead):
+
+- [ ] Bound: Grapple, Limb parry and any move action warn. Shoot doesn't
+- [ ] Helpless: warns as Bound
+- [ ] Loss of Balance: move actions warn
+- [ ] Off Guard: Limb parry (reaction) warns
+- [ ] Silence: Intimidate (speech) warns
+- [ ] Blind: Shoot (aimed) warns
+- [ ] Dying: attack, move and full actions warn, free and quick actions don't. With physical improvement: no warning
+- [ ] Dead: everything warns
+- [ ] Use Anyway on a roll: the chat card says "Used despite: Bound" above the damage button
+- [ ] Use Anyway on "Spend N" (an action with only a Spirituality cost): it spends, then a chat line says it was used
+      despite the status. Cancel: nothing is spent
+- [ ] Use Anyway on Reload / Chamber / Unload (e.g. Reload while Dying): it reloads, then the "Used despite" line.
+      Cancel: the gun doesn't change. A reload that can't happen (no ammo) posts no "Used despite" line
+- [ ] Shift-click (fast roll) still shows the warning first
+- [ ] Hotbar macro for a restricted action: the warning shows too
+- [ ] Blind with an empty gun: "Click. Revolver is empty." straight away, with no warning (nothing to use anyway)
+- [ ] Blind with a loaded gun: the warning; Use Anyway rolls and uses the round; Cancel keeps the round

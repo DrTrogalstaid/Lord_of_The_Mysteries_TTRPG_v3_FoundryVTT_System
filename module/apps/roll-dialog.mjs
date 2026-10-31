@@ -2,6 +2,7 @@ import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { signedTerm } from "../helpers/skill-check-formula.mjs";
 import { defaultMessageMode, messageModeButtons, postRoll } from "../helpers/message-modes.mjs";
 import { currentSpirituality, spendSpirituality, spiritualityNote } from "../helpers/spirituality.mjs";
+import { statusRollExtras, targetedActors } from "../effects/status-rolls.mjs";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -30,6 +31,8 @@ export const ROLL_DIALOG_PARTIALS = [
  *     They start on the chat sidebar's choice and only change this one roll.
  *   - an optional "Spend N Spirituality" checkbox (helpers/spirituality.mjs)
  *   - an optional DC: the dialog shows it, and the chat card says whether the roll passed (total >= DC)
+ *   - statuses (effects/status-rolls.mjs): the roller's and their targets' modifiers start in the list (Angry -4,
+ *     Fear -4, Advantage +2, a Helpless target +2), and their notes show in the dialog and on the chat card
  *   - rolling, and posting to chat as the character
  *
  * A dialog that extends this class only fills in its own part:
@@ -39,6 +42,8 @@ export const ROLL_DIALOG_PARTIALS = [
  *   _formula()            the full roll formula, including this.modifiers (see modifierTerms())
  *   _totalLabel()         what the Roll button shows in brackets, e.g. "+7"
  *   _flavor()             the chat message's title, e.g. "Pistol Check (Agility)"
+ *   rollKind              "skill", "attribute" or "action", for the status modifiers (default "attribute")
+ *   rollSkillUuid         the skill rolled, for skill checks (Deaf notes Listen checks)
  * Like the sheets, Foundry merges DEFAULT_OPTIONS down the chain, so a dialog only lists what's new for it.
  */
 export default class LotmRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -81,6 +86,9 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     this.messageMode = defaultMessageMode();
     this.chat = chat;
     this.dc = (dc === null || dc === undefined || Number.isNaN(Number(dc))) ? null : Number(dc);
+    // Notes from statuses (Deaf, Blind, an Invisible target, ...): filled in by addStatusExtras when it opens.
+    this.statusNotes = [];
+    this.statusExtrasAdded = false;
 
     // Spirituality: ticked when the actor has enough, and it can't be ticked when they don't.
     this.spiritCost = Math.max(0, Number(spirituality?.cost) || 0);
@@ -100,6 +108,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
    * @returns {Promise<Roll|null>}    The roll, or null if the window was closed without rolling.
    */
   static show(app, { fast = false } = {}) {
+    app.addStatusExtras();
     if (fast) return app.roll();
     return new Promise((resolve) => {
       app.resolve = resolve;
@@ -113,6 +122,37 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
   /* -------------------------------------------- */
   /*  For the dialogs that extend this class       */
   /* -------------------------------------------- */
+
+  /** What kind of roll this is, for status modifiers: "skill", "attribute" or "action". */
+  get rollKind() {
+    return "attribute";
+  }
+
+  /** For a skill check: the skill's UUID (Deaf notes Listen checks). */
+  get rollSkillUuid() {
+    return null;
+  }
+
+  /**
+   * Add what the roller's and their targets' statuses bring to this roll (effects/status-rolls.mjs): their
+   * modifiers as rows in the list, removable like any other, and their notes. Done once, when the dialog opens.
+   */
+  addStatusExtras() {
+    if (this.statusExtrasAdded) return;
+    this.statusExtrasAdded = true;
+    const { modifiers, notes } = statusRollExtras({
+      actor: this.actor,
+      kind: this.rollKind,
+      skillUuid: this.rollSkillUuid,
+      targets: targetedActors(),
+    });
+    for (const modifier of modifiers) {
+      // The label goes into the roll formula as "-4[Fear vs. Bob]", so it can't have square brackets of its own.
+      const label = modifier.label.replace(/[[\]]/g, "");
+      this.modifiers.push({ id: foundry.utils.randomID(), label, value: modifier.value, img: modifier.img, status: true });
+    }
+    this.statusNotes = notes;
+  }
 
   /** Data for the dialog's own section of the template. @returns {object|Promise<object>} */
   _prepareBodyContext() {
@@ -164,6 +204,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
       spendSpirit: this.spendSpirit,
       totalLabel: this._totalLabel(),
       dc: this.dc,
+      statusNotes: this.statusNotes,
     };
   }
 
@@ -208,7 +249,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
 
     await postRoll(roll, {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: this._flavor() + this.#dcNote(roll) + spiritualityNote(spent) + (this.chat.footer ?? ""),
+      flavor: this._flavor() + this.#dcNote(roll) + this.#statusNotesHTML() + spiritualityNote(spent) + (this.chat.footer ?? ""),
       flags: this.chat.flags ?? {},
     }, this.messageMode);
 
@@ -227,6 +268,12 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     const result = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
     return ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
       + `${game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DCResult", { dc: this.dc, result })}</span>`;
+  }
+
+  /** The status notes for the chat card, or "" when there are none. */
+  #statusNotesHTML() {
+    if (!this.statusNotes.length) return "";
+    return `<div class="lotm roll-status-notes">${this.statusNotes.map((note) => `<p>${note}</p>`).join("")}</div>`;
   }
 
   static async #onSubmit(event, form, formData) {

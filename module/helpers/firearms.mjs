@@ -17,6 +17,7 @@
  */
 
 import { autoPlacement } from "./inventory.mjs";
+import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
 
 const L = "LORD_OF_THE_MYSTERIES.Firearm";
 
@@ -405,6 +406,8 @@ function looseStacks(actor, gun, rounds) {
 /**
  * Do what an ammo action does (its "Uses ammo" setting), without an attack roll.
  * The character sheet's ammo button calls this. "fire" here is for fire actions that have no attack roll.
+ * A status that stops the action (Dying and a reload that isn't a quick action...) warns first, with Use Anyway
+ * (effects/status-restrictions.mjs). Used anyway: the chat says so.
  * @param {Actor} actor
  * @param {Item} action
  * @param {string} [gunId]  The gun the action came from, if any (see gunFor).
@@ -415,14 +418,21 @@ export async function useAmmoAction(actor, action, gunId, use = action.system.am
   const gun = gunFor(actor, gunId);
   if (!gun) return null;
   const amount = action.system.ammoAmount ?? 0;
+  if (!["fire", "reload", "chamber", "unload"].includes(use)) return null;
 
+  const { proceed, note } = await confirmStatusRestrictions(actor, action);
+  if (!proceed) return null;
+
+  let result = null;
   switch (use) {
-    case "fire": return fireGun(actor, gun, { amount: Math.max(1, amount), chat: true });
-    case "reload": return reloadGun(actor, gun, { amount });
-    case "chamber": return chamberRound(actor, gun);
-    case "unload": return unloadGun(actor, gun);
-    default: return null;
+    case "fire": result = await fireGun(actor, gun, { amount: Math.max(1, amount), chat: true }); break;
+    case "reload": result = await reloadGun(actor, gun, { amount }); break;
+    case "chamber": result = await chamberRound(actor, gun); break;
+    case "unload": result = await unloadGun(actor, gun); break;
   }
+  // null = it couldn't happen (empty gun, no ammo...): nothing was used, so nothing to say.
+  if (result !== null && result !== undefined) await postUsedDespite(actor, action, note);
+  return result;
 }
 
 /** A short chat line with the gun's picture: "Loaded 6 × Silver bullets into Revolver (6/6)." */

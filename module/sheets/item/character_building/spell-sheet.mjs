@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL } from "../../base-item-sheet.mjs";
 // The Skill slot, the same one the action sheet uses.
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
 
@@ -21,7 +21,7 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/spell.hbs" },
+    form: { template: "systems/lotm/templates/item/character_building/spell.hbs", templates: [ACTION_TRAITS_PARTIAL] },
   };
 
   /* -------------------------------------------- */
@@ -37,6 +37,9 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
 
     // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
     context.actionSkill = await prepareSkillSlot(this.item);
+
+    // The Traits checkboxes (templates/item/parts/action-traits.hbs).
+    context.traitOptions = this._traitOptions();
 
     // Sequence Upgrade rows just need their array index for input naming.
     context.higherSequenceUpgrades = (context.system.higherSequenceUpgrades ?? []).map((value, index) => ({

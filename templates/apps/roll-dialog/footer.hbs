@@ -13,6 +13,12 @@
     <span class="roll-mode-label">{{messageModeLabel}}</span>
 </div>
 
+{{#if statusNotes.length}}
+<ul class="roll-status-notes">
+    {{#each statusNotes as |note|}}<li>{{{note}}}</li>{{/each}}
+</ul>
+{{/if}}
+
 {{#if dc}}
 <p class="roll-dc">{{localize "LORD_OF_THE_MYSTERIES.RollDialog.DC" dc=dc}}</p>
 {{/if}}

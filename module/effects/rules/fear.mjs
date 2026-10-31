@@ -9,7 +9,7 @@ const RESIST_DC = 15;
  *   - Every movement action can only go away from the source. A Will check (DC 15) resists that for good
  *     (system.hasResisted), unless a new fear effect is added. Rolled from the start-of-turn card or the
  *     Effects tab's Resist button.
- *   - Checks related to the source are -4, resisted or not (Phase 3 adds this to the roll dialogs).
+ *   - Checks related to the source are -4, resisted or not (a row in the roll dialogs, effects/status-rolls.mjs).
  */
 export default class FearRule extends StatusRule {
 

@@ -69,6 +69,15 @@
       }
     },
 
+    "Traits": {
+      "Label": "Traits",
+      "Hint": "Statuses check these before it's used: Silence stops speech, Off Guard stops reactions, Bound stops grapples and parries, Blind stops anything aimed.",
+      "speech": "Speech",
+      "reaction": "Reaction",
+      "grapple": "Grapple",
+      "parry": "Parry",
+      "aimed": "Aimed at someone"
+    },
     "Status": {
       "Names": {
         "lossOfBalance": "Loss of Balance",
@@ -132,6 +141,30 @@
         "CalmedDown": "{name} calms down.",
         "MeditatedFull": "{name} meditates and calms down.",
         "MeditatedHalf": "{name} meditates: the anger's penalty is halved."
+      },
+      "Rolls": {
+        "Against": "{status} vs. {source}",
+        "HelplessTarget": "Advantage: target is Helpless"
+      },
+      "Restrictions": {
+        "Title": "Use {name}?",
+        "Intro": "{name}'s statuses stop {item}:",
+        "UseAnyway": "Use Anyway",
+        "Cancel": "Cancel",
+        "UsedDespite": "Used despite: {statuses}",
+        "lossOfBalance": "Loss of Balance: can't take movement actions. Standing up takes 1 movement action.",
+        "offGuard": "Off Guard: can't react.",
+        "bound": "Bound: can't take movement actions (squirming at Agility speed is the GM's call), and can't parry or grapple.",
+        "dead": "Dead: can't act.",
+        "silence": "Silence: can't use language-related actions and abilities.",
+        "blind": "Blind: an action aimed at something needs an Inspiration check (DC 15) first, or it can't be taken.",
+        "dying": "Dying: only free and quick actions, unless a Will check (DC {dc}) turns them into 1 attack, casting or move action."
+      },
+      "Notes": {
+        "TargetBound": "{name} is Bound: Vital Strike isn't at a disadvantage.",
+        "TargetInvisible": "{name} is Invisible: a Spot or Listen check against its Stealth finds it first, otherwise it can't be attacked (areas of effect still work).",
+        "Blind": "Blind: Inspiration check (DC 15) first, or the action can't be taken. Usually no critical strikes.",
+        "Deaf": "Deaf: hearing checks fail (halved instead for extraordinary hearing, unless the deafness is extraordinary too)."
       }
     },
 

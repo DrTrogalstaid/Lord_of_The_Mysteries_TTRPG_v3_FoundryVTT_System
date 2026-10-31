@@ -13,6 +13,13 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     schema.description = new fields.StringField({ required: true, initial: "Results" });
     schema.category = new fields.StringField({ required: true, initial: "combat", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionCategories) });
 
+    // What kind of action it is, beyond its Action Type: speech, reaction, grapple, parry, aimed
+    // (CONFIG.LORD_OF_THE_MYSTERIES.actionTraits). Statuses check these before it's used
+    // (effects/status-restrictions.mjs): Silence stops speech, Off Guard stops reactions, Blind stops aimed...
+    schema.traits = new fields.SetField(new fields.StringField({
+      required: true, blank: false, choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTraits),
+    }));
+
     //Spirituatlity cost
     schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
 

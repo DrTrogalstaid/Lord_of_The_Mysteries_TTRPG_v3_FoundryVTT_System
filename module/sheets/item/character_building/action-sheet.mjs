@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL } from "../../base-item-sheet.mjs";
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
 import { AMMO_USES } from "../../../helpers/firearms.mjs";
 
@@ -19,7 +19,7 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/action.hbs" },
+    form: { template: "systems/lotm/templates/item/character_building/action.hbs", templates: [ACTION_TRAITS_PARTIAL] },
   };
 
   /* -------------------------------------------- */
@@ -34,6 +34,9 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
 
     // The Skill slot: the skill this action rolls with.
     context.actionSkill = await prepareSkillSlot(this.item);
+
+    // The Traits checkboxes (templates/item/parts/action-traits.hbs).
+    context.traitOptions = this._traitOptions();
 
     // "Uses ammo" dropdown: none / fire / reload / chamber / unload (helpers/firearms.mjs).
     context.ammoUseOptions = AMMO_USES;

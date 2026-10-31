@@ -6,6 +6,9 @@ const DEATH_DC = 15;
 /** The Will check to turn the round's small actions into one attack, casting or move action. */
 const ACT_DC = 15;
 
+/** The action types a dying creature can still take (rulebook: "up to 3 free actions and 1 swift action"). */
+const DYING_ACTION_TYPES = ["free", "quick"];
+
 /**
  * Dying (rulebook: Dying/Dead). Health 0 or less: turned on and off automatically (effects/health-statuses.mjs),
  * or by hand. Dead replaces it once Health is past the death point.
@@ -14,8 +17,17 @@ const ACT_DC = 15;
  *     turns those into 1 attack, casting or move action, with half movement. A Helpless creature (fainted) can't
  *     act at all, so it only gets the Physique check.
  *   - Beyonders with physical improvement act normally; the card only reminds the table that they're dying.
+ *   - Using an attack, casting, move or full action while dying warns first (Use Anyway: after a passed Will check).
  */
 export default class DyingRule extends StatusRule {
+
+  /** Only free and quick actions, for creatures without physical improvement. @override */
+  restriction(item, actor, effect) {
+    if (actor?.system?.hasPhysicalImprovement) return null;
+    const type = item?.system?.actionType ?? "";
+    if (!type || DYING_ACTION_TYPES.includes(type)) return null;
+    return game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Restrictions.dying", { dc: ACT_DC });
+  }
 
   /** @override */
   turnStart(actor, effect) {

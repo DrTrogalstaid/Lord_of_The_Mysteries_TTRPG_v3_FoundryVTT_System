@@ -7,13 +7,19 @@ const CALM_DC = 20;
 /**
  * Angry/Taunted (rulebook: Angry/Taunted). The source is the effect's system.source (who caused the anger).
  *   - The creature must attack or chase the source first, until it or the source is Dying/Dead.
- *   - Skill and attribute checks are -4 (Phase 3 adds this to the roll dialogs); -2 after Meditation (Half).
+ *   - Skill and attribute checks are -4 (a row in the roll dialogs, effects/status-rolls.mjs); -2 after Meditation (Half).
  *   - Calming down: a Will check (DC 20) at the start of its action (start-of-turn card or the Effects tab),
  *     or Meditation (Full). Meditation (Half) only halves the penalty (system.isPenaltyHalved).
  *   - A Psychotherapy guidance check (DC 20) by someone else, or harm to someone or something it values, also calms
  *     it at once: the GM removes the status.
  */
 export default class AngryRule extends StatusRule {
+
+  /** -4 on skill and attribute checks (set in status-effects.mjs), halved after Meditation (Half). @override */
+  rollValue(effect) {
+    const value = super.rollValue(effect);
+    return effect.system?.isPenaltyHalved ? Math.trunc(value / 2) : value;
+  }
 
   /** @override */
   turnStart(actor, effect) {
