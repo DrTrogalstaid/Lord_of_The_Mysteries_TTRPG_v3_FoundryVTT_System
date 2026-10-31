@@ -9,6 +9,7 @@
  *   - skills: only the ones dropped on the sheet (plus any a Sequence raises), instead of the whole compendium
  *   - a simple inventory: one list, no slots, pockets or money
  *   - no Favorites on actions
+ *   - the Effects tab is the player sheet's (effects.hbs), between Sequences and Notes
  *
  * Hiding granted abilities, actions, spells and skill raises is handled by the base sheet; it's turned on
  * because NPC data has a hiddenGrants list (data/actor/actor-npc.mjs).
@@ -58,6 +59,8 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
     spells:    { template: `${TEMPLATES}/player-character/parts/spells.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
     inventory: { template: `${TEMPLATES}/npc/inventory.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
     sequences: { template: `${TEMPLATES}/player-character/parts/sequences.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
+    // The player sheet's Effects tab too (prepared by the base sheet).
+    effects:   { template: `${TEMPLATES}/player-character/parts/effects.hbs`, scrollable: [""] },
     notes:     { template: `${TEMPLATES}/npc/notes.hbs`, scrollable: [""] },
   };
 
@@ -70,6 +73,7 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
         { id: "spells", label: "LORD_OF_THE_MYSTERIES.Tabs.Spells" },
         { id: "inventory", label: "LORD_OF_THE_MYSTERIES.Tabs.Inventory" },
         { id: "sequences", label: "LORD_OF_THE_MYSTERIES.Tabs.Sequences" },
+        { id: "effects", label: "LORD_OF_THE_MYSTERIES.Tabs.Effects" },
         { id: "notes", label: "LORD_OF_THE_MYSTERIES.Tabs.Notes" },
       ],
       initial: "main"

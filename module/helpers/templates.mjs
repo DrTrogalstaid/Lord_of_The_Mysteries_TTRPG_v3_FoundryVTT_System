@@ -9,7 +9,6 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/parts/actor-features.hbs',
     'systems/lotm/templates/actor/parts/actor-items.hbs',
     'systems/lotm/templates/actor/parts/actor-spells.hbs',
-    'systems/lotm/templates/actor/parts/actor-effects.hbs',
     'systems/lotm/templates/actor/player-character/character.hbs',
     'systems/lotm/templates/actor/player-character/parts/biography.hbs',
     'systems/lotm/templates/actor/player-character/parts/header.hbs',
@@ -35,7 +34,6 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/apps/roll-dialog/footer.hbs',
 
     // Item partials
-    'systems/lotm/templates/item/parts/item-effects.hbs',
     'systems/lotm/templates/item/parts/item-header.hbs',
   ]);
 };

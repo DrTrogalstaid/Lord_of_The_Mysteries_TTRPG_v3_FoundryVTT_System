@@ -1,0 +1,153 @@
+/* -------------------------------------------------------------------- */
+/* Effects tab (player and NPC sheets): status toggles and effect rows  */
+/* templates/actor/player-character/parts/effects.hbs                   */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor {
+  --lotm-status-active: #c9a227;
+}
+
+.lotm.sheet.actor .effects-section {
+  margin-bottom: 10px;
+}
+
+/* One button per status, in a wrapping grid. Off: faded and grey. On: full colour with a gold ring. */
+.lotm.sheet.actor .status-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 4px;
+}
+
+.lotm.sheet.actor .status-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 2px;
+  margin: 0;
+  background: var(--psx-panel);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .status-toggle img {
+  width: 28px;
+  height: 28px;
+  border: none;
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.lotm.sheet.actor .status-toggle:hover img {
+  opacity: 0.7;
+}
+
+.lotm.sheet.actor .status-toggle.active {
+  border-color: var(--lotm-status-active);
+  box-shadow: 0 0 0 1px var(--lotm-status-active);
+}
+
+.lotm.sheet.actor .status-toggle.active img {
+  opacity: 1;
+  filter: none;
+}
+
+.lotm.sheet.actor .status-toggle:disabled {
+  cursor: default;
+}
+
+/* Effect rows: icon, name and details, time left, buttons. */
+.lotm.sheet.actor .effect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lotm.sheet.actor .effect-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--psx-panel);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+}
+
+/* Switched off, or suppressed (gear that's stowed). */
+.lotm.sheet.actor .effect-row.inactive {
+  opacity: 0.55;
+}
+
+.lotm.sheet.actor .effect-img {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+}
+
+.lotm.sheet.actor .effect-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lotm.sheet.actor .effect-name {
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lotm.sheet.actor .effect-detail {
+  color: var(--psx-text-dim);
+  font-size: 11px;
+}
+
+.lotm.sheet.actor .effect-duration {
+  flex: 0 0 auto;
+  color: var(--psx-text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.lotm.sheet.actor .effect-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.sheet.actor .effect-control {
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .effect-control:hover {
+  color: var(--psx-text);
+}
+
+.lotm.sheet.actor .effect-button {
+  flex: 0 0 auto;
+  width: auto;
+  height: 22px;
+  line-height: 1;
+  padding: 0 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------- */
+/* Sidebar: Physical Defense / Movement changed by a status             */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .status-modified {
+  border-color: var(--lotm-status-active);
+}
+
+.lotm.sheet.actor .status-modified input {
+  color: var(--lotm-status-active);
+}

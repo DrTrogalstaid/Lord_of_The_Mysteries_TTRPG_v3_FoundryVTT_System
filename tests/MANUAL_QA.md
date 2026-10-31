@@ -314,3 +314,70 @@ Gear and clothing / bags:
 - [ ] On a character: the carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
       remove, open), and a gun's Reload / Chamber / Unload buttons work
 - [ ] A coat or bag on a character lists what's inside and how full it is
+
+## Statuses and the Effects tab (Phase 1b)
+
+Setup: install the update and reload. Have a player character and an NPC, each with a token on a scene.
+Note their Physical Defense and Movement first (e.g. Agility 5, Armor 3, Dodge Trained +2: Physical 20).
+
+Leftover effects (run once):
+
+- [ ] Run the "Leftover effects" macro (`module/macros/check-leftover-effects.js`). It whispers a report and changes
+      nothing. Old Token HUD statuses (Prone, Poisoned, ...) are listed as OLD STATUS
+- [ ] With APPLY set to true it deletes the OLD STATUS effects; running it again reports none
+
+Status list:
+
+- [ ] The Token HUD's status icons are the 17 system statuses (Loss of Balance ... Shock), not Foundry's old list
+- [ ] Hovering one shows its name; turning one on puts its icon on the token and a row on the Effects tab
+- [ ] No errors in the console (F12) on load, opening sheets, toggling statuses
+
+Effects tab (player sheet, and the new Effects tab on the NPC sheet between Sequences and Notes):
+
+- [ ] A grid of the 17 statuses: off ones faded, on ones in colour with a gold ring. Click toggles, and the Token HUD agrees
+- [ ] Each effect row has its icon, name, Rules (book), Turn off / on, Edit and Delete
+- [ ] Rules opens that status's page in LOTM Rules > Status Effects (Advantage and Disadvantage open the same page;
+      Dying and Dead too)
+- [ ] Turn off: the row fades and the status stops counting (Physical Defense goes back); Turn on brings it back
+- [ ] Edit opens the effect's own sheet. Give it a duration of 2 rounds in a combat: the row shows the time left,
+      and when it runs out the effect is deleted
+- [ ] Delete asks first (Shift-click skips the question)
+- [ ] Drop an effect (e.g. from an Item's or another actor's effects) on the sheet: it's added
+- [ ] A player who only observes the actor sees the tab but can't toggle, turn off or delete anything
+
+Physical Defense and Movement:
+
+- [ ] Bound (or Off Guard): Physical Defense loses Agility and Dodge (20 -> 13). The box turns gold, and hovering it
+      says "Bound: no Agility, no Dodge"
+- [ ] Helpless: a Bound effect is added with it. The token shows both icons, the Token HUD lights up both, and the
+      Effects tab has a "Bound · From Helpless" row with no Turn off or Delete button. Physical Defense is the same as Bound
+- [ ] Clicking Bound (Token HUD or Effects tab) while Helpless is on: "Bound comes from Helpless. Remove Helpless instead."
+      and nothing changes
+- [ ] Turning Helpless off on the Effects tab turns its Bound off too, and back on together. Removing Helpless (or it
+      running out) removes its Bound
+- [ ] A creature that was already Bound (tied up) keeps that Bound when a Helpless is added and removed
+- [ ] Loss of Balance: Agility halved, rounded up, for Physical Defense and Movement only (Agility 5 counts as 3:
+      Physical 18, Movement drops). The Agility total and Agility checks don't change. Both boxes have hover text
+- [ ] Loss of Balance's row has a Stand Up button: it removes the status and posts "<name> stands up (1 movement action)."
+- [ ] Disadvantage: Physical Defense -2 (20 -> 18). Disadvantage together with Bound: just Bound's 13
+- [ ] The other statuses (Fear, Silence, Bleeding, ...) don't change Physical Defense or Movement yet (Phases 2 and 3)
+- [ ] An NPC works the same way as a player character
+
+Gear lends effects only while held or worn:
+
+- [ ] Item sheets get their Effects section in Phase 4, so for now give a character's gear an effect from the console
+      (F12), with the gear's name in place of "Charm":
+      `game.actors.getName("<character>").items.getName("Charm").createEmbeddedDocuments("ActiveEffect", [{ name: "Charm of Dread", img: "icons/svg/downgrade.svg", statuses: ["disadvantage"], transfer: true }])`
+- [ ] Held or Worn: the effect is listed as "From Charm" and counts (Physical -2). Stowed in a coat: the row says
+      "Not active while stowed" and it doesn't count. It has no Delete button on the actor (it belongs to the gear)
+
+Blind, Dead and Invisible:
+
+- [ ] Blind: the token loses its sight (Foundry's blindness)
+- [ ] Dead: the combat tracker marks the combatant Defeated
+- [ ] Game Settings: "Invisible Hides Tokens" is off by default. Off: Invisible is just an icon. Turn it on (the world
+      reloads): an invisible token is hidden from players who can't see invisible creatures
+
+Initiative:
+
+- [ ] Roll initiative in a combat: 1d20 + the Agility total, no error

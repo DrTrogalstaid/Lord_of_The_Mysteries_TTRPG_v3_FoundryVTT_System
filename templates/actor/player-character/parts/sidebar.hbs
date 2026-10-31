@@ -32,7 +32,7 @@
 
   <!--Defense -->
   <div class="defense-box">
-    <div class="stat-box full-width">
+    <div class="stat-box full-width{{#if statusNotes.physical}} status-modified{{/if}}"{{#if statusNotes.physical}} data-tooltip="{{statusNotes.physical}}"{{/if}}>
       <label>Physical</label>
       <input type="number" name="system.defenses.physical" value="{{system.defenses.physical}}" readonly/>
     </div>
@@ -87,7 +87,7 @@
 
   <!--Movement-->
   <div class="speed-container">
-    <div class="speed-box full-width">
+    <div class="speed-box full-width{{#if statusNotes.movement}} status-modified{{/if}}"{{#if statusNotes.movement}} data-tooltip="{{statusNotes.movement}}"{{/if}}>
       <label>Movement Speed</label>
       <input type="number" name="system.movement", value="{{system.movement}}" readonly>
     </div>

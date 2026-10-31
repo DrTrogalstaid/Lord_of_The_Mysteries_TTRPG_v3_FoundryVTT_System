@@ -193,3 +193,22 @@ LORD_OF_THE_MYSTERIES.strengthDamageBonus = [
     { strength: 25, bonus: "4d10" },
     { strength: 30, bonus: "4d12" },
 ];
+/**
+ * How an effect stored on a spell or action is handed out when it's used (system.application.mode,
+ * see data/effect/effect.mjs).
+ */
+LORD_OF_THE_MYSTERIES.effectApplicationModes = {
+    targets: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.targets',
+    self: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.self',
+    area: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.area',
+    zone: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.zone',
+};
+
+/** The shape placed on the scene for an "area" or "zone" effect (system.application.shape). */
+LORD_OF_THE_MYSTERIES.effectAreaShapes = {
+    circle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.circle',
+    cone: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.cone',
+    ray: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.ray',
+    rectangle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.rectangle',
+    emanation: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.emanation',
+};

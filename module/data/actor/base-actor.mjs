@@ -3,6 +3,8 @@ import { calculateCarrying, armoredMovement } from "../../helpers/inventory.mjs"
 import { calculateSkillModifier } from "../../helpers/skill-modifiers.mjs";
 import { atLeastLevel, raiseLevel } from "../../helpers/skill-associations.mjs";
 import { educationGrowth } from "../../helpers/skill-learning.mjs";
+import { activeStatusRules } from "../../effects/status-effects.mjs";
+import { combineStatusRules, movementAgility, physicalDefense } from "../../effects/status-math.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -209,13 +211,20 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.attributes.agi.corruption -= armor.agilityPenalty;
         this.attributes.agi.total -= armor.agilityPenalty;
 
+        // Statuses (Loss of Balance, Bound, Disadvantage, ...): what they do to movement and Physical Defense.
+        // Each status's settings are in effects/status-effects.mjs, the math in effects/status-math.mjs.
+        // Agility itself isn't changed, so Agility checks are unaffected; only movement and defense use these.
+        // Display only, not in the schema: { defense: {agility, dodge, modifier, sources}, movement: {agility, sources} }.
+        this.statusModifiers = combineStatusRules(activeStatusRules(this.parent));
+
         // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
 
         // Movement in meters (Strength + Agility), halved (rounded up) or stopped by armor that's too heavy,
         // then x3 for feet. The armor rule rounds in meters, so it's applied before the conversion.
         //TODO: Change the multiplication here to depend on the system's distance unit.
-        const meters = this.attributes.str.total + this.attributes.agi.total;
+        // Loss of Balance halves the Agility used here (rounded up).
+        const meters = this.attributes.str.total + movementAgility(this.attributes.agi.total, this.statusModifiers.movement);
         this.movement = armoredMovement(meters, armor.movement) * 3;
 
         this._prepareDefenseValues();
@@ -271,8 +280,14 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             this.sequenceSkillSteps?.[dodgeUuid] ?? 0   // a Sequence that raises Dodge raises the defense too
         );
         this.defenses.dodge = calculateSkillModifier(dodgeLevel, 0);
-        // Physical
-        this.defenses.physical = (this.attributes.agi.total + this.defenses.armor + this.defenses.dodge + 10);
+        // Physical: Agility + Armor + Dodge + 10. Statuses can halve or remove the Agility and Dodge parts, or lower
+        // them (Disadvantage), see physicalDefense in effects/status-math.mjs. The Dodge value above isn't changed.
+        this.defenses.physical = physicalDefense({
+            agility: this.attributes.agi.total,
+            armor: this.defenses.armor,
+            dodge: this.defenses.dodge,
+            defense: this.statusModifiers?.defense,
+        });
         // Will
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique

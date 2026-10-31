@@ -1,2 +1,73 @@
+{{!-- Effects tab, used by the player and NPC sheets (prepared in _prepareEffectsPanel, sheets/base-actor-sheet.mjs).
+      Status toggles first (the same as the Token HUD's status icons), then every effect on the actor. --}}
 <section class="tab effects-tab {{tab.cssClass}}" data-group="sheet" data-tab="effects">
+
+  <div class="effects-section">
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Effects.Statuses"}}</div>
+    <div class="status-toggles">
+      {{#each effectsPanel.statuses as |status|}}
+      <button type="button" class="status-toggle{{#if status.active}} active{{/if}}" data-action="toggleStatus"
+              data-status-id="{{status.id}}" data-tooltip="{{status.name}}" aria-label="{{status.name}}"
+              aria-pressed="{{#if status.active}}true{{else}}false{{/if}}" {{#unless @root.editable}}disabled{{/unless}}>
+        <img src="{{status.img}}" alt="" />
+      </button>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="effects-section">
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Effects.List"}}</div>
+    <ol class="effect-list">
+      {{#each effectsPanel.effects as |effect|}}
+      <li class="effect-row{{#if effect.inactive}} inactive{{/if}}" data-effect-uuid="{{effect.uuid}}">
+        <img class="effect-img" src="{{effect.img}}" alt="" />
+
+        <div class="effect-info">
+          <span class="effect-name">{{effect.name}}</span>
+          {{#if effect.detail}}<span class="effect-detail">{{effect.detail}}</span>{{/if}}
+        </div>
+
+        {{#if effect.duration}}<span class="effect-duration">{{effect.duration}}</span>{{/if}}
+
+        <div class="effect-controls">
+          {{#if @root.editable}}
+          {{#each effect.buttons as |button|}}
+          <button type="button" class="effect-button" data-action="effectButton"
+                  data-status-id="{{button.statusId}}" data-button="{{button.id}}">
+            {{#if button.icon}}<i class="{{button.icon}}"></i>{{/if}} {{button.label}}
+          </button>
+          {{/each}}
+          {{/if}}
+
+          {{#if effect.reference}}
+          <a class="effect-control" data-action="openEffectRules" data-uuid="{{effect.reference}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Rules'}}">
+            <i class="fa-solid fa-book"></i>
+          </a>
+          {{/if}}
+
+          {{#if @root.editable}}{{#unless effect.locked}}
+          <a class="effect-control" data-action="toggleEffect"
+             data-tooltip="{{#if effect.disabled}}{{localize 'LORD_OF_THE_MYSTERIES.Effects.TurnOn'}}{{else}}{{localize 'LORD_OF_THE_MYSTERIES.Effects.TurnOff'}}{{/if}}">
+            <i class="fa-solid {{#if effect.disabled}}fa-toggle-off{{else}}fa-toggle-on{{/if}}"></i>
+          </a>
+          {{/unless}}{{/if}}
+
+          <a class="effect-control" data-action="editEffect" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Edit'}}">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </a>
+
+          {{#if @root.editable}}{{#if effect.owned}}{{#unless effect.locked}}
+          <a class="effect-control" data-action="deleteEffect" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Delete'}}">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+          {{/unless}}{{/if}}{{/if}}
+        </div>
+      </li>
+      {{else}}
+      <li class="placeholder-note">{{localize "LORD_OF_THE_MYSTERIES.Effects.Empty"}}</li>
+      {{/each}}
+    </ol>
+  </div>
+
 </section>

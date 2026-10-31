@@ -1,6 +1,7 @@
 // Import document classes.
 import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
+import { LordOfTheMysteriesActiveEffect } from './documents/active-effect.mjs';
 
 // Import sheet classes.
 // Both actor sheets extend LordOfTheMysteriesActorSheetBase (sheets/base-actor-sheet.mjs).
@@ -20,6 +21,7 @@ import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
 import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 import { registerCurrencySettings } from './helpers/currency.mjs';
 import { registerTokenSettings } from './helpers/token-settings.mjs';
+import { STATUS_RULES, registerStatusEffects } from './effects/status-effects.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -41,6 +43,8 @@ Hooks.once('init', function () {
     LordOfTheMysteriesActor,
     LordOfTheMysteriesItem,
     rollItemMacro,
+    // Every status's rules, by id (effects/status-effects.mjs), e.g. game.lotm.statusRules.bound
+    statusRules: STATUS_RULES,
   };
 
   // Add custom constants for configuration.
@@ -52,7 +56,8 @@ Hooks.once('init', function () {
    * @type {String}
    */
   CONFIG.Combat.initiative = {
-    formula: '1d20 + @abilities.dex.mod',
+    // 1d20 + the Agility total (after armor and carrying penalties).
+    formula: '1d20 + @attributes.agi.total',
     decimals: 2,
   };
 
@@ -106,10 +111,28 @@ Hooks.once('init', function () {
     container: models.LordOfTheMysteriesContainer
   }
 
-  // Active Effects are never copied to the Actor,
-  // but will still apply to the Actor from within the Item
-  // if the transfer property on the Active Effect is true.
-  CONFIG.ActiveEffect.legacyTransferral = false;
+  // Active Effects: statuses, spell effects and the effects Items lend their owner (see documents/active-effect.mjs,
+  // data/effect/effect.mjs and effects/status-effects.mjs). Every new effect is the system's "effect" type.
+  CONFIG.ActiveEffect.documentClass = LordOfTheMysteriesActiveEffect;
+  CONFIG.ActiveEffect.dataModels.effect = models.LordOfTheMysteriesEffect;
+  CONFIG.ActiveEffect.defaultType = 'effect';
+  // An effect whose duration has run out is deleted (Foundry's effect registry checks durations as time passes).
+  CONFIG.ActiveEffect.expiryAction = 'delete';
+
+  // World setting: Invisible hides the token like Foundry's own invisibility, or is only a status icon.
+  // Read once here, when the statuses are registered, so changing it needs a reload.
+  game.settings.register('lotm', 'invisibleHidesToken', {
+    name: 'LORD_OF_THE_MYSTERIES.Settings.InvisibleHidesToken.Name',
+    hint: 'LORD_OF_THE_MYSTERIES.Settings.InvisibleHidesToken.Hint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: true,
+  });
+
+  // The system's statuses replace Foundry's own list (Token HUD, Effects tab).
+  registerStatusEffects({ invisibleHidesToken: game.settings.get('lotm', 'invisibleHidesToken') });
 
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);

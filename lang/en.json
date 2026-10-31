@@ -29,12 +29,72 @@
       "Container": "Clothing / Bag Sheet"
     },
 
-    "Effect": {
-      "Source": "Source",
-      "Toggle": "Toggle Effect",
-      "Temporary": "Temporary Effects",
-      "Passive": "Passive Effects",
-      "Inactive": "Inactive Effects"
+    "Effects": {
+      "Statuses": "Statuses",
+      "List": "Effects",
+      "Empty": "No effects. Click a status above, or drop an effect on the sheet.",
+      "Source": "Source: {name}",
+      "Via": "From {name}",
+      "Disabled": "Turned off",
+      "Suppressed": "Not active",
+      "SuppressedStowed": "Not active while stowed",
+      "Rules": "Rules",
+      "RulesMissing": "This status's rules page couldn't be found in the LOTM Rules compendium.",
+      "ImpliedLocked": "{name} comes from {parent}. Remove {parent} instead.",
+      "TurnOn": "Turn on",
+      "TurnOff": "Turn off",
+      "Edit": "Edit",
+      "Delete": "Delete",
+      "Notes": {
+        "AgilityHalf": "Agility halved (rounded up)",
+        "AgilityNone": "no Agility",
+        "DodgeHalf": "Dodge halved (rounded up)",
+        "DodgeNone": "no Dodge",
+        "Modifier": "{value} to Agility and Dodge"
+      },
+      "Application": {
+        "Modes": {
+          "targets": "Targets",
+          "self": "Self",
+          "area": "Area (once)",
+          "zone": "Zone (while inside)"
+        },
+        "Shapes": {
+          "circle": "Circle",
+          "cone": "Cone",
+          "ray": "Ray",
+          "rectangle": "Rectangle",
+          "emanation": "Emanation (moves with the user)"
+        }
+      }
+    },
+
+    "Status": {
+      "Names": {
+        "lossOfBalance": "Loss of Balance",
+        "offGuard": "Off Guard",
+        "helpless": "Helpless",
+        "bound": "Bound",
+        "advantage": "Advantage",
+        "disadvantage": "Disadvantage",
+        "bloodbath": "Bloodbath",
+        "bleeding": "Bleeding",
+        "dying": "Dying",
+        "dead": "Dead",
+        "fear": "Fear",
+        "angry": "Angry/Taunted",
+        "silence": "Silence",
+        "invisible": "Invisible",
+        "blind": "Blind",
+        "deaf": "Deaf",
+        "shock": "Shock"
+      },
+      "Buttons": {
+        "StandUp": "Stand Up"
+      },
+      "Chat": {
+        "StoodUp": "{name} stands up (1 movement action)."
+      }
     },
 
     "SheetTitles": {
@@ -118,6 +178,10 @@
         "tokenDisplayBars": {
             "Name": "Token Resource Bars",
             "Hint": "Who can see a token's bars (bar 1 is Health). Applies to every actor and every token already on a scene, and to new ones."
+        },
+        "InvisibleHidesToken": {
+            "Name": "Invisible Hides Tokens",
+            "Hint": "On: the Invisible status works like Foundry's own invisibility, and the token is hidden from anyone who can't see invisible creatures. Off: Invisible is only a status, and players find the creature with Spot / Listen against its Stealth. Changing this reloads the world."
         }
     },
 
@@ -867,6 +931,10 @@
       "action": "Action",
       "container": "Container",
       "gear": "Gear"
+    },
+
+    "ActiveEffect": {
+      "effect": "Effect"
     }
   }
 }

@@ -13,6 +13,8 @@
  *   - attribute, skill and action rolls (the roll dialogs in apps/; Shift-click skips the dialog),
  *     damage resistance rows, spending Spirituality
  *   - hiding granted entries, for actors whose data has a hiddenGrants list (NPCs, see actor-npc.mjs)
+ *   - the Effects tab: status toggles and every effect on the actor (effects/status-effects.mjs), and the
+ *     sidebar tooltips that say how statuses change Physical Defense and movement
  *
  * How the sheets that extend this class add their own things:
  *   - DEFAULT_OPTIONS is merged by Foundry down the chain, so a sheet only lists what's new for it.
@@ -29,6 +31,7 @@ import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionD
 import { autoPlacement, placementUpdate } from "../helpers/inventory.mjs";
 import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
+import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -471,6 +474,14 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       addSpell: LordOfTheMysteriesActorSheetBase.#onAddSpell,
       deleteSpell: LordOfTheMysteriesActorSheetBase.#onDeleteItem,
       deleteItem: LordOfTheMysteriesActorSheetBase.#onDeleteItem,
+
+      // Effects tab
+      toggleStatus: LordOfTheMysteriesActorSheetBase.#onToggleStatus,
+      toggleEffect: LordOfTheMysteriesActorSheetBase.#onToggleEffect,
+      editEffect: LordOfTheMysteriesActorSheetBase.#onEditEffect,
+      deleteEffect: LordOfTheMysteriesActorSheetBase.#onDeleteEffect,
+      openEffectRules: LordOfTheMysteriesActorSheetBase.#onOpenEffectRules,
+      effectButton: LordOfTheMysteriesActorSheetBase.#onEffectButton,
     },
   };
 
@@ -565,6 +576,12 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
       case "sidebar":
         context.damageTypeChoices = this._prepareDamageTypes();
+        // Hover text on Physical Defense and Movement when statuses change them.
+        context.statusNotes = this._prepareStatusNotes();
+        break;
+
+      case "effects":
+        context.effectsPanel = this._prepareEffectsPanel();
         break;
     }
 
@@ -1501,6 +1518,187 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     }
 
     await item.delete();
+  }
+
+  /* -------------------------------------------- */
+  /*  Effects tab                                  */
+  /* -------------------------------------------- */
+
+  /**
+   * The Effects tab (player and NPC sheets): a toggle for every status, then every effect on the actor, including
+   * the ones its Items lend it (a charm's effect). Each row says where the effect came from, how long it has left,
+   * whether it's switched off or suppressed (gear that's stowed), and has its statuses' buttons (Stand Up).
+   * @returns {{statuses: object[], effects: object[]}}
+   */
+  _prepareEffectsPanel() {
+    const localize = (key) => game.i18n.localize(key);
+    const active = activeStatusIds(this.actor);
+
+    const statuses = Object.values(STATUS_RULES).map((rule) => ({
+      id: rule.id,
+      name: localize(rule.name),
+      img: rule.img,
+      active: active.has(rule.id),
+    }));
+
+    const effects = [];
+    for (const effect of this.actor.allApplicableEffects()) {
+      // Effects on the actor itself, or lent by one of its Items.
+      const owned = effect.parent === this.actor;
+      const rules = effect.statusRules ?? [];
+      // A linked effect another one brought with it (the Bound that comes with Helpless). It follows that effect,
+      // so it has no buttons of its own (see documents/active-effect.mjs).
+      const bringer = effect.impliedByEffect ?? null;
+
+      const details = [];
+      const source = effect.sourceActor?.name;
+      if (source) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Source", { name: source }));
+      if (!owned) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
+      if (bringer) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: bringer.name }));
+      if (effect.disabled) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
+      else if (effect.isSuppressed) {
+        const stowed = effect.parent?.type === "gear" && effect.parent.system.carry === "stowed";
+        details.push(localize(stowed ? "LORD_OF_THE_MYSTERIES.Effects.SuppressedStowed" : "LORD_OF_THE_MYSTERIES.Effects.Suppressed"));
+      }
+
+      // Time left, only for effects that run out (a duration, or an expiry event like "end of turn").
+      const duration = effect.duration;
+      const finite = duration && (Number.isFinite(duration.value) || duration.expiry);
+
+      effects.push({
+        uuid: effect.uuid,
+        name: effect.name,
+        img: effect.img,
+        disabled: effect.disabled,
+        inactive: effect.disabled || effect.isSuppressed,
+        owned,
+        locked: !!bringer,
+        detail: details.join(" · "),
+        duration: finite ? (duration.label ?? "") : "",
+        // The first of its statuses with a rules page.
+        reference: rules.find((rule) => rule.reference)?.reference ?? null,
+        // Status buttons (Stand Up, ...) only on the actor's own effects, not on ones an Item lends it or linked ones.
+        buttons: (owned && !bringer) ? rules.flatMap((rule) => rule.buttons(effect)) : [],
+      });
+    }
+
+    return { statuses, effects };
+  }
+
+
+  /**
+   * Hover text for the sidebar's Physical Defense and Movement, one line per status that changes them,
+   * e.g. "Bound: no Agility, no Dodge". Empty when no status does. The text is HTML (lines joined with <br>).
+   * @returns {{physical: string, movement: string}}
+   */
+  _prepareStatusNotes() {
+    const localize = (key) => game.i18n.localize(key);
+    const { defense, movement } = this.actor.system.statusModifiers ?? {};
+    const portionNote = (portion, half, none) => {
+      if (portion === "half") return localize(half);
+      if (portion === "none") return localize(none);
+      return null;
+    };
+    const line = (id, parts) => {
+      const name = localize(statusRule(id)?.name ?? id);
+      return Handlebars.escapeExpression(`${name}: ${parts.filter(Boolean).join(", ")}`);
+    };
+
+    const physical = (defense?.sources ?? []).map((id) => {
+      const rule = statusRule(id)?.defense ?? {};
+      const modifier = Number(rule.modifier) || 0;
+      return line(id, [
+        portionNote(rule.agility, "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityNone"),
+        portionNote(rule.dodge, "LORD_OF_THE_MYSTERIES.Effects.Notes.DodgeHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.DodgeNone"),
+        modifier ? game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Notes.Modifier", { value: modifier > 0 ? `+${modifier}` : `${modifier}` }) : null,
+      ]);
+    });
+
+    const moves = (movement?.sources ?? []).map((id) => {
+      const rule = statusRule(id)?.movement ?? {};
+      return line(id, [
+        portionNote(rule.agility, "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityNone"),
+      ]);
+    });
+
+    return { physical: physical.join("<br>"), movement: moves.join("<br>") };
+  }
+
+
+  /**
+   * The effect an Effects tab control belongs to (its row's data-effect-uuid): one of the actor's own effects or
+   * one an Item lends it.
+   * @param {HTMLElement} target
+   * @returns {ActiveEffect|null}
+   */
+  #effectFor(target) {
+    const uuid = target.closest("[data-effect-uuid]")?.dataset.effectUuid;
+    if (!uuid) return null;
+    for (const effect of this.actor.allApplicableEffects()) {
+      if (effect.uuid === uuid) return effect;
+    }
+    return null;
+  }
+
+
+  /** A status toggle (data-status-id): add the status, or remove it. The same as the Token HUD's status icons. */
+  static async #onToggleStatus(event, target) {
+    if (!this.isEditable) return;
+    await this.actor.toggleStatusEffect(target.dataset.statusId);
+  }
+
+
+  /** Switch an effect off, or back on. */
+  static async #onToggleEffect(event, target) {
+    if (!this.isEditable) return;
+    const effect = this.#effectFor(target);
+    await effect?.update({ disabled: !effect.disabled });
+  }
+
+
+  /** Open an effect's own sheet (name, duration, changes, statuses). */
+  static #onEditEffect(event, target) {
+    this.#effectFor(target)?.sheet.render({ force: true });
+  }
+
+
+  /** Delete one of the actor's own effects. Hold Shift to skip the confirmation (like removing an Item). */
+  static async #onDeleteEffect(event, target) {
+    if (!this.isEditable) return;
+    const effect = this.#effectFor(target);
+    if (!effect || effect.parent !== this.actor) return;
+
+    if (!event.shiftKey) {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
+        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(effect.name) })}</p>`,
+        rejectClose: false,
+        modal: true,
+      });
+      if (!confirmed) return;
+    }
+
+    await effect.delete();
+  }
+
+
+  /** Open a status's rules page (data-uuid) in the LOTM Rules journal. */
+  static async #onOpenEffectRules(event, target) {
+    const page = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (!page) {
+      ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Effects.RulesMissing"));
+      return;
+    }
+    page.parent.sheet.render({ force: true, pageId: page.id });
+  }
+
+
+  /** A status's own button on an effect row (data-status-id, data-button), e.g. Stand Up for Loss of Balance. */
+  static async #onEffectButton(event, target) {
+    if (!this.isEditable) return;
+    const effect = this.#effectFor(target);
+    const rule = statusRule(target.dataset.statusId);
+    if (effect && rule) await rule.onButton(target.dataset.button, effect);
   }
 
 }

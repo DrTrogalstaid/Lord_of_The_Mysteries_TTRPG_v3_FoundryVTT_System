@@ -17,3 +17,6 @@ export {default as LordOfTheMysteriesAction} from "./item/character_building/act
 export {default as LordOfTheMysteriesSpell} from "./item/character_building/spell.mjs";
 export {default as LordOfTheMysteriesGear } from "./item/character_building/gear.mjs";
 export {default as LordOfTheMysteriesContainer } from "./item/character_building/container.mjs";
+
+// Active Effects
+export {default as LordOfTheMysteriesEffect} from "./effect/effect.mjs";

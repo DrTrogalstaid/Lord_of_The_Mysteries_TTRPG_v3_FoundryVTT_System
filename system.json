@@ -30,7 +30,8 @@
     "css/drop-sections.css",
     "css/inventory.css",
     "css/npc-sheet.css",
-    "css/roll-dialog.css"
+    "css/roll-dialog.css",
+    "css/effects.css"
   ],
   "languages": [
     {
@@ -152,6 +153,9 @@
       "action": {},
       "gear": {},
       "container": {}
+    },
+    "ActiveEffect": {
+      "effect": {}
     }
   }
 }

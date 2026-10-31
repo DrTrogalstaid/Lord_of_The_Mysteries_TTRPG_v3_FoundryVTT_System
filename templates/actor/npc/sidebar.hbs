@@ -45,7 +45,7 @@
   </div>
 
   <div class="defense-box">
-    <div class="stat-box full-width">
+    <div class="stat-box full-width{{#if statusNotes.physical}} status-modified{{/if}}"{{#if statusNotes.physical}} data-tooltip="{{statusNotes.physical}}"{{/if}}>
       <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Defenses.Physical"}}</label>
       <input type="number" value="{{system.defenses.physical}}" readonly tabindex="-1" />
     </div>
@@ -96,7 +96,7 @@
   </div>
 
   <div class="speed-container">
-    <div class="speed-box full-width">
+    <div class="speed-box full-width{{#if statusNotes.movement}} status-modified{{/if}}"{{#if statusNotes.movement}} data-tooltip="{{statusNotes.movement}}"{{/if}}>
       <label>{{localize "LORD_OF_THE_MYSTERIES.NPC.Movement"}}</label>
       <input type="number" value="{{system.movement}}" readonly tabindex="-1" />
     </div>
