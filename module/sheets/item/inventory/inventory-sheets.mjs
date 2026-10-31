@@ -10,23 +10,25 @@ import {
   BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
 } from "../../../helpers/currency.mjs";
 import { ammoBoxStatus, chamberRound, firearmStatus, reloadGun, unloadGun } from "../../../helpers/firearms.mjs";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ItemSheetV2 } = foundry.applications.sheets;
+import { LordOfTheMysteriesItemSheetBase } from "../../base-item-sheet.mjs";
 
 
-/** What both sheets share: the form setup, the image picker, and the basic context. */
-class InventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+/**
+ * What both sheets share: the image picker, the money text boxes, and the basic context.
+ * The form setup (save on every change, resizable window) comes from LordOfTheMysteriesItemSheetBase.
+ */
+class InventoryItemSheet extends LordOfTheMysteriesItemSheetBase {
 
   static DEFAULT_OPTIONS = {
-    classes: ["lotm", "sheet", "item", "inventory-item"],
+    classes: ["inventory-item"],
     position: { width: 520, height: "auto" },
-    window: { resizable: true },
-    form: { submitOnChange: true, closeOnSubmit: false },
     actions: {
       editImage: InventoryItemSheet.#onEditImage,
     },
   };
+
+  /** Gear and containers have no Description / Details tabs. */
+  static TABS = {};
 
   /** @override */
   async _prepareContext(options) {

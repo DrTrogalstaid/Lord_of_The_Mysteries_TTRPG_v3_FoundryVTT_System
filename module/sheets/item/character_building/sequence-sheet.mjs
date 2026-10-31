@@ -1,28 +1,11 @@
-
-import {
-  onManageActiveEffect,
-  prepareActiveEffectCategories,
-} from '../../../helpers/effects.mjs';
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ItemSheetV2 } = foundry.applications.sheets;
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
 
 
-export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class LordOfTheMysteriesSequenceSheet extends LordOfTheMysteriesItemSheetBase {
   /** @override */
   static DEFAULT_OPTIONS = {
-    tag: "form",
-    classes: ['lotm', 'sheet', 'item', 'sequence'],
-    form: {
-      submitOnChange: true,
-      closeOnSubmit: false
-    },
-    position: {
-      width: 520,
-      height: 480,
-    },
+    classes: ["sequence"],
     window: {
-      resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.Sequence"
     },
     // Accept Item drops anywhere in the sheet body; _onDropDocument
@@ -39,83 +22,21 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
   };
 
   /** @override */
-  // Placeholder path — the real per-type template is resolved in
-  // _configureRenderParts() below, the V2 replacement for the old
-  // `get template()` getter.
   static PARTS = {
-    header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
-    form: { template: 'systems/lotm/templates/item/character_building/sequence-sheet.hbs'},
-  };
-
-  /** @override */
-  static TABS = {
-    sheet: {
-      tabs: [
-        { id: 'description', label: 'LORD_OF_THE_MYSTERIES.Tabs.Description' },
-        { id: 'details', label: 'LORD_OF_THE_MYSTERIES.Tabs.Details'},
-      ],
-      initial: 'description',
-    },
+    header: ITEM_HEADER_PART,
+    form: { template: "systems/lotm/templates/item/character_building/sequence.hbs" },
   };
 
   /* -------------------------------------------- */
-
-  /**
-   * Resolve a distinct template per item type, e.g.
-   * item-item-sheet.hbs, item-feature-sheet.hbs, item-spell-sheet.hbs
-   * (one .hbs file per type registered in CONFIG.Item.dataModels).
-   * This is the V2 replacement for overriding the old `get template()` getter.
-   */
-  /** @override */
-  _configureRenderParts(options) {
-    const parts = super._configureRenderParts(options);
-    
-    parts.form.template = `systems/lotm/templates/item/character_building/sequence.hbs`;
-                           
-
-    return parts;
-  }
-
+  /*  Context Preparation                          */
+  /* -------------------------------------------- */
 
   /** @override */
-  async _prepareContext(options){
-    // Retrieve base data structure.
+  async _prepareContext(options) {
     const context = await super._prepareContext(options);
 
-    // Use a safe clone of the item data for further operations.
-    const itemData = this.document.toPlainObject();
-
-    context.item = this.item;
-
-    // Enrich text editors
-    context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.item.system.description,
-      {
-        // Whether to show secret blocks in the finished html
-        secrets: this.document.isOwner,
-        // Relative UUID resolution
-        relativeTo: this.item,
-      }
-    );
-    context.enrichedActingPrincipals = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.item.system.acting_principals,
-      {
-        // Whether to show secret blocks in the finished html
-        secrets: this.document.isOwner,
-        // Relative UUID resolution
-        relativeTo: this.item,
-      }
-    );
-
-    // Add the item's data to context.data for easier access, as well as flags.
-    context.system = itemData.system;
-    context.flags = itemData.flags;
-
-    // Adding a pointer to CONFIG.LORD_OF_THE_MYSTERIES
-    context.config = CONFIG.LORD_OF_THE_MYSTERIES;
-
-    // Prepare active effects for easier access
-    context.effects = prepareActiveEffectCategories(this.item.effects);
+    context.enrichedDescription = await this._enrich(this.item.system.description);
+    context.enrichedActingPrincipals = await this._enrich(this.item.system.acting_principals);
 
     // ---- Details tab: attribute_gain / skill_increase / abilities_gained ----
 
@@ -130,67 +51,18 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
       ...row,
     }));
 
-    // Skill increase rows reference a Skill Item by UUID — resolve name/img for display.
-    context.skillIncrease = await Promise.all(
-      (context.system.skill_increase ?? []).map(async (row, index) => {
-        const skillItem = row.skill_uuid ? await fromUuid(row.skill_uuid).catch(() => null) : null;
-        return {
-          index,
-          value: row.value,
-          uuid: row.skill_uuid,
-          name: skillItem?.name ?? "Unknown Item",
-          img: skillItem?.img ?? "icons/svg/hazard.svg",
-          broken: !!row.skill_uuid && !skillItem,
-        };
-      })
-    );
+    // Skill increase rows: the skill looked up for its name and image, plus how many levels it's raised.
+    const skillIncrease = context.system.skill_increase ?? [];
+    const skillRows = await this._linkedItemRows(skillIncrease.map((row) => row.skill_uuid));
+    context.skillIncrease = skillRows.map((row, index) => ({ ...row, value: skillIncrease[index].value }));
 
-    // Abilities gained are a flat array of Item UUIDs — resolve name/img for display.
-    context.abilitiesGained = await Promise.all(
-      (context.system.abilities_gained ?? []).map(async (uuid, index) => {
-        const abilityItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
-        return {
-          index,
-          uuid,
-          name: abilityItem?.name ?? "Unknown Item",
-          img: abilityItem?.img ?? "icons/svg/hazard.svg",
-          broken: !!uuid && !abilityItem,
-        };
-      })
-    );
+    // Abilities gained: a flat array of Item UUIDs.
+    context.abilitiesGained = await this._linkedItemRows(context.system.abilities_gained);
 
     // Knowledge and Training bonus: skills this Sequence makes faster to study (helpers/skill-learning.mjs).
-    // A flat array of skill UUIDs — resolve name/img for display.
-    context.trainingBonus = await Promise.all(
-      (context.system.trainingBonus ?? []).map(async (uuid, index) => {
-        const skillItem = uuid ? await fromUuid(uuid).catch(() => null) : null;
-        return {
-          index,
-          uuid,
-          name: skillItem?.name ?? "Unknown Item",
-          img: skillItem?.img ?? "icons/svg/hazard.svg",
-          broken: !!uuid && !skillItem,
-        };
-      })
-    );
+    context.trainingBonus = await this._linkedItemRows(context.system.trainingBonus);
 
     return context;
-  }
-
-
-  /** @override */
-  _onRender(context, options) {
-    super._onRender(context, options);
-
-    this.element.querySelectorAll('prose-mirror').forEach((editor) => {
-      editor.addEventListener('save', () => this.submit());
-    });
-
-    if (!this.isEditable) return;
-
-    this.element.querySelectorAll('.effect-control').forEach((el) => {
-      el.addEventListener('click', (ev) => onManageActiveEffect(ev, this.item));
-    });
   }
 
   /* -------------------------------------------- */
@@ -210,22 +82,25 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
     if (!dropZone) return null;
 
     if (dropZone === "trainingBonus") {
-      if (document.type !== "skill") {
-        ui.notifications.warn(`${document.name} is not a skill.`);
-        return null;
-      }
-      // A copy of a compendium skill (e.g. dragged from the Items sidebar) is saved as the compendium original,
-      // because that's the UUID characters store their skills under. Otherwise the speed-up would never match.
-      const uuid = document._stats?.compendiumSource || document.uuid;
-      const current = this.item.system.trainingBonus ?? [];
-      if (current.includes(uuid)) {
-        ui.notifications.warn(`${document.name} is already in Knowledge and Training.`);
-        return null;
-      }
-      await this.item.update({ "system.trainingBonus": [...current, uuid] });
-      return document;
+      return this._dropOnList(document, {
+        path: "system.trainingBonus",
+        type: "skill",
+        wrongType: "{name} is not a skill.",
+        duplicate: "{name} is already in Knowledge and Training.",
+        // A copy of a compendium skill (e.g. dragged from the Items sidebar) is saved as the compendium original,
+        // because that's the UUID characters store their skills under. Otherwise the speed-up would never match.
+        uuid: document._stats?.compendiumSource || document.uuid,
+      });
     }
 
+    if (dropZone === "abilities_gained") {
+      return this._dropOnList(document, {
+        path: "system.abilities_gained",
+        duplicate: "{name} is already in Abilities Gained.",
+      });
+    }
+
+    // Skill Increase rows are { skill_uuid, value }, not plain UUIDs, so they're added here.
     if (dropZone === "skill_increase") {
       const current = this.item.system.skill_increase ?? [];
       if (current.some((row) => row.skill_uuid === document.uuid)) {
@@ -234,15 +109,6 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
       }
       await this.item.update({
         "system.skill_increase": [...current, { skill_uuid: document.uuid, value: 1 }],
-      });
-    } else if (dropZone === "abilities_gained") {
-      const current = this.item.system.abilities_gained ?? [];
-      if (current.includes(document.uuid)) {
-        ui.notifications.warn(`${document.name} is already in Abilities Gained.`);
-        return null;
-      }
-      await this.item.update({
-        "system.abilities_gained": [...current, document.uuid],
       });
     }
 
@@ -268,40 +134,24 @@ export class LordOfTheMysteriesSequenceSheet extends HandlebarsApplicationMixin(
     });
   }
 
-  /** Remove an Attribute Gain row by index. */
+  /** Remove an Attribute Gain row (data-index = its position). */
   static async #onDeleteAttributeGain(event, target) {
-    const index = Number(target.dataset.index);
-    const current = this.item.system.attribute_gain ?? [];
-    await this.item.update({
-      "system.attribute_gain": current.filter((_, i) => i !== index),
-    });
+    await this._removeFromList("system.attribute_gain", target.dataset.index);
   }
 
-  /** Remove a Skill Increase row by index. */
+  /** Remove a Skill Increase row. */
   static async #onDeleteSkillIncrease(event, target) {
-    const index = Number(target.dataset.index);
-    const current = this.item.system.skill_increase ?? [];
-    await this.item.update({
-      "system.skill_increase": current.filter((_, i) => i !== index),
-    });
+    await this._removeFromList("system.skill_increase", target.dataset.index);
   }
 
-  /** Remove a Knowledge and Training entry by index. */
+  /** Remove a Knowledge and Training entry. */
   static async #onDeleteTrainingBonus(event, target) {
-    const index = Number(target.dataset.index);
-    const current = this.item.system.trainingBonus ?? [];
-    await this.item.update({
-      "system.trainingBonus": current.filter((_, i) => i !== index),
-    });
+    await this._removeFromList("system.trainingBonus", target.dataset.index);
   }
 
-  /** Remove an Abilities Gained entry by index. */
+  /** Remove an Abilities Gained entry. */
   static async #onDeleteAbilityGained(event, target) {
-    const index = Number(target.dataset.index);
-    const current = this.item.system.abilities_gained ?? [];
-    await this.item.update({
-      "system.abilities_gained": current.filter((_, i) => i !== index),
-    });
+    await this._removeFromList("system.abilities_gained", target.dataset.index);
   }
 
 }

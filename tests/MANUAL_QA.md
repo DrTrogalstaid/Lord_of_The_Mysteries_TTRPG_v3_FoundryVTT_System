@@ -248,3 +248,69 @@ Setup: a target with Damage Resistance rows Physical 3 and Fire 2 in its sidebar
 - [ ] Big Success that's raised to the average: the card's per-type line shows each type at its own average,
       and reduction is taken off those
 - [ ] Damage cards from before this change still apply their full amount (they have no types saved)
+
+## Item sheets after the shared base sheet (regression)
+
+All item sheets now extend LordOfTheMysteriesItemSheetBase (`module/sheets/base-item-sheet.mjs`). Nothing should look
+or work differently. Test with an Item in the Items sidebar (editable), one in a locked compendium (read-only), and one
+owned by a character.
+
+Smoke test first:
+
+- [ ] Before installing the update, run the "Sheet smoke test" macro (`module/macros/smoke-test-item-sheets.js`) and
+      keep its chat report. Run it again after the update: no new problems in the report
+- [ ] The macro's "Sheet smoke test" folder is gone from the Items sidebar afterwards
+
+Every sheet:
+
+- [ ] Opens at the same size as before (520 × 480; gear 520 × 720; clothing / bags as tall as their contents) and can be resized
+- [ ] Changing a field saves straight away (close and reopen the sheet: the change is still there)
+- [ ] A description box: Edit, type, Save. The text is kept, and @UUID links in it can be clicked
+- [ ] A locked compendium Item opens read-only: no editing, no add / remove buttons that work
+- [ ] No errors in the console (F12) while opening, switching tabs and editing
+
+Ability:
+
+- [ ] Description and Details tabs switch
+- [ ] Sequence Upgrades: add a row, type in it, remove it
+- [ ] Drop a spell on the Spell List, an action on the Action List: they're listed with their image. Drop the same one
+      again: "… is already in the Spell List." / "… Action List." Remove each with its button
+- [ ] Skill Options: drop a skill (added), drop it again (already in the Skill Options), drop an action
+      ("Only Skills can be added to Skill Options.")
+- [ ] Learning by Doing: add a category, change it, remove it. Drop a skill (added), a non-skill (the "not a skill"
+      warning), the same skill again (already taught by this ability). Remove a skill
+- [ ] An entry whose Item was deleted shows as "Unknown Item" with the hazard icon, and can still be removed
+- [ ] Dropping an Item on the sheet outside the lists does nothing
+
+Action:
+
+- [ ] Description and Details tabs switch; Action Type, Uses Ammo and the other fields save
+- [ ] Skill slot: drop a skill, open it, remove it
+
+Spell:
+
+- [ ] Description and Details tabs; Special text box; Sequence Upgrades add / remove
+- [ ] Skill slot: drop a skill, open it, remove it. Dropping any other Item on the sheet does nothing
+
+Sequence:
+
+- [ ] Description and Acting Principles boxes save
+- [ ] Attribute Gain: add a row, change the attribute and value, remove it
+- [ ] Skill Increase: drop a skill (value 1), drop it again ("… is already in Skill Increase."), change the value, remove it
+- [ ] Abilities Gained: drop an ability, drop it again (already in Abilities Gained), remove it
+- [ ] Knowledge and Training: drop a skill, a non-skill ("… is not a skill."), the same skill again (already in Knowledge
+      and Training). A skill dragged from the Items sidebar that came from the compendium saves the compendium skill
+      (the character's study speed-up still applies to it)
+- [ ] Dropping an Item outside the lists does nothing
+
+Skill:
+
+- [ ] Related-skill categories: add one, change category and mode, remove it. With every category used: "all used" message
+
+Gear and clothing / bags:
+
+- [ ] No tabs (same as before). Click the image: the file picker opens and the new image is saved
+- [ ] Value "£3 10s" saves and shows again as £3 10s; "nonsense" warns and keeps the old value. A purse's money boxes the same
+- [ ] On a character: the carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
+      remove, open), and a gun's Reload / Chamber / Unload buttons work
+- [ ] A coat or bag on a character lists what's inside and how full it is
