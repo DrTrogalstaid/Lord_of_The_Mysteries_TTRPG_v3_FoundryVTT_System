@@ -26,6 +26,8 @@ import { registerTokenSettings } from './helpers/token-settings.mjs';
 import { STATUS_RULES, registerStatusEffects } from './effects/status-effects.mjs';
 import { registerTurnStartChatListeners } from './effects/turn-start.mjs';
 import { registerEffectQueries } from './effects/effect-application.mjs';
+import { ZONE_BEHAVIOR_TYPE, registerZones } from './effects/effect-areas.mjs';
+import LotmApplyEffectBehavior from './data/region-behavior/apply-effect.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -128,6 +130,13 @@ Hooks.once('init', function () {
   CONFIG.ActiveEffect.expiryAction = 'delete';
   // Players' Apply buttons ask the GM to put effects on actors they don't own (effects/effect-application.mjs).
   registerEffectQueries();
+
+  // Zones: the "Apply LotM Effect" region behavior, and keeping zones and their caster's marker together
+  // (data/region-behavior/apply-effect.mjs, effects/effect-areas.mjs).
+  CONFIG.RegionBehavior.dataModels[ZONE_BEHAVIOR_TYPE] = LotmApplyEffectBehavior;
+  if (CONFIG.RegionBehavior.typeIcons) CONFIG.RegionBehavior.typeIcons[ZONE_BEHAVIOR_TYPE] = 'fa-solid fa-person-rays';
+  if (CONFIG.RegionBehavior.typeLabels) CONFIG.RegionBehavior.typeLabels[ZONE_BEHAVIOR_TYPE] = 'LORD_OF_THE_MYSTERIES.RegionBehaviors.ApplyEffect.Label';
+  registerZones();
 
   // World setting: Invisible hides the token like Foundry's own invisibility, or is only a status icon.
   // Read once here, when the statuses are registered, so changing it needs a reload.

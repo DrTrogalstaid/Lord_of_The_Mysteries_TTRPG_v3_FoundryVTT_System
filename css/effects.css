@@ -383,3 +383,33 @@
   flex: 0 0 auto;
   border: none;
 }
+
+/* -------------------------------------------------------------------- */
+/* Area effects: who gets it (effects/effect-areas.mjs)                  */
+/* -------------------------------------------------------------------- */
+
+.lotm-area-tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.lotm-area-token {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lotm-area-token input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.lotm-area-token img {
+  flex: 0 0 auto;
+  border: none;
+  object-fit: contain;
+}

@@ -562,3 +562,50 @@ Source from dragging:
 - [ ] Drag the same effect from a spell in the sidebar (no owner) onto a token: no source
 - [ ] Drag a spell with effects from the sidebar onto Klein, then drag its effect from Klein's copy onto a token:
       the source is Klein (the copy's effects point at Klein's spell)
+
+## Area and zone effects (Phase 4b)
+
+Setup: restart Foundry (system.json gained the "Apply LotM Effect" region behavior), then reload the world. Run
+`npm test` (90 tests). Use a scene with a grid, Klein's token, three goblin tokens, and a spell of Klein's with a
+"Terrified" effect (Fear status, 3 rounds). Change its Use on the LotM tab for each test.
+
+Area (Use: Area, Shape: Circle, Size 10):
+
+- [ ] Apply (spell's Effects tab or the attack card): a notice says how to place it; a circle 10 ft in radius follows
+      the cursor with its measurements; the mouse wheel turns shapes that can turn; right-click cancels with nothing
+      applied
+- [ ] Left-click: a list of every token inside comes up. Everyone is ticked except Klein ("the caster")
+- [ ] Apply: the ticked goblins get Terrified (source: Klein), chat says who. Nothing is left on the scene
+- [ ] Untick one goblin first: that goblin gets nothing. Untick everyone, or Cancel: nobody gets it
+- [ ] Place it where nobody is: "Nobody is inside"
+- [ ] Cone, Ray and Rectangle place the right shape and size (a ray is one grid space wide)
+- [ ] Emanation: no placing; the list has everyone within the size of Klein's token edge. With Klein's token not on
+      this scene: a warning
+- [ ] Tokens on another level of the scene (V14 levels) aren't in the list
+- [ ] As a player who owns Klein (GM logged in): placing works, and the goblins get it through the GM
+
+Zone (Use: Zone, Shape: Circle, Size 10):
+
+- [ ] Apply and place it: a Region stays on the scene named "Terrified (Klein)", in your user colour, with an
+      "Apply LotM Effect" behavior (Region config > Behaviors)
+- [ ] Goblins already inside get Terrified at once; Klein doesn't (the caster isn't affected by their own zone)
+- [ ] Klein's Effects tab has "Zone: Terrified" with 3 rounds, detail "Zone on the scene: remove this to end it".
+      Chat says "Klein creates Terrified."
+- [ ] Move a goblin out: its Terrified goes. Move it back in: it gets it again (once, not twice)
+- [ ] A goblin that comes in has Klein as its source ("Fear vs. Klein" in its dialogs)
+- [ ] Delete "Zone: Terrified" from Klein's Effects tab: the Region is gone, and the goblins inside lose Terrified
+- [ ] Make another zone and delete the Region from the scene instead: Klein's marker goes, and so do the goblins' copies
+- [ ] In combat, let 3 rounds pass: the marker runs out, and the zone goes with it
+- [ ] Emanation zone: no placing; the zone is centered on Klein's token. Move Klein: the zone moves with him, goblins
+      it passes over get Terrified, and lose it when it moves off them
+- [ ] As a player who owns Klein (GM logged in): the zone is made (by the GM's client), Klein gets the marker, and
+      the player can remove the marker to end it. With no GM logged in: a warning, and no zone
+
+Zones made by hand (GM):
+
+- [ ] Draw a Region, add the behavior "Apply LotM Effect", drop Fear from the Effects compendium into its Effects box,
+      leave Source empty. Tokens walking in get Fear (no source) and lose it walking out
+- [ ] Give it a Source (an actor's UUID): copies name that actor; that actor isn't affected unless
+      "Affects its source too" is ticked
+- [ ] Change the behavior's effects while tokens are inside: they lose the old copies and get the new ones
+- [ ] Foundry's own "Apply Active Effect" behavior still works too (its copies have no source)

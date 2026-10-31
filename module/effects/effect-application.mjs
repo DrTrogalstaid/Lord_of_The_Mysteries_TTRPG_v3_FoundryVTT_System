@@ -6,8 +6,9 @@
  *   targets   a copy goes on every token the user has targeted. Source: the caster.
  *   self      a copy goes on the caster. Source: the one token the user has targeted, if exactly one
  *             (Raid: Advantage over that enemy), otherwise none.
- *   area      a shape is placed on the scene once; tokens inside get a copy (next delivery, effect-areas.mjs).
- *   zone      a shape stays on the scene; tokens get a copy while inside (next delivery, effect-areas.mjs).
+ *   area      the user places a shape on the scene; everyone inside gets a copy, once, after a confirm list
+ *             (effect-areas.mjs). Source: the caster.
+ *   zone      a shape stays on the scene; tokens have a copy while inside it (effect-areas.mjs). Source: the caster.
  *
  * Where it's handed out from:
  *   - the Apply buttons on an action's or spell's attack card in chat (effectButtonsHTML / applyEffectFromMessage)
@@ -15,8 +16,8 @@
  *   - dragging the effect onto a token (Foundry does that itself; LotmActiveEffect#_preCreate fills in the source)
  *
  * Players can't change actors they don't own, so a copy for someone else's actor (an enemy) is made by the GM:
- * the player's client asks the active GM through a query ("lotm.createEffects", registerEffectQueries below).
- * That needs a GM logged in.
+ * the player's client asks the active GM through a query ("lotm.createEffects" / "lotm.deleteEffects",
+ * registerEffectQueries below; askGM). That needs a GM logged in.
  *
  * Each copy is a fresh effect: its clock starts when it's made, and resisted / halved marks start cleared.
  */
@@ -24,8 +25,9 @@
 /** Item types whose new effects start as passive (they lend themselves to the owner). Others start as "targets". */
 const PASSIVE_ITEM_TYPES = ["ability", "sequence", "gear"];
 
-/** The query a player's client sends the GM to put effects on an actor the player doesn't own. */
+/** The queries a player's client sends the GM to put effects on, or take them off, an actor the player doesn't own. */
 const CREATE_EFFECTS_QUERY = "lotm.createEffects";
+const DELETE_EFFECTS_QUERY = "lotm.deleteEffects";
 
 const localize = (key) => game.i18n.localize(key);
 const format = (key, data) => game.i18n.format(key, data);
@@ -188,10 +190,15 @@ export async function applyItemEffect(effect, { caster = null } = {}) {
       return giveEffect(effect, [{ name: caster.name, actor: caster }], { caster, source });
     }
 
-    case "area":
-    case "zone":
-      ui.notifications.info(localize("LORD_OF_THE_MYSTERIES.Effects.Apply.AreaLater"));
-      return null;
+    // Shapes on the scene (loaded when needed, so this file works without the canvas code).
+    case "area": {
+      const { applyArea } = await import("./effect-areas.mjs");
+      return applyArea(effect, { caster });
+    }
+    case "zone": {
+      const { createZone } = await import("./effect-areas.mjs");
+      return createZone(effect, { caster });
+    }
 
     default:
       return null;
@@ -233,18 +240,48 @@ export async function createEffectsOn(actor, effects) {
     await actor.createEmbeddedDocuments("ActiveEffect", effects);
     return true;
   }
+  return !!(await askGM(CREATE_EFFECTS_QUERY, { actorUuid: actor.uuid, effects }, actor.name));
+}
 
+
+/**
+ * Delete effects from an actor: straight away when the user owns it, otherwise through the GM.
+ * Effects already gone are skipped.
+ * @param {Actor} actor
+ * @param {string[]} ids   Effect ids on that actor.
+ * @returns {Promise<boolean>} Whether anything was deleted.
+ */
+export async function deleteEffectsOn(actor, ids) {
+  const present = ids.filter((id) => actor.effects?.has?.(id) ?? true);
+  if (!present.length) return false;
+  if (actor.isOwner) {
+    await actor.deleteEmbeddedDocuments("ActiveEffect", present);
+    return true;
+  }
+  return !!(await askGM(DELETE_EFFECTS_QUERY, { actorUuid: actor.uuid, ids: present }, actor.name));
+}
+
+
+/**
+ * Ask the active GM's client to do something the user isn't allowed to (one of the system's queries).
+ * Warns, and returns null, when no GM is logged in or the GM's client couldn't do it.
+ * @param {string} query     The query name, e.g. "lotm.createEffects".
+ * @param {object} data
+ * @param {string} name      What it's for, for the warning (an actor's name).
+ * @returns {Promise<any|null>}  What the GM's handler returned.
+ */
+export async function askGM(query, data, name) {
   const gm = game.users.activeGM;
   if (!gm) {
-    ui.notifications.warn(format("LORD_OF_THE_MYSTERIES.Effects.Apply.NoGM", { name: actor.name }));
-    return false;
+    ui.notifications.warn(format("LORD_OF_THE_MYSTERIES.Effects.Apply.NoGM", { name }));
+    return null;
   }
   try {
-    return !!(await gm.query(CREATE_EFFECTS_QUERY, { actorUuid: actor.uuid, effects }, { timeout: 15000 }));
+    return await gm.query(query, data, { timeout: 15000 });
   } catch (error) {
-    console.error("lotm | The GM couldn't apply the effect", error);
-    ui.notifications.warn(format("LORD_OF_THE_MYSTERIES.Effects.Apply.GMFailed", { name: actor.name }));
-    return false;
+    console.error(`lotm | The GM's client couldn't do "${query}"`, error);
+    ui.notifications.warn(format("LORD_OF_THE_MYSTERIES.Effects.Apply.GMFailed", { name }));
+    return null;
   }
 }
 
@@ -320,8 +357,8 @@ export async function applyEffectFromMessage(message, effectId) {
 /* -------------------------------------------- */
 
 /**
- * Let players' clients ask the GM to create effects on actors they don't own. Called once from the init hook.
- * The GM's client creates them, so they appear like any other effect.
+ * Let players' clients ask the GM to create or delete effects on actors they don't own. Called once from the init
+ * hook. The GM's client makes the change, so it shows up like any other.
  */
 export function registerEffectQueries() {
   CONFIG.queries ??= {};
@@ -331,6 +368,14 @@ export function registerEffectQueries() {
     // Only effect data of the system's own type is accepted.
     const clean = effects.filter((data) => data && typeof data === "object").map((data) => ({ ...data, type: "effect" }));
     await actor.createEmbeddedDocuments("ActiveEffect", clean);
+    return true;
+  };
+
+  CONFIG.queries[DELETE_EFFECTS_QUERY] = async ({ actorUuid, ids } = {}) => {
+    const actor = await fromUuid(actorUuid).catch(() => null);
+    if (!actor || !Array.isArray(ids)) return false;
+    const present = ids.filter((id) => actor.effects.has(id));
+    if (present.length) await actor.deleteEmbeddedDocuments("ActiveEffect", present);
     return true;
   };
 }

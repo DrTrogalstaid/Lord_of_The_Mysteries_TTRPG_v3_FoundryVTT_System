@@ -19,6 +19,8 @@
  *                        that effect, on the same actor. It's removed, turned off and on together with that effect.
  *   turnChecks           The start-of-turn card buttons already used for this effect, as "<card id>:<check>", so each
  *                        button works once (effects/turn-start.mjs). Only the latest card's are kept.
+ *   zone                 On a caster's "Zone: ..." marker effect: the UUID of the zone's Region on the scene. When the
+ *                        marker runs out or is removed, the zone goes too (effects/effect-areas.mjs).
  *
  * The lists of modes and shapes are in CONFIG.LORD_OF_THE_MYSTERIES (helpers/config.mjs).
  */
@@ -48,6 +50,7 @@ export default class LordOfTheMysteriesEffect extends foundry.data.ActiveEffectT
     schema.grantedFrom = new fields.DocumentUUIDField({ type: "Item", required: true, nullable: true, initial: null });
     schema.impliedBy = new fields.StringField({ required: true, blank: true, initial: "" });
     schema.turnChecks = new fields.ArrayField(new fields.StringField({ required: true, blank: false }));
+    schema.zone = new fields.DocumentUUIDField({ type: "Region", required: true, nullable: true, initial: null });
 
     return schema;
   }

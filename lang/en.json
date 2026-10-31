@@ -77,11 +77,27 @@
         "Passive": "{name} is passive: it applies to the item's owner by itself.",
         "NoCaster": "Who's using {name}? Select your token, or open the item from a character.",
         "NoTargets": "Target the tokens that get {name} first.",
-        "AreaLater": "Area and zone effects arrive in the next update. Use Targets for now.",
         "NoGM": "{name} belongs to someone else, and no GM is logged in to apply the effect.",
         "GMFailed": "The GM's client couldn't apply the effect to {name}.",
         "Gone": "That item or its effect no longer exists.",
         "NotOwner": "Only {name}'s owners and the GM can apply this."
+      },
+      "Area": {
+        "PlaceHint": "Place {name}: left-click to place, mouse wheel to turn, right-click to cancel.",
+        "NoCanvas": "Open a scene to place {name}.",
+        "NobodyInside": "Nobody is inside {name}.",
+        "ChooseTitle": "Apply {name} to...",
+        "ChooseIntro": "Everyone inside the area. Untick anyone who shouldn't get it.",
+        "You": "the caster",
+        "Apply": "Apply",
+        "Cancel": "Cancel",
+        "NoCasterToken": "{name} has no token on this scene to center the emanation on."
+      },
+      "Zone": {
+        "Chat": "{name} creates {effect}.",
+        "RegionName": "{effect} ({name})",
+        "MarkerName": "Zone: {name}",
+        "MarkerDetail": "Zone on the scene: remove this to end it"
       },
       "Item": {
         "Create": "New Effect",
@@ -109,6 +125,26 @@
         "IsPenaltyHalved": "Penalty halved (Meditation, Half)",
         "HasInternalBleeding": "Internal bleeding",
         "GrantedFrom": "Copied from the ability {name}."
+      }
+    },
+
+    "RegionBehaviors": {
+      "ApplyEffect": {
+        "Label": "Apply LotM Effect",
+        "FIELDS": {
+          "effects": {
+            "label": "Effects",
+            "hint": "Tokens inside get a copy of each, and lose it when they leave. Drop effects here from the Effects compendium or an item."
+          },
+          "source": {
+            "label": "Source",
+            "hint": "The actor the copies are about (the caster), for Fear's or Advantage's source. Leave it empty for a zone you made by hand."
+          },
+          "includeSource": {
+            "label": "Affects its source too",
+            "hint": "Normally the source isn't affected by its own zone."
+          }
+        }
       }
     },
 
@@ -1034,6 +1070,12 @@
   },
 
   "TYPES": {
+    "RegionBehavior": {
+      "lotm": {
+        "applyEffect": "Apply LotM Effect"
+      }
+    },
+
     "Actor": {
       "character": "Character",
       "npc": "NPC"

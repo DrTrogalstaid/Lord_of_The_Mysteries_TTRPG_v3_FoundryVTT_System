@@ -1555,6 +1555,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       if (source) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Source", { name: source }));
       if (!owned) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
       if (bringer) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: bringer.name }));
+      if (effect.system?.zone) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Zone.MarkerDetail"));
       if (effect.disabled) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
       else if (effect.isSuppressed) {
         const stowed = effect.parent?.type === "gear" && effect.parent.system.carry === "stowed";

@@ -1,5 +1,6 @@
 import { statusRule, withImpliedStatuses } from "../effects/status-effects.mjs";
 import { effectUse } from "../effects/effect-application.mjs";
+import { deleteZoneRegion } from "../effects/effect-areas.mjs";
 
 /**
  * The system's Active Effect document. Statuses (Bound, Fear, ...), spell effects and the effects Items lend their
@@ -140,6 +141,8 @@ export class LordOfTheMysteriesActiveEffect extends ActiveEffect {
     // This effect is gone: remove the effects it brought with it.
     const ids = this.#impliedEffects().map((effect) => effect.id);
     if (ids.length) this.parent.deleteEmbeddedDocuments("ActiveEffect", ids, { lotmImpliedBy: this.id });
+    // A zone's marker: the zone goes with it (effects/effect-areas.mjs).
+    if (this.system?.zone) deleteZoneRegion(this.system.zone);
   }
 
 

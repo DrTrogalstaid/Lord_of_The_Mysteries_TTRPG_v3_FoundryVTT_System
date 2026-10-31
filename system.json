@@ -168,6 +168,9 @@
     },
     "ActiveEffect": {
       "effect": {}
+    },
+    "RegionBehavior": {
+      "lotm.applyEffect": {}
     }
   }
 }
