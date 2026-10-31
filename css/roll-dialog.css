@@ -108,3 +108,40 @@
 .lotm.chat-damage-types .chat-damage-type {
   white-space: nowrap;
 }
+
+.lotm.chat-damage-taken .chat-damage-title {
+  margin: 0 0 4px;
+}
+
+.lotm.chat-damage-taken .chat-damage-title i {
+  color: #b33a3a;
+}
+
+.lotm.chat-damage-taken .chat-damage-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.lotm.chat-damage-taken .chat-damage-table th,
+.lotm.chat-damage-taken .chat-damage-table td {
+  padding: 1px 4px;
+  text-align: right;
+}
+
+.lotm.chat-damage-taken .chat-damage-table th:first-child,
+.lotm.chat-damage-taken .chat-damage-table td:first-child {
+  text-align: left;
+}
+
+.lotm.chat-damage-taken .chat-damage-total td {
+  border-top: 1px solid currentColor;
+}
+
+.lotm.chat-damage-taken .chat-damage-ignored {
+  margin: 4px 0 0;
+  font-size: 0.85em;
+  font-style: italic;
+  opacity: 0.8;
+}

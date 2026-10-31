@@ -19,6 +19,7 @@ import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
 import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 import { registerCurrencySettings } from './helpers/currency.mjs';
+import { registerTokenSettings } from './helpers/token-settings.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -79,6 +80,9 @@ Hooks.once('init', function () {
 
   // Money: the local currency prices are shown in, exchange rates, and the exchange fee (helpers/currency.mjs).
   registerCurrencySettings();
+
+  // Token "Display Name" / "Resource Bars" for every actor (helpers/token-settings.mjs).
+  registerTokenSettings();
 
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;

@@ -19,7 +19,7 @@ import { postRoll } from "./message-modes.mjs";
  * so an action's attack bonus always matches the skill's bonus on the Character tab.
  * An action with no skill goes through ActionRollDialog. Both are built on LotmRollDialog (apps/roll-dialog.mjs).
  * Damage has no dialog: it rolls straight away, and its chat message gets Damage / Heal buttons
- * that change the selected tokens' Health (applyDamageFromMessage below).
+ * that change the selected tokens' Health, after their damage reduction (applyDamageFromMessage below).
  *
  * The actor is passed in separately because an action granted by a Sequence, ability
  * or gear isn't always owned by the character directly, so action.actor can be empty.
@@ -456,6 +456,26 @@ export async function averageRoll(formula, rollData) {
 }
 
 /**
+ * The average of a damage formula, per damage type (see damageByType): halfway between each type's lowest and
+ * highest result, rounded down. "2d6[fire] + 1d4[cold]" -> 7 fire, 2 cold.
+ * @param {string} formula
+ * @param {object} rollData
+ * @param {string} defaultType  The action's Damage Type, for parts that don't name one.
+ * @returns {Promise<{type: string, label: string, amount: number}[]>}
+ */
+export async function averageByType(formula, rollData, defaultType = "") {
+  const [low, high] = await Promise.all([
+    new LOTM_VTTRoll(formula, rollData).evaluate({ minimize: true }),
+    new LOTM_VTTRoll(formula, rollData).evaluate({ maximize: true }),
+  ]);
+  const highByType = new Map(damageByType(high, defaultType).map((part) => [part.type, part.amount]));
+  return damageByType(low, defaultType).map((part) => ({
+    ...part,
+    amount: Math.floor((part.amount + (highByType.get(part.type) ?? part.amount)) / 2),
+  }));
+}
+
+/**
  * Roll an action's damage from its Damage Roll Macro and post it to chat.
  *
  * The message gets "Damage" and "Heal" buttons that apply the amount to the selected tokens
@@ -487,18 +507,25 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
   const roll = await new LOTM_VTTRoll(formula, rollData).evaluate();
 
   // The amount the Damage / Heal buttons apply.
+  // How much of it is each damage type (see damageByType).
+  const defaultType = defaultDamageType(action);
+  let parts = damageByType(roll, defaultType);
   let amount = roll.total;
   let note = "";
   if (bigSuccess) {
-    const average = await averageRoll(formula, rollData);
+    // Below the average: every type is raised to its own average, so damage reduction still sees each type.
+    const averages = await averageByType(formula, rollData, defaultType);
+    const average = averages.reduce((total, part) => total + part.amount, 0);
     const raised = roll.total < average;
-    if (raised) amount = average;
+    if (raised) {
+      parts = averages;
+      amount = average;
+    }
     const key = raised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
     note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, average })}</div>`;
   }
 
-  // How much of it is each damage type, and their names for the title ("Shoot: Damage (Fire, Cold)").
-  const parts = damageByType(roll, defaultDamageType(action));
+  // The types' names for the title ("Shoot: Damage (Fire, Cold)").
   const typeNames = parts.map((part) => part.label).filter(Boolean);
   const flavor = game.i18n.format(
     bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor",
@@ -521,7 +548,8 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
     flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid, damage: {
       amount,
       bigSuccess,
-      // { fire: 5, cold: 3 } ("" = untyped). What was rolled; a Big Success raise isn't split between them.
+      // { fire: 5, cold: 3 } ("" = untyped). Adds up to `amount`. Damage reduction is taken off each one
+      // when the Damage button is used (applyDamageFromMessage).
       types: Object.fromEntries(parts.map((part) => [part.type, part.amount])),
     } } },
   });
@@ -562,15 +590,49 @@ function applyButtonsHTML(amount) {
 }
 
 /**
+ * Take an actor's damage reduction off incoming damage, one damage type at a time:
+ * 5 physical and 6 fire against Physical 3 and Fire 2 reduction is 2 physical and 4 fire, so 6 damage.
+ * A type's damage never goes below 0. Untyped damage, and types the actor has no reduction against, aren't reduced.
+ * @param {Record<string, number>} types       Incoming damage per type, e.g. { physical: 5, fire: 6 } ("" = untyped).
+ * @param {Record<string, number>} reduction   The actor's system.damageReduction, e.g. { physical: 3, fire: 2 }.
+ * @returns {{incoming: number, reduced: number, total: number,
+ *            parts: {type: string, label: string, amount: number, reduction: number, taken: number}[]}}
+ *   incoming  damage before reduction; reduced  how much was taken off; total  damage after reduction.
+ */
+export function reduceDamage(types, reduction = {}) {
+  const parts = Object.entries(types ?? {}).map(([type, value]) => {
+    const amount = Number(value) || 0;
+    const against = type ? Math.max(0, Number(reduction?.[type]) || 0) : 0;
+    const taken = amount > 0 ? Math.max(0, amount - against) : amount;
+    return { type, label: damageTypeName(type), amount, reduction: amount - taken, taken };
+  });
+  const incoming = parts.reduce((sum, part) => sum + part.amount, 0);
+  const total = Math.max(0, parts.reduce((sum, part) => sum + part.taken, 0));
+  return { incoming, reduced: incoming - total, total, parts };
+}
+
+/**
  * The Damage / Heal buttons on a damage message: change every selected token's Health by the message's amount.
- * Health stays between 0 and its maximum. Damage reduction isn't taken off here.
+ *
+ * Damage: each token's damage reduction (its actor's system.damageReduction: the rows on its sheet plus its worn
+ * armor, see base-actor.mjs) is taken off each damage type first (reduceDamage). Shift-click applies the damage
+ * without any reduction (for attacks that ignore it). Healing is never reduced.
+ * Health stays between 0 and its maximum.
  * Each token needs to be one the user owns (the GM owns them all), otherwise it's skipped with a warning.
+ * Every damaged token gets a chat message with the breakdown (postDamageTaken). The notice the user gets also
+ * shows the Health before and after; the chat message doesn't.
+ *
  * @param {ChatMessage} message
  * @param {"damage"|"heal"} kind
+ * @param {object} [options]
+ * @param {boolean} [options.ignoreReduction]  Apply the full damage (Shift-click).
  */
-export async function applyDamageFromMessage(message, kind) {
-  const amount = Number(message.getFlag("lotm", "damage")?.amount);
+export async function applyDamageFromMessage(message, kind, { ignoreReduction = false } = {}) {
+  const damage = message.getFlag("lotm", "damage");
+  const amount = Number(damage?.amount);
   if (!Number.isFinite(amount)) return;
+  // Messages from before damage types were saved: all of it untyped, so nothing reduces it.
+  const types = damage.types && Object.keys(damage.types).length ? damage.types : { "": amount };
 
   const tokens = canvas.tokens?.controlled ?? [];
   if (!tokens.length) {
@@ -588,14 +650,94 @@ export async function applyDamageFromMessage(message, kind) {
     }
 
     const before = Number(hp.value) || 0;
-    const after = kind === "heal"
-      ? (hp.max > 0 ? Math.min(hp.max, before + amount) : before + amount)
-      : Math.max(0, before - amount);
-    await actor.update({ "system.resources.hp.value": after });
 
-    const key = kind === "heal" ? "LORD_OF_THE_MYSTERIES.Action.Healed" : "LORD_OF_THE_MYSTERIES.Action.Damaged";
-    ui.notifications.info(game.i18n.format(key, { name: token.name, amount, before, after }));
+    if (kind === "heal") {
+      const after = hp.max > 0 ? Math.min(hp.max, before + amount) : before + amount;
+      await actor.update({ "system.resources.hp.value": after });
+      ui.notifications.info(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.Healed", { name: token.name, amount, before, after }));
+      continue;
+    }
+
+    const result = reduceDamage(types, ignoreReduction ? {} : actor.system.damageReduction);
+    const after = Math.max(0, before - result.total);
+    await actor.update({ "system.resources.hp.value": after });
+    // Tell the table what happened (without the Health that's left).
+    await postDamageTaken(token, result, message, { ignoreReduction });
+
+    if (!result.reduced) {
+      ui.notifications.info(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.Damaged", { name: token.name, amount: result.total, before, after }));
+      continue;
+    }
+    // How much each type was reduced by.
+    const details = result.parts
+      .filter((part) => part.reduction > 0)
+      .map((part) => `${part.label} ${part.reduction}`)
+      .join(", ");
+    ui.notifications.info(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamagedReduced", {
+      name: token.name, amount: result.total, incoming: result.incoming, reduced: result.reduced, details, before, after,
+    }));
   }
+}
+
+/**
+ * Chat message for a token that took damage: how much of each type came in, how much its damage reduction took off,
+ * and how much it took. Its Health isn't shown.
+ *
+ * Posted as the token. It's seen by the same people as the damage roll it came from: a damage roll that was
+ * whispered or blind gives a result that's whispered or blind to the same people, so it can't give a hidden roll away.
+ *
+ * @param {Token} token
+ * @param {ReturnType<reduceDamage>} result
+ * @param {ChatMessage} source      The damage roll's message.
+ * @param {object} [options]
+ * @param {boolean} [options.ignoreReduction]  The damage was applied with Shift (no reduction).
+ * @returns {Promise<ChatMessage>}
+ */
+async function postDamageTaken(token, result, source, { ignoreReduction = false } = {}) {
+  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Action.DamageTaken.${key}`);
+  const escape = Handlebars.escapeExpression;
+  const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
+  const minus = (n) => (n ? `−${n}` : "0");
+
+  const rows = result.parts.map((part) => `
+      <tr data-damage-type="${escape(part.type)}">
+        <td>${escape(part.label || untyped)}</td>
+        <td>${part.amount}</td>
+        <td>${minus(part.reduction)}</td>
+        <td><strong>${part.taken}</strong></td>
+      </tr>`).join("");
+  // With more than one type, a total row at the bottom.
+  const totals = result.parts.length > 1 ? `
+      <tr class="chat-damage-total">
+        <td>${localize("Total")}</td>
+        <td>${result.incoming}</td>
+        <td>${minus(result.reduced)}</td>
+        <td><strong>${result.total}</strong></td>
+      </tr>` : "";
+
+  const title = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamageTaken.Title", {
+    name: escape(token.name), amount: result.total,
+  });
+  const content = `<div class="lotm chat-damage-taken">
+    <p class="chat-damage-title">${title}</p>
+    <table class="chat-damage-table">
+      <thead><tr>
+        <th>${localize("Type")}</th><th>${localize("Incoming")}</th><th>${localize("Reduced")}</th><th>${localize("Taken")}</th>
+      </tr></thead>
+      <tbody>${rows}${totals}
+      </tbody>
+    </table>
+    ${ignoreReduction ? `<p class="chat-damage-ignored">${localize("Ignored")}</p>` : ""}
+  </div>`;
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ token: token.document, actor: token.actor }),
+    content,
+    // Same audience as the damage roll.
+    whisper: [...(source.whisper ?? [])],
+    blind: !!source.blind,
+    flags: { lotm: { damageTaken: { tokenUuid: token.document?.uuid ?? "", ...result } } },
+  });
 }
 
 /**
@@ -625,7 +767,10 @@ export function registerActionChatListeners() {
       const holder = html.querySelector(".lotm-apply-buttons");
       if (holder) content?.append(holder);
       for (const button of applyButtons) {
-        button.addEventListener("click", () => applyDamageFromMessage(message, button.dataset.lotmApply));
+        // Shift-click: apply the damage without the targets' damage reduction.
+        button.addEventListener("click", (event) => applyDamageFromMessage(message, button.dataset.lotmApply, {
+          ignoreReduction: event.shiftKey,
+        }));
       }
     }
   });

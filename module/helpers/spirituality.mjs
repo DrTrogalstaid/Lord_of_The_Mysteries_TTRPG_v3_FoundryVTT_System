@@ -76,7 +76,7 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
 }
 
 /**
- * The line a roll's chat message gets when it spent Spirituality: "−2 Spirituality (8 left)".
+ * The line a roll's chat message gets when it spent Spirituality: "-2 Spirituality (8 left)".
  * @param {{amount: number, after: number}|null} spent  What spendSpirituality returned.
  * @returns {string}  HTML, or "" when nothing was spent.
  */

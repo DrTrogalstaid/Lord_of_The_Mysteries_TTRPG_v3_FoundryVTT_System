@@ -110,6 +110,14 @@
         "AllowUntrainedSkillChecks": {
             "Name": "Allow Untrained Skill Checks",
             "Hint": "When disabled, players can't roll a skill they're untrained in."
+        },
+        "tokenDisplayName": {
+            "Name": "Token Display Name",
+            "Hint": "Who can see a token's name. Applies to every actor and every token already on a scene, and to new ones."
+        },
+        "tokenDisplayBars": {
+            "Name": "Token Resource Bars",
+            "Hint": "Who can see a token's bars (bar 1 is Health). Applies to every actor and every token already on a scene, and to new ones."
         }
     },
 
@@ -412,7 +420,7 @@
       "NotEnough": "{name} has only {value} Spirituality ({cost} needed). Nothing was spent.",
       "Chat": "{name} spends {amount} Spirituality{reason}: {before} → {after}",
       "ChatReason": " on {reason}",
-      "RollNote": "−{amount} Spirituality ({after} left)",
+      "RollNote": "-{amount} Spirituality ({after} left)",
       "ActionCheckbox": "Spend {cost} Spirituality (has {value})",
       "ActionNotEnough": "Not enough Spirituality ({value} of {cost}). It will roll without spending any.",
       "UseButton": "Spend {cost}",
@@ -608,13 +616,13 @@
         }
       },
       "Warnings": {
-        "Overloaded": "Over the Strength limit by {slots}: Agility −{penalty}",
+        "Overloaded": "Over the Strength limit by {slots}: Agility -{penalty}",
         "ContainerFull": "Over capacity by {slots}.",
         "HiddenFull": "More hidden than the hidden pockets hold.",
         "TooBig": "Too big for this container.",
         "NoContainer": "Not in any pocket or bag.",
         "MultipleClothing": "More than one outfit is equipped.",
-        "Suitcase": "−2 to skill and ability checks while fighting with a suitcase",
+        "Suitcase": "-2 to skill and ability checks while fighting with a suitcase",
         "NotAnAbility": "{name} is not an ability.",
         "NotAnAction": "{name} is not an action.",
         "AlreadyGranted": "{name} is already on this item.",
@@ -740,10 +748,20 @@
       "BigSuccessKept": "Big Success: rolled {rolled} (average {average})",
       "ApplyDamage": "Damage ({amount})",
       "ApplyHeal": "Heal ({amount})",
-      "ApplyHint": "Apply to the selected token(s)",
+      "ApplyHint": "Apply to the selected token(s). Damage is lowered by each token's damage reduction; Shift-click to ignore it.",
       "SelectToken": "Select one or more tokens first.",
       "NotOwner": "You can't change {name}'s Health. Ask the GM to apply it.",
       "Damaged": "{name} takes {amount} damage: {before} → {after}",
+      "DamagedReduced": "{name} takes {amount} damage ({incoming} - {reduced} reduction: {details}): {before} → {after}",
+      "DamageTaken": {
+        "Title": "{name} takes {amount} damage",
+        "Type": "Type",
+        "Incoming": "Incoming",
+        "Reduced": "Reduced",
+        "Taken": "Taken",
+        "Total": "Total",
+        "Ignored": "Damage reduction was ignored."
+      },
       "Healed": "{name} heals {amount}: {before} → {after}",
       "Untyped": "untyped",
       "DamageTypesHint": "Give parts their own type in brackets, like 2d6[fire] + 1d4[cold]. Parts without one use the Damage Type below."

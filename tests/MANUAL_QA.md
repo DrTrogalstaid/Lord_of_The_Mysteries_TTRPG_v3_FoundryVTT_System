@@ -13,7 +13,7 @@ can't: the click wiring, the rendered dialog, and the chat output.
 - [ ] Load a world using this system with at least one Player Character actor
 - [ ] The actor has at least one skill with a level other than "untrained" recorded
       (so the level bonus and any override are visible as something other than the
-      default −4)
+      default -4)
 - [ ] Ideally, one skill in the compendium has a nonzero `system.modifier` set, to
       exercise the "Item Modifier" line — if none do, this one case can be skipped
       but note it as untested rather than assumed passing
@@ -74,7 +74,7 @@ can't: the click wiring, the rendered dialog, and the chat output.
 ## Untrained skill checks and the GM setting
 
 - [ ] Open a skill the actor has no recorded level for (shows as "Untrained" with
-      a −4-inclusive modifier) — with the default setting, the dialog opens and
+      a -4-inclusive modifier) — with the default setting, the dialog opens and
       rolls normally, same as any other skill
 - [ ] As GM, open Configure Settings → System Settings, find "Allow Untrained
       Skill Checks", and turn it off
@@ -179,7 +179,7 @@ Setup: a Sequence whose skill increases include a compendium skill (e.g. Pistol)
       an optional reason. Spending lowers Spirituality and posts "X spends 3 Spirituality on Y: 10 → 7" to chat
 - [ ] Spending more than the actor has: a warning, nothing changes. Closing the dialog spends nothing
 - [ ] An action with a skill and a Spirituality Cost: the roll dialog has a "Spend N Spirituality" box, ticked.
-      Rolling spends it and the chat card says "−N Spirituality (X left)". Untick it: nothing is spent.
+      Rolling spends it and the chat card says "-N Spirituality (X left)". Untick it: nothing is spent.
       Closing the dialog without rolling spends nothing. Changing the attribute keeps the box as you set it
 - [ ] Not enough Spirituality: the box is greyed out with a warning, and the roll happens without spending
 - [ ] An action with no skill but an Attack Roll Macro and a cost: rolling spends the cost (note on the chat card)
@@ -233,3 +233,18 @@ Setup: set the chat sidebar's roll mode to Private GM Roll.
       shows e.g. "7 Fire · 5 Physical"
 - [ ] "2d6" on a Fire action: the title says (Fire), no breakdown line
 - [ ] The Damage button's hover on the sheet shows the formula with the types in it (no extra type added at the end)
+
+## Damage reduction when applying damage
+
+Setup: a target with Damage Resistance rows Physical 3 and Fire 2 in its sidebar (or worn armor that reduces them).
+
+- [ ] Roll "5[physical] + 6[fire]" (or any roll that comes out 5 physical, 6 fire), select the target, click Damage:
+      it loses 6 Health, and the notice says "takes 6 damage (11 - 5 reduction: Physical 3, Fire 2)"
+- [ ] A type it has no reduction against (cold), and untyped damage, go through in full
+- [ ] A type's damage never goes below 0 (2 physical against Physical 3 is 0, not -1)
+- [ ] Shift-click Damage: the full 11 is taken, no reduction
+- [ ] Heal is never reduced
+- [ ] A Physical row on the sidebar and worn armor that reduces physical add together (both count)
+- [ ] Big Success that's raised to the average: the card's per-type line shows each type at its own average,
+      and reduction is taken off those
+- [ ] Damage cards from before this change still apply their full amount (they have no types saved)

@@ -283,16 +283,25 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     /**
      * Damage reduction: the rows typed in on the sheet (damage_resistance) plus the worn armor's.
      * The saved rows are never changed; the totals are display / roll data only:
-     *   damageReduction       { physical: 7, fire: 5, ... }  what damage should be reduced by, per type.
+     *   damageReduction       { physical: 7, fire: 5, ... }  what damage should be reduced by, per type. Used when
+     *                         damage is applied from chat (applyDamageFromMessage in helpers/action-roll.mjs).
      *   armorReductionList    [{ damageType, label, value, source }]  the armor's rows, for a read-only list on the sheet.
      */
     _prepareDamageReduction() {
         const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
-        // Rows should hold a key ("physical"), but accept a label ("LORD_OF_THE_MYSTERIES.DamageTypes.Physical") too.
+        // Rows should hold a key ("physical"). The sheet's dropdown saves "Physical" (its language key), and older
+        // rows may hold the full label key ("LORD_OF_THE_MYSTERIES.DamageTypes.Physical"), so those are matched too.
+        // Every total uses the lower-case key, the same as armor and damage rolls (helpers/action-roll.mjs), so
+        // applying damage can look each type up directly.
         const keyOf = (type) => {
             if (!type) return null;
             if (type in damageTypes) return type;
-            return Object.keys(damageTypes).find((key) => damageTypes[key] === type) ?? type;
+            const lower = String(type).toLowerCase();
+            return Object.keys(damageTypes).find((key) =>
+                key === lower
+                || damageTypes[key] === type
+                || damageTypes[key].split(".").pop().toLowerCase() === lower
+            ) ?? type;
         };
 
         const totals = {};
