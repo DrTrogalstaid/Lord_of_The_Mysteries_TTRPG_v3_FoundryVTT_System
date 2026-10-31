@@ -134,15 +134,11 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
    * @returns {string}
    */
   #sequenceLine() {
-    const sequences = this.actor.items
-      .filter((item) => item.type === "sequence")
-      .sort((a, b) => (a.system.sequence_number ?? 9) - (b.system.sequence_number ?? 9));
-    const top = sequences[0];
-    if (!top) return game.i18n.localize("LORD_OF_THE_MYSTERIES.NPC.NoSequence");
-
-    const data = { number: top.system.sequence_number ?? "?", name: top.name, pathway: top.system.pathway };
-    const key = top.system.pathway ? "LORD_OF_THE_MYSTERIES.NPC.SequenceLine" : "LORD_OF_THE_MYSTERIES.NPC.SequenceLineNoPathway";
-    return game.i18n.format(key, data);
+    // The lowest-numbered owned Sequence (_currentSequence in base-actor-sheet.mjs).
+    const current = this._currentSequence();
+    if (!current) return game.i18n.localize("LORD_OF_THE_MYSTERIES.NPC.NoSequence");
+    const key = current.pathway ? "LORD_OF_THE_MYSTERIES.NPC.SequenceLine" : "LORD_OF_THE_MYSTERIES.NPC.SequenceLineNoPathway";
+    return game.i18n.format(key, current);
   }
 
 

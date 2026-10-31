@@ -475,6 +475,20 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   };
 
   /**
+   * The actor's current Sequence: the owned Sequence with the lowest number (Sequence 8 over Sequence 9).
+   * Shown in the sheet headers (the player sheet's Sequence Title, the NPC sheet's Sequence line).
+   * @returns {{name: string, number: number|string, pathway: string}|null}  null when it has no Sequence.
+   */
+  _currentSequence() {
+    const top = this.actor.items
+      .filter((item) => item.type === "sequence")
+      .sort((a, b) => (a.system.sequence_number ?? 9) - (b.system.sequence_number ?? 9))[0];
+    if (!top) return null;
+    return { name: top.name, number: top.system.sequence_number ?? "?", pathway: top.system.pathway ?? "" };
+  }
+
+
+  /**
    * Whether granted entries on this actor can be hidden (the eye-slash button and the "Hidden" lists).
    * True for actors whose data has a hiddenGrants list, which only NPCs have (actor-npc.mjs).
    * @type {boolean}

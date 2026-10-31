@@ -134,6 +134,9 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     if (!skillTabIds.includes(this.tabGroups.skills)) this.tabGroups.skills = PlayerCharacterSheet.TABS.skills.initial;
     context.skillTabs = this._prepareTabs("skills");
 
+    // The header's Sequence Title: the character's lowest-numbered Sequence (base-actor-sheet.mjs). null = none yet.
+    context.currentSequence = this._currentSequence();
+
     // The ability (if any) that regular skills can be analyzed into -- see helpers/granted-skills.mjs.
     const analyzeAbility = this._grantingAbilities().find(item => item.system.analyzeSkills);
     context.analyzeAbility = analyzeAbility && { id: analyzeAbility.id, name: analyzeAbility.name };

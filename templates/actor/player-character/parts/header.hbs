@@ -17,13 +17,14 @@
 
         <div class="sequence-row">
           <span class="sequence-title-label">Sequence Title:</span>
-          <input
-            class="sequence-title-input"
-            type="text"
-            name="system.SequenceData.current_sequence.title"
-            value="{{system.SequenceData.current_sequence.title}}"
-          />
-          <span class="pathway-label">({{system.SequenceData.pathway.common_name}})</span>
+          {{!-- Filled in from the character's lowest-numbered Sequence (_currentSequence in base-actor-sheet.mjs).
+                Change it by adding or removing Sequences on the Sequences tab. --}}
+          {{#if currentSequence}}
+          <span class="sequence-title-value">{{currentSequence.name}}</span>
+          <span class="pathway-label">(Sequence {{currentSequence.number}}{{#if currentSequence.pathway}} · {{currentSequence.pathway}}{{/if}})</span>
+          {{else}}
+          <span class="sequence-title-value none">{{localize "LORD_OF_THE_MYSTERIES.NPC.NoSequence"}}</span>
+          {{/if}}
         </div>
 
         <div class="basic-info-row">

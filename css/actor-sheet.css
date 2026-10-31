@@ -151,6 +151,18 @@
   margin-right: 6px;
 }
 
+/* The Sequence Title itself (read-only, from the character's Sequences). */
+.lotm.sheet.actor .sequence-title-value {
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.lotm.sheet.actor .sequence-title-value.none {
+  font-weight: normal;
+  font-style: italic;
+  opacity: 0.7;
+}
+
 .lotm.sheet.actor .sequence-title-input {
   width: 180px;
   margin-right: 8px;
