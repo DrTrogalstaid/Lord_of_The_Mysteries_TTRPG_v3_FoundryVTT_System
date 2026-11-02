@@ -1,6 +1,12 @@
 import LordOfTheMysteriesItemBase from "../base-item.mjs";
+import { rollActionAttack, rollActionDamage } from "../../../helpers/action-roll.mjs";
 
-export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase {
+/**
+ * A spell. It rolls the same way an action does (helpers/action-roll.mjs), with the same roll fields and names:
+ * skill, attackRollMacro, modifiers, damageRollMacro, damageType. The one difference: a spell with no skill set
+ * rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
+ */
+export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase {
 
   static defineSchema() {
     const fields = foundry.data.fields;
@@ -8,6 +14,13 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
 
     //Action Type (e.i. Attack/Spell, quick action, free action)
     schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
+
+    // What kind of action it is, beyond its Action Type: speech, reaction, grapple, parry, aimed
+    // (CONFIG.LORD_OF_THE_MYSTERIES.actionTraits). Statuses check these before it's used
+    // (effects/status-restrictions.mjs): Silence stops speech, Off Guard stops reactions, Blind stops aimed...
+    schema.traits = new fields.SetField(new fields.StringField({
+      required: true, blank: false, choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTraits),
+    }));
 
     schema.description = new fields.StringField({ required: true, initial: "Description" });
     schema.special = new fields.StringField({ required: true, initial: "na" });
@@ -17,8 +30,18 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     schema.target = new fields.StringField({required: false, blank: true});
     schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
     
-    // Attack: string with roll macro?
-    schema.attack = new fields.StringField({ required: false, blank: true});
+    // ---- Rolls: the same fields as an action (action.mjs) ----
+    // The skill it rolls with (UUID of a skill Item). Blank = Occultism. Set by dropping a skill on the spell
+    // sheet's Skill slot (helpers/skill-slot.mjs).
+    schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
+    // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). This used to be "attack".
+    schema.attackRollMacro = new fields.StringField({ required: false, blank: true });
+    // Flat bonus/penalty added to the attack roll. Shows up in the roll dialog's modifier list.
+    schema.modifiers = new fields.NumberField({ required: false, integer: true });
+    // Damage formula rolled by the damage buttons. Parts can have their own type: "2d6[fire] + 1d4[cold]".
+    schema.damageRollMacro = new fields.StringField({ required: false, blank: true });
+    // The damage type of every part of the damage formula that doesn't name its own.
+    schema.damageType = new fields.StringField({ required: false, blank: true, initial: "" });
     //DC_Results
     //TODO: Make an array?? Mayebe, but it could also be a markdown table. Or the sheet would process the array into a markdown table??
     schema.dcResults = new fields.StringField({ required: false, initial: "Results" });
@@ -52,6 +75,40 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
      */
     
     return schema;
+  }
+
+  /**
+   * Spells saved before they had the action roll fields kept their attack formula in "attack".
+   * Copy it into attackRollMacro. (Only when attackRollMacro is still empty.)
+   * @override
+   */
+  static migrateData(source) {
+    if (typeof source.attack === "string" && source.attack.trim() && !source.attackRollMacro) {
+      source.attackRollMacro = source.attack;
+    }
+    return super.migrateData(source);
+  }
+
+  /* -------------------------------------------- */
+  /*  Rolls (see helpers/action-roll.mjs)          */
+  /* -------------------------------------------- */
+
+  /**
+   * Roll this spell's attack. Used by hotbar macros.
+   * @param {object} [options]
+   * @param {Actor} [options.actor]  Who's casting. Defaults to the character that owns the spell.
+   */
+  async rollAttack({ actor = this.parent.actor } = {}) {
+    return rollActionAttack(actor, this.parent);
+  }
+
+  /**
+   * Roll this spell's damage.
+   * @param {object} [options]
+   * @param {Actor} [options.actor]  Who's casting. Defaults to the character that owns the spell.
+   */
+  async rollDamage({ actor = this.parent.actor } = {}) {
+    return rollActionDamage(actor, this.parent);
   }
 
 }

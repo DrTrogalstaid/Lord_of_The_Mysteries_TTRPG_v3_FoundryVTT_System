@@ -1,0 +1,13 @@
+{{!-- NPC Notes tab: one text editor, saved in system.biography. --}}
+<section class="tab notes-tab {{tab.cssClass}}" data-group="sheet" data-tab="notes">
+  <div class="biography-box npc-notes-box">
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Notes"}}</div>
+    {{#if editable}}
+      <prose-mirror name="system.biography" button="true" editable="{{editable}}" toggled="false" value="{{system.biography}}">
+        {{{enrichedNotes}}}
+      </prose-mirror>
+    {{else}}
+      {{{enrichedNotes}}}
+    {{/if}}
+  </div>
+</section>

@@ -90,7 +90,7 @@ across 4+ sequences, ⑥ analyzing a Beyonder's blood, ⑦ directly analyzing a 
 characteristic or item (+1 each; doesn't stack with ②③⑥ for the same subject).
 Current house rule: analyses are counted and the GM judges when they earn a level, with each
 step needing more than the last. Still to decide: exact thresholds (if any), and whether
-sources ①–⑥ count as analyses or as flat levels.
+sources ①-⑥ count as analyses or as flat levels.
 
 Also from the original: above Sequence 9, a Reader may spend potion attribute points on
 Knowledge levels. Not automated.

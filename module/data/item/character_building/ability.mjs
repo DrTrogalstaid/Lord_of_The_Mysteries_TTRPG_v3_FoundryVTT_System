@@ -67,6 +67,25 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
         })
     );
 
+    // Learning by Doing (helpers/skill-learning.mjs). For Sequence abilities that teach skills through use,
+    // e.g. "each challenging theft of something valuable raises a detection or stealing skill".
+    // Characters with the ability get a ✋ button on the skills it covers, to record each success.
+    // The next level needs 1, 2, 3, 4... successes. The counts are saved on the character (system.learning).
+    schema.fastLearning = new fields.SchemaField({
+        enabled: new fields.BooleanField({ required: true, initial: false }),
+        // What counts as a success, shown to the player when they record one.
+        condition: new fields.StringField({ required: true, blank: true, initial: "" }),
+        // Highest level this ability can raise a skill to.
+        maxLevel: new fields.StringField({
+            required: true, initial: "mastery", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels)
+        }),
+        // Which skills it covers: whole categories (config.mjs skillCategories), plus single skills dropped on it.
+        categories: new fields.ArrayField(new fields.StringField({
+            required: true, blank: false, choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories)
+        })),
+        skills: new fields.ArrayField(new fields.DocumentUUIDField({ type: "Item", required: false }))
+    });
+
     return schema;
   }
 

@@ -1,116 +1,58 @@
-import { 
-  SKILL_SLOT_ACTIONS, 
-  prepareSkillSlot, 
-  bindSkillSlot 
-} from "../../../helpers/skill-slot.mjs";
-// Used in _prepareContext and _onRender below, but weren't imported (same import as item-sheet.mjs, one folder deeper).
-import {
-  onManageActiveEffect,
-  prepareActiveEffectCategories,
-} from "../../../helpers/effects.mjs";
-
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ItemSheetV2 } = foundry.applications.sheets;
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
+import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
+import { AMMO_USES } from "../../../helpers/firearms.mjs";
 
 
-export class LordOfTheMysteriesActionSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBase {
   /** @override */
   static DEFAULT_OPTIONS = {
-    tag: "form",
-    classes: ['lotm', 'sheet', 'item', 'action'],
-    form: {
-      submitOnChange: true,
-      closeOnSubmit: false
-    },
-    position: {
-      width: 520,
-      height: 480,
-    },
+    classes: ["action"],
     window: {
-      resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.Skill"
     },
-    // Clicks on [data-action] buttons. The Skill slot's open / remove (helpers/skill-slot.mjs).
+    // Clicks on [data-action] buttons: the Skill slot's open / remove (helpers/skill-slot.mjs), and the Special
+    // Results list's add / delete (Description tab).
     actions: {
       ...SKILL_SLOT_ACTIONS,
+      addSpecialResult: LordOfTheMysteriesActionSheet.#onAddSpecialResult,
+      deleteSpecialResult: LordOfTheMysteriesActionSheet.#onDeleteSpecialResult,
     },
   };
 
+  /** The Effects tab (sheets/base-item-sheet.mjs). */
+  static HAS_EFFECTS = true;
+
   /** @override */
-  // Placeholder path — the real per-type template is resolved in
-  // _configureRenderParts() below, the V2 replacement for the old
-  // `get template()` getter.
+  static TABS = LordOfTheMysteriesItemSheetBase.EFFECTS_TABS;
+
+  /** @override */
   static PARTS = {
-    header: { template: 'systems/lotm/templates/item/parts/item-header.hbs' },
-    form: { template: 'systems/lotm/templates/item/character_building/action-sheet.hbs'},
-  };
-
-  /** @override */
-  static TABS = {
-    sheet: {
-      tabs: [
-        { id: 'description', label: 'LORD_OF_THE_MYSTERIES.Tabs.Description' },
-        { id: 'details', label: 'LORD_OF_THE_MYSTERIES.Tabs.Details'},
-      ],
-      initial: 'description',
-    },
+    header: ITEM_HEADER_PART,
+    form: { template: "systems/lotm/templates/item/character_building/action.hbs", templates: [ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL] },
   };
 
   /* -------------------------------------------- */
-
-  /**
-   * Resolve a distinct template per item type, e.g.
-   * item-item-sheet.hbs, item-feature-sheet.hbs, item-spell-sheet.hbs
-   * (one .hbs file per type registered in CONFIG.Item.dataModels).
-   * This is the V2 replacement for overriding the old `get template()` getter.
-   */
-  /** @override */
-  _configureRenderParts(options) {
-    const parts = super._configureRenderParts(options);
-    
-    parts.form.template = `systems/lotm/templates/item/character_building/action.hbs`;
-                           
-
-    return parts;
-  }
-
+  /*  Context Preparation                          */
+  /* -------------------------------------------- */
 
   /** @override */
-  async _prepareContext(options){
-    // Retrieve base data structure.
+  async _prepareContext(options) {
     const context = await super._prepareContext(options);
 
-    // Use a safe clone of the item data for further operations.
-    const itemData = this.document.toPlainObject();
+    context.enrichedDescription = await this._enrich(this.item.system.description);
 
-    context.item = this.item;
-
-    // Enrich text editors
-    context.enrichedDescription = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.item.system.description,
-      {
-        // Whether to show secret blocks in the finished html
-        secrets: this.document.isOwner,
-        // Relative UUID resolution
-        relativeTo: this.item,
-      }
-    );
-    context.enrichedSpecialResults = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      this.item.system.specialResults,
-      { secrets: this.document.isOwner, relativeTo: this.item }
-    );
-
-    // Add the item's data to context.data for easier access, as well as flags.
-    context.system = itemData.system;
-    context.flags = itemData.flags;
-
-    // Adding a pointer to CONFIG.LORD_OF_THE_MYSTERIES
-    context.config = CONFIG.LORD_OF_THE_MYSTERIES;
-
-    // Prepare active effects for easier access
-    context.effects = prepareActiveEffectCategories(this.item.effects);
-
+    // The Skill slot: the skill this action rolls with.
     context.actionSkill = await prepareSkillSlot(this.item);
+
+    // The Traits checkboxes (templates/item/parts/action-traits.hbs).
+    context.traitOptions = this._traitOptions();
+
+    // "Uses ammo" dropdown: none / fire / reload / chamber / unload (helpers/firearms.mjs).
+    context.ammoUseOptions = AMMO_USES;
+
+    // Special Results (Great Success / Big Failure events): each row needs its position, for its text box's name
+    // (system.specialResults.<index>) and its delete button.
+    context.specialResults = (context.system.specialResults ?? []).map((value, index) => ({ index, value }));
 
     return context;
   }
@@ -120,19 +62,24 @@ export class LordOfTheMysteriesActionSheet extends HandlebarsApplicationMixin(It
   _onRender(context, options) {
     super._onRender(context, options);
 
-    this.element.querySelectorAll('prose-mirror').forEach((editor) => {
-      editor.addEventListener('save', () => this.submit());
-    });
-
-    if (!this.isEditable) return;
-
-    this.element.querySelectorAll('.effect-control').forEach((el) => {
-      el.addEventListener('click', (ev) => onManageActiveEffect(ev, this.item));
-    });
-
-    // Let the Skill slot accept a dropped skill.
+    // Let the Skill slot accept a dropped skill (only when the sheet can be edited; bindSkillSlot checks).
     bindSkillSlot(this);
-
   }
 
+  /* -------------------------------------------- */
+  /*  Actions                                      */
+  /* -------------------------------------------- */
+
+  /** Add a blank Special Result row. */
+  static async #onAddSpecialResult(event, target) {
+    if (!this.isEditable) return;
+    const current = this.item.system.specialResults ?? [];
+    await this.item.update({ "system.specialResults": [...current, ""] });
+  }
+
+  /** Remove a Special Result row (data-index = its position). */
+  static async #onDeleteSpecialResult(event, target) {
+    if (!this.isEditable) return;
+    await this._removeFromList("system.specialResults", target.dataset.index);
+  }
 }

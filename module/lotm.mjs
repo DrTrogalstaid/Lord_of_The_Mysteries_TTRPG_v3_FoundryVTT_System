@@ -1,10 +1,13 @@
 // Import document classes.
 import { LordOfTheMysteriesActor } from './documents/actor.mjs';
 import { LordOfTheMysteriesItem } from './documents/item.mjs';
+import { LordOfTheMysteriesActiveEffect } from './documents/active-effect.mjs';
+import { LordOfTheMysteriesCombat } from './documents/combat.mjs';
 
 // Import sheet classes.
+// Both actor sheets extend LordOfTheMysteriesActorSheetBase (sheets/base-actor-sheet.mjs).
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
-import { LordOfTheMysteriesActorSheet } from './sheets/actor-sheet.mjs';
+import { NpcSheet } from "./sheets/npc-sheet.mjs";
 import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
 import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_building/sequence-sheet.mjs';
 import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/skill-sheet.mjs';
@@ -12,11 +15,20 @@ import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building
 import { LordOfTheMysteriesActionSheet } from './sheets/item/character_building/action-sheet.mjs';
 import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/spell-sheet.mjs';
 import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
+import LotmActiveEffectConfig from './apps/effect-config.mjs';
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
 import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
+import { registerCurrencySettings } from './helpers/currency.mjs';
+import { registerTokenSettings } from './helpers/token-settings.mjs';
+import { STATUS_RULES, registerStatusEffects } from './effects/status-effects.mjs';
+import { registerTurnStartChatListeners } from './effects/turn-start.mjs';
+import { registerEffectQueries } from './effects/effect-application.mjs';
+import { ZONE_BEHAVIOR_TYPE, registerZones } from './effects/effect-areas.mjs';
+import LotmApplyEffectBehavior from './data/region-behavior/apply-effect.mjs';
+import { syncGrantedEffects } from './effects/granted-effects.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -38,6 +50,11 @@ Hooks.once('init', function () {
     LordOfTheMysteriesActor,
     LordOfTheMysteriesItem,
     rollItemMacro,
+    // Every status's rules, by id (effects/status-effects.mjs), e.g. game.lotm.statusRules.bound
+    statusRules: STATUS_RULES,
+    // Bring an actor's copies of granted abilities' passive effects up to date (effects/granted-effects.mjs).
+    // Used by module/macros/sync-granted-effects.js.
+    syncGrantedEffects,
   };
 
   // Add custom constants for configuration.
@@ -49,7 +66,8 @@ Hooks.once('init', function () {
    * @type {String}
    */
   CONFIG.Combat.initiative = {
-    formula: '1d20 + @abilities.dex.mod',
+    // 1d20 + the Agility total (after armor and carrying penalties).
+    formula: '1d20 + @attributes.agi.total',
     decimals: 2,
   };
 
@@ -64,6 +82,10 @@ Hooks.once('init', function () {
   // Make the "Roll damage" button on action attack messages work.
   registerActionChatListeners();
 
+  // Combat: start-of-turn cards for statuses (documents/combat.mjs), and their roll buttons (effects/turn-start.mjs).
+  CONFIG.Combat.documentClass = LordOfTheMysteriesCombat;
+  registerTurnStartChatListeners();
+
   // World setting read by SkillCheckDialog.prompt(): when off, untrained
   // skills can't be rolled at all.
   game.settings.register('lotm', 'allowUntrainedSkillChecks', {
@@ -74,6 +96,12 @@ Hooks.once('init', function () {
     type: Boolean,
     default: true,
   });
+
+  // Money: the local currency prices are shown in, exchange rates, and the exchange fee (helpers/currency.mjs).
+  registerCurrencySettings();
+
+  // Token "Display Name" / "Resource Bars" for every actor (helpers/token-settings.mjs).
+  registerTokenSettings();
 
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;
@@ -97,17 +125,44 @@ Hooks.once('init', function () {
     container: models.LordOfTheMysteriesContainer
   }
 
-  // Active Effects are never copied to the Actor,
-  // but will still apply to the Actor from within the Item
-  // if the transfer property on the Active Effect is true.
-  CONFIG.ActiveEffect.legacyTransferral = false;
+  // Active Effects: statuses, spell effects and the effects Items lend their owner (see documents/active-effect.mjs,
+  // data/effect/effect.mjs and effects/status-effects.mjs). Every new effect is the system's "effect" type.
+  CONFIG.ActiveEffect.documentClass = LordOfTheMysteriesActiveEffect;
+  CONFIG.ActiveEffect.dataModels.effect = models.LordOfTheMysteriesEffect;
+  CONFIG.ActiveEffect.defaultType = 'effect';
+  // An effect whose duration has run out is deleted (Foundry's effect registry checks durations as time passes).
+  CONFIG.ActiveEffect.expiryAction = 'delete';
+  // Players' Apply buttons ask the GM to put effects on actors they don't own (effects/effect-application.mjs).
+  registerEffectQueries();
+
+  // Zones: the "Apply LotM Effect" region behavior, and keeping zones and their caster's marker together
+  // (data/region-behavior/apply-effect.mjs, effects/effect-areas.mjs).
+  CONFIG.RegionBehavior.dataModels[ZONE_BEHAVIOR_TYPE] = LotmApplyEffectBehavior;
+  if (CONFIG.RegionBehavior.typeIcons) CONFIG.RegionBehavior.typeIcons[ZONE_BEHAVIOR_TYPE] = 'fa-solid fa-person-rays';
+  if (CONFIG.RegionBehavior.typeLabels) CONFIG.RegionBehavior.typeLabels[ZONE_BEHAVIOR_TYPE] = 'LORD_OF_THE_MYSTERIES.RegionBehaviors.ApplyEffect.Label';
+  registerZones();
+
+  // World setting: Invisible hides the token like Foundry's own invisibility, or is only a status icon.
+  // Read once here, when the statuses are registered, so changing it needs a reload.
+  game.settings.register('lotm', 'invisibleHidesToken', {
+    name: 'LORD_OF_THE_MYSTERIES.Settings.InvisibleHidesToken.Name',
+    hint: 'LORD_OF_THE_MYSTERIES.Settings.InvisibleHidesToken.Hint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: true,
+  });
+
+  // The system's statuses replace Foundry's own list (Token HUD, Effects tab).
+  registerStatusEffects({ invisibleHidesToken: game.settings.get('lotm', 'invisibleHidesToken') });
 
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
-  foundry.documents.collections.Actors.registerSheet('lotm', LordOfTheMysteriesActorSheet, {
+  foundry.documents.collections.Actors.registerSheet('lotm', NpcSheet, {
     types: ['npc'],
     makeDefault: true,
-    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Actor',
+    label: 'LORD_OF_THE_MYSTERIES.SheetTitles.NPC',
   });
   foundry.documents.collections.Actors.registerSheet('lotm', PlayerCharacterSheet, {
     types: ['character'], // whatever `type` PlayerCharacterData is registered under
@@ -154,6 +209,12 @@ Hooks.once('init', function () {
     types: ['container'],
     makeDefault: true,
     label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Container'
+  });
+
+  // The effect sheet: Foundry's, plus a LotM tab (Source, Use, Shape and Size; apps/effect-config.mjs).
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(ActiveEffect, 'lotm', LotmActiveEffectConfig, {
+    makeDefault: true,
+    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.ActiveEffect',
   });
 
   // Preload Handlebars templates.
@@ -239,8 +300,8 @@ function rollItemMacro(itemUuid) {
       );
     }
 
-    // Actions roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
-    if (item.type === 'action') return item.system.rollAttack();
+    // Actions and spells roll their attack (skill bonus + dialog). Everything else uses the item's own roll.
+    if (item.type === "action" || item.type === "spell") return item.system.rollAttack();
     item.roll();
   });
 }

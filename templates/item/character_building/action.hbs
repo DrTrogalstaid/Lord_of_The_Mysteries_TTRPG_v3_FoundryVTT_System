@@ -4,6 +4,7 @@
   <nav class="sheet-tabs tabs" data-group="sheet">
     <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
     <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
+    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
   </nav>
 
   {{!-- Sheet Body --}}
@@ -62,6 +63,9 @@
           {{selectOptions config.actionTypes selected=system.actionType localize=true}}
         </select>
       </fieldset>
+
+      <!--Traits: speech, reaction, grapple, parry, aimed (templates/item/parts/action-traits.hbs)-->
+      {{> "systems/lotm/templates/item/parts/action-traits.hbs"}}
 
       <!--Category-->
       <fieldset class="category">
@@ -123,10 +127,11 @@
       <fieldset>
         <legend>Damage Roll Macro</legend>
         <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="Damage roll macro" />
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DamageTypesHint"}}</p>
       </fieldset>
 
-      <!--Damage Type: shown in the damage chat message title. Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes.
-          The blank first option = no damage type. -->
+      <!--Damage Type: the type of every part of the damage formula that doesn't name its own (2d6[fire] does).
+          Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes. The blank first option = no damage type. -->
       <fieldset class="damageType">
         <legend>Damage Type</legend>
         <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>
@@ -134,12 +139,35 @@
         </select>
       </fieldset>
 
+      <!--Uses Ammo: what this action does to its gun (helpers/firearms.mjs). Options from action-sheet.mjs (ammoUseOptions). -->
+      <fieldset class="ammoUse">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.Label"}}</legend>
+        <select name="system.ammoUse" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions ammoUseOptions selected=system.ammoUse localize=true}}
+        </select>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.Hint"}}</p>
+      </fieldset>
+
+      <!--Rounds per use: only for actions that fire or reload. -->
+      {{#if (or (eq system.ammoUse "fire") (eq system.ammoUse "reload"))}}
+        <fieldset>
+          <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoAmount"}}</legend>
+          <input id="ammoAmount" class="blend-input" type="number" name="system.ammoAmount" value="{{system.ammoAmount}}" min="0" step="1" />
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoAmountHint"}}</p>
+        </fieldset>
+      {{/if}}
+
       <!--DC Results-->
       <fieldset class="dc-results">
         <legend>DC Results</legend>
         <textarea id="dcResults" class="blend-input" name="system.dcResults" rows="4" placeholder="Results" {{#unless editable}}disabled{{/unless}}>{{system.dcResults}}</textarea>
       </fieldset>
 
+    </div>
+
+    {{!-- Effects Tab: the item's effects (templates/item/parts/item-effects.hbs) --}}
+    <div class="tab effects {{tabs.effects.cssClass}}" data-group="sheet" data-tab="effects">
+      {{> "systems/lotm/templates/item/parts/item-effects.hbs"}}
     </div>
 
   </section>

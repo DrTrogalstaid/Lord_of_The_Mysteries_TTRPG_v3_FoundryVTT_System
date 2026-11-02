@@ -13,6 +13,13 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     schema.description = new fields.StringField({ required: true, initial: "Results" });
     schema.category = new fields.StringField({ required: true, initial: "combat", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionCategories) });
 
+    // What kind of action it is, beyond its Action Type: speech, reaction, grapple, parry, aimed
+    // (CONFIG.LORD_OF_THE_MYSTERIES.actionTraits). Statuses check these before it's used
+    // (effects/status-restrictions.mjs): Silence stops speech, Off Guard stops reactions, Blind stops aimed...
+    schema.traits = new fields.SetField(new fields.StringField({
+      required: true, blank: false, choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTraits),
+    }));
+
     //Spirituatlity cost
     schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
 
@@ -35,6 +42,17 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     // When set, the action gets a dice button on the character sheet that opens the skill check
     // dialog: the Attack Roll Macro is rolled, plus the character's bonuses in this skill.
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
+
+    // What this action does to a gun (see helpers/firearms.mjs). The keys match AMMO_USES there.
+    //   none     nothing
+    //   fire     the attack button uses up rounds
+    //   reload   moves rounds from an ammo box into the gun
+    //   chamber  moves the next round into the chamber
+    //   unload   puts the rounds back in their boxes
+    schema.ammoUse = new fields.StringField({ required: true, initial: "none", choices: ["none", "fire", "reload", "chamber", "unload"] });
+    // Rounds per use. Fire: 0 counts as 1 (2 for a double-barrel blast). Reload: 0 fills the gun up,
+    // a number loads that many (1 for a revolver loaded one round at a time).
+    schema.ammoAmount = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
 
     //DC_Results
     schema.dcResults = new fields.StringField({ required: true, initial: "Results" });
@@ -67,9 +85,10 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
    * Roll this action's attack. "this.parent" is the action Item that owns this data.
    * @param {object} [options]
    * @param {Actor} [options.actor]  Who's rolling. Defaults to the character that owns the action.
+   * @param {string} [options.gunId] For "Fires rounds" actions: the gun to fire. Default: the gun in hand.
    */
-  async rollAttack({ actor = this.parent.actor } = {}) {
-    return rollActionAttack(actor, this.parent);
+  async rollAttack({ actor = this.parent.actor, gunId } = {}) {
+    return rollActionAttack(actor, this.parent, { gunId });
   }
 
   /**

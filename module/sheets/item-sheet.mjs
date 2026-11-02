@@ -1,9 +1,3 @@
-import {
-  onManageActiveEffect,
-  prepareActiveEffectCategories,
-} from '../helpers/effects.mjs';
-
-
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
@@ -92,9 +86,6 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
     // Adding a pointer to CONFIG.LORD_OF_THE_MYSTERIES
     context.config = CONFIG.LORD_OF_THE_MYSTERIES;
 
-    // Prepare active effects for easier access
-    context.effects = prepareActiveEffectCategories(this.item.effects);
-
     return context;
   }
 
@@ -110,11 +101,6 @@ export class LordOfTheMysteriesItemSheet extends HandlebarsApplicationMixin(Item
     if (!this.isEditable) return;
 
     // Roll handlers, click handlers, etc. would go here.
-
-    // Active Effect management
-    html.on('click', '.effect-control', (ev) =>
-      onManageActiveEffect(ev, this.item)
-    );
   }
 
 }

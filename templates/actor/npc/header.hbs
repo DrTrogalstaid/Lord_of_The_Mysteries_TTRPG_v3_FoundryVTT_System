@@ -1,0 +1,20 @@
+{{!-- NPC header: portrait, name, the strongest Sequence (worked out by NpcSheet.#sequenceLine) and organization. --}}
+<header class="npc-header">
+  <div class="portrait-box npc-portrait">
+    <img class="portrait-img" src="{{actor.img}}" data-edit="img" data-action="editImage" alt="{{actor.name}}" />
+  </div>
+
+  <div class="npc-header-info">
+    <input class="npc-name" type="text" name="name" value="{{actor.name}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.NPC.Name'}}" />
+    <div class="npc-header-row">
+      <span class="npc-sequence-line" data-tooltip="LORD_OF_THE_MYSTERIES.NPC.SequenceLineHint">
+        <i class="fa-solid fa-flask"></i> {{sequenceLine}}
+      </span>
+      <label class="npc-organization">
+        <span>{{localize "LORD_OF_THE_MYSTERIES.NPC.Organization"}}</span>
+        <input type="text" name="system.organization" value="{{system.organization}}"
+               placeholder="{{localize 'LORD_OF_THE_MYSTERIES.NPC.OrganizationPlaceholder'}}" />
+      </label>
+    </div>
+  </div>
+</header>

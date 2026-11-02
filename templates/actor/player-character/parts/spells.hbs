@@ -1,7 +1,10 @@
 {{!--
   Spells tab. Spells are grouped by the name of the ability Spell List they come from;
   lists with the same name from different abilities share one group. Spells dropped
-  straight onto the sheet go in "Other Spells" at the bottom.
+  straight onto the sheet go in "Other Spells" at the bottom. Each group folds open and closed.
+
+  Spell rows have the same roll buttons as actions. On the player sheet each also has a star:
+  a favorite spell is also listed in Favorites on the Actions tab.
 
   The whole box is still ONE drop section (data-drop-zone="spells"), so dropping a spell
   anywhere in it works the same as before.
@@ -19,25 +22,32 @@
       {{/if}}
     </header>
 
+    {{!-- Each Spell List folds open and closed by clicking its title. The sheet remembers which ones this player
+          closed (#saveCollapsed in base-actor-sheet.mjs), so it only needs to leave "open" off those. --}}
     {{#each spellLists as |list|}}
-    <div class="spell-list" data-spell-list="{{list.key}}">
-      <h4 class="spell-list-title">
-        {{list.name}}
-      </h4>
+    <details class="spell-list" data-spell-list="{{list.collapseKey}}"{{#unless list.collapsed}} open{{/unless}}>
+      <summary class="spell-list-title">
+        <i class="fa-solid fa-chevron-right spell-list-chevron"></i>
+        <span class="spell-list-name">{{list.name}}</span>
+        <span class="spell-list-count">{{list.entries.length}}</span>
+      </summary>
       {{#if list.entries.length}}
       <ol class="drop-section-list">
         {{#each list.entries}}
-          {{> "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs" this deleteAction="deleteSpell"}}
+          {{> "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs" this deleteAction="deleteSpell" favorites=@root.showFavorites}}
         {{/each}}
       </ol>
       {{else}}
       {{!-- A named Spell List with no spells in it yet. --}}
       <p class="drop-section-empty spell-list-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.SpellListEmpty"}}</p>
       {{/if}}
-    </div>
+    </details>
     {{else}}
     <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
     {{/each}}
+
+    {{!-- Spells this actor has hidden (NPCs only; renders nothing on player sheets). --}}
+    {{> "systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs" entries=hiddenGrants.spells}}
 
   </div>
 </section>

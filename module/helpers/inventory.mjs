@@ -6,6 +6,10 @@
  *                   Going over is allowed; each slot over gives -1 Agility.
  *   Container limit Each equipped coat or bag holds its own number of slots. Only stowed items count.
  *                   Going over is allowed but flagged in red so the GM can decide.
+ *
+ * Armor is worked out here too, because it needs the same two things: the actor's items and Strength.
+ *   Only one worn suit counts (the one with the most armor); any others are flagged.
+ *   Armor that's destroyed, or that the character is too weak to wear, is flagged and gives no protection.
  */
 
 import { ITEM_SIZES, CONTAINER_TYPES, CARRY_MODES, DRAW_ACTIONS, UNITS_PER_SLOT } from "./inventory-config.mjs";
@@ -28,6 +32,19 @@ export function formatSlots(units) {
 /** Rank of an item size (bigger = bigger item). Unknown sizes count as small-medium. */
 function sizeRank(size) {
   return (ITEM_SIZES[size] ?? ITEM_SIZES.smallMedium).rank;
+}
+
+/**
+ * Movement after armor: "half" is halved and rounded up, "none" is 0.
+ * Call it from the actor wherever movement is worked out: armoredMovement(speed, system.carrying.armor.movement).
+ * @param {number} speed
+ * @param {string} movement   "normal", "half" or "none" (carrying.armor.movement).
+ * @returns {number}
+ */
+export function armoredMovement(speed, movement) {
+  if (movement === "none") return 0;
+  if (movement === "half") return Math.ceil(speed / 2);
+  return speed;
 }
 
 /**
@@ -54,6 +71,17 @@ export function calculateCarrying(items, strength) {
     clothingCount: 0,      // equipped outfits (should be 1)
     containers: {},        // container Item id -> { capacityUnits, usedUnits, ... }
     gear: {},              // gear Item id -> { place, warnings }
+    armor: {               // the worn armor that's protecting the character (empty when there isn't any)
+      itemId: "",
+      name: "",
+      value: 0,              // armor points
+      reduction: {},         // damage type -> damage reduction
+      agilityPenalty: 0,     // temporary Agility penalty
+      movement: "normal",    // "normal", "half" or "none" (see armoredMovement)
+      unprotected: [],       // vital points it doesn't protect
+      breach: 0,             // 0 intact, 1 penetrated, 2 broken (ARMOR_BREACH)
+      critPenaltyReduction: 0, // how much wound expansion lowers the critical-strike penalty against the gap
+    },
   };
 
   // 1. Containers. Done first so gear can find the container it's in.
@@ -77,11 +105,20 @@ export function calculateCarrying(items, strength) {
   }
 
   // 2. Gear.
+  const wornArmor = [];   // armor that's worn and could protect
   for (const item of items) {
     if (item.type !== "gear") continue;
     const system = item.system;
     const info = { place: "", warnings: [] };
     result.gear[item.id] = info;
+
+    // Worn armor: can it protect?
+    if (system.isArmor && system.carry === "worn") {
+      const cannotWear = system.strengthNeeds.cannotWear;
+      if (system.destroyed) info.warnings.push("ArmorDestroyed");
+      else if (cannotWear !== null && strength < cannotWear) info.warnings.push("TooWeakToWear");
+      else wornArmor.push(item);
+    }
 
     // On the body: Strength only.
     if (system.carry === "held" || system.carry === "worn") {
@@ -120,6 +157,30 @@ export function calculateCarrying(items, strength) {
   }
   result.overUnits = Math.max(0, result.usedUnits - result.strengthUnits);
   result.penalty = Math.ceil(result.overUnits / UNITS_PER_SLOT);
+
+  // 4. Armor. Only one suit counts: the one with the most armor. The rest are flagged.
+  wornArmor.sort((a, b) => b.system.armorValue - a.system.armorValue);
+  const [best, ...extra] = wornArmor;
+  for (const item of extra) result.gear[item.id].warnings.push("ExtraArmor");
+  if (best) {
+    const system = best.system;
+    const needs = system.strengthNeeds;
+    let movement = "normal";
+    if (needs.immobile !== null && strength < needs.immobile) movement = "none";
+    else if (needs.halfMove !== null && strength < needs.halfMove) movement = "half";
+
+    Object.assign(result.armor, {
+      itemId: best.id,
+      name: best.name,
+      value: system.armorValue,
+      reduction: { ...system.reduction },
+      agilityPenalty: system.agilityPenalty,
+      movement,
+      unprotected: [...system.unprotected],
+      breach: system.armorState.breach,
+      critPenaltyReduction: system.critPenaltyReduction,
+    });
+  }
 
   return result;
 }
@@ -161,6 +222,18 @@ export function autoPlacement(actor, itemData) {
     if (fits && hasRoom) return placementUpdate(container.id);
   }
   return placementUpdate("");   // nowhere fits: it shows up under "Not stowed"
+}
+
+/**
+ * "Physical 5, Fire 5" for a { damageType: value } map.
+ * @param {Record<string, number>} reduction
+ * @returns {string}
+ */
+function reductionLabel(reduction) {
+  const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
+  return Object.entries(reduction)
+    .map(([type, value]) => `${game.i18n.localize(damageTypes[type] ?? type)} ${value}`)
+    .join(", ");
 }
 
 /**
@@ -268,6 +341,11 @@ export function buildInventoryView(entries, actor) {
         ? localize(CARRY_MODES[info.place].label)
         : (groupById[system.containerId]?.name ?? localize("LORD_OF_THE_MYSTERIES.Inventory.NotStowed")),
       warning: info.warnings.map((key) => localize(`LORD_OF_THE_MYSTERIES.Inventory.Warnings.${key}`)).join(" "),
+      // Armor: "Armor 8" on the row, and whether this is the suit that's protecting the character.
+      armorLabel: system.isArmor
+        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Armor.RowLabel", { armor: system.armorValue })
+        : "",
+      protecting: carrying.armor.itemId === item.id,
     };
 
     if (onBody) person.entries.push(entry);
@@ -307,6 +385,10 @@ export function buildInventoryView(entries, actor) {
   if (carrying.combatPenalty) warnings.push(localize("LORD_OF_THE_MYSTERIES.Inventory.Warnings.Suitcase"));
   if (carrying.clothingCount > 1) warnings.push(localize("LORD_OF_THE_MYSTERIES.Inventory.Warnings.MultipleClothing"));
 
+  const armor = carrying.armor;
+  if (armor.movement === "half") warnings.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.ArmorHalfMove", { name: armor.name }));
+  if (armor.movement === "none") warnings.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.ArmorImmobile", { name: armor.name }));
+
   return {
     groups,
     locationOptions,
@@ -318,6 +400,13 @@ export function buildInventoryView(entries, actor) {
       stowed: formatSlots(stowedUnits),
       capacity: formatSlots(capacityUnits),
       stowedOver: stowedUnits > capacityUnits,
+      // The suit that's protecting the character, for an optional readout in inventory.hbs. null = none.
+      armor: armor.itemId ? {
+        name: armor.name,
+        value: armor.value,
+        reduction: reductionLabel(armor.reduction),
+        agilityPenalty: armor.agilityPenalty,
+      } : null,
       warnings,
     },
   };

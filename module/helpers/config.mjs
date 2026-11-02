@@ -75,6 +75,13 @@ LORD_OF_THE_MYSTERIES.skillCategories = {
     extraordinaryKnowledge: 'LORD_OF_THE_MYSTERIES.Skill_Categories.ExtraordinaryKnowledge'
 };
 
+/** How a skill takes part in one of its related-skill categories (see helpers/skill-associations.mjs). */
+LORD_OF_THE_MYSTERIES.skillCategoryModes = {
+    both: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.both',
+    gives: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.gives',
+    receives: 'LORD_OF_THE_MYSTERIES.SkillAssociation.Modes.receives',
+};
+
 LORD_OF_THE_MYSTERIES.skillAttributes = {
     str: 'LORD_OF_THE_MYSTERIES.Attributes.Str.long',
     agi: 'LORD_OF_THE_MYSTERIES.Attributes.Agi.long',
@@ -94,6 +101,23 @@ LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
 };
 
 LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
+
+/** The Dodge skill in the Skills compendium (its defense bonus is worked out in base-actor.mjs). */
+LORD_OF_THE_MYSTERIES.dodgeSkillUuid = 'Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ';
+
+/**
+ * The skill a spell rolls with when its Skill slot is empty: Occultism, in the Skills compendium
+ * (see rollSkillUuid in helpers/action-roll.mjs).
+ */
+LORD_OF_THE_MYSTERIES.spellSkillUuid = 'Compendium.lotm.skills_compendium.Item.23huemg1lJ4Wk90O';
+
+/**
+ * Skills every character has at least this level in, keyed by skill UUID.
+ * Rulebook: "Your dodge skill is trained by default." Picking Proficient (with Education) still works.
+ */
+LORD_OF_THE_MYSTERIES.defaultSkillLevels = {
+    [LORD_OF_THE_MYSTERIES.dodgeSkillUuid]: 'trained',
+};
 
 LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
     str: 'Strength',
@@ -147,3 +171,60 @@ LORD_OF_THE_MYSTERIES.mysticalLanguages = {
     hermes: "Hermes",
     death: "Death"
 };
+
+LORD_OF_THE_MYSTERIES.strengthDamageBonus = [
+    { strength: 0,  bonus: "-2" },
+    { strength: 1,  bonus: "-1" },
+    { strength: 2,  bonus: "0" },
+    { strength: 3,  bonus: "1" },
+    { strength: 4,  bonus: "1d2" },
+    { strength: 5,  bonus: "1d4" },
+    { strength: 6,  bonus: "1d6" },
+    { strength: 7,  bonus: "1d8" },
+    { strength: 8,  bonus: "1d10" },
+    { strength: 9,  bonus: "1d12" },
+    { strength: 10, bonus: "2d6" },
+    { strength: 11, bonus: "2d8" },
+    { strength: 12, bonus: "2d10" },
+    { strength: 13, bonus: "2d12" },
+    { strength: 14, bonus: "3d8" },
+    { strength: 15, bonus: "3d10" },
+    { strength: 20, bonus: "3d12" },
+    { strength: 25, bonus: "4d10" },
+    { strength: 30, bonus: "4d12" },
+];
+/**
+ * How an effect stored on a spell or action is handed out when it's used (system.application.mode,
+ * see data/effect/effect.mjs).
+ */
+LORD_OF_THE_MYSTERIES.effectApplicationModes = {
+    targets: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.targets',
+    self: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.self',
+    area: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.area',
+    zone: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.zone',
+};
+
+/** The shape placed on the scene for an "area" or "zone" effect (system.application.shape). */
+LORD_OF_THE_MYSTERIES.effectAreaShapes = {
+    circle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.circle',
+    cone: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.cone',
+    ray: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.ray',
+    rectangle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.rectangle',
+    emanation: 'LORD_OF_THE_MYSTERIES.Effects.Application.Shapes.emanation',
+};
+
+/**
+ * Action traits (system.traits on actions and spells): what kind of action it is, for the statuses that stop it
+ * (effects/status-effects.mjs `restrict`). Silence stops speech, Off Guard reactions, Bound grapples and parries,
+ * and Blind needs an Inspiration check first for anything aimed at someone.
+ */
+LORD_OF_THE_MYSTERIES.actionTraits = {
+    speech: 'LORD_OF_THE_MYSTERIES.Traits.speech',
+    reaction: 'LORD_OF_THE_MYSTERIES.Traits.reaction',
+    grapple: 'LORD_OF_THE_MYSTERIES.Traits.grapple',
+    parry: 'LORD_OF_THE_MYSTERIES.Traits.parry',
+    aimed: 'LORD_OF_THE_MYSTERIES.Traits.aimed',
+};
+
+/** The Listen skill in the Skills compendium: Deaf adds a note to its checks (effects/status-effects.mjs). */
+LORD_OF_THE_MYSTERIES.listenSkillUuid = 'Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP';

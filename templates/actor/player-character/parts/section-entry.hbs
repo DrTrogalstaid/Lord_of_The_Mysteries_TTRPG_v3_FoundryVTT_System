@@ -1,0 +1,125 @@
+{{!--
+  One row of a drop section (icon, name, roll buttons, stats, move / remove buttons).
+  The context is one entry built by buildEntry() in base-actor-sheet.mjs.
+
+  Used by drop-section.hbs (every tab's list) and action-groups.hbs (the grouped action sections):
+    {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" entry remove="deleteAction" favorites=@root.showFavorites}}
+
+  remove     data-action for the delete button (owned entries only).
+  favorites  true in the action sections of sheets that have Favorites (the player sheet): shows the star
+             that adds / removes the action or spell from Favorites (entry-favorite.hbs).
+  Actions and spells (entry.isRollable) get their roll buttons from entry-rolls.hbs.
+
+  Granted entries (not owned) get an eye-slash button instead of the trash can on sheets that can hide them
+  (@root.canHideGrants, NPCs). It hides the entry on this actor only; the Item that grants it isn't changed.
+--}}
+<li class="drop-entry{{#if nested}} granted{{/if}}{{#if broken}} broken{{/if}}{{#if isRollable}} action{{/if}}{{#if isSpell}} spell{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}" data-item-id="{{id}}">
+  {{#if broken}}
+    <span class="drop-entry-icon">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+    </span>
+  {{else}}
+    <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+      <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+    </button>
+  {{/if}}
+
+  <div class="drop-entry-main">
+    <div class="drop-entry-title-row">
+      {{#if broken}}
+        <span class="drop-entry-name">{{name}}</span>
+      {{else}}
+        <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
+      {{/if}}
+      {{!-- The Favorites star (entry-favorite.hbs), in the action sections of sheets that have Favorites. --}}
+      {{#if favorites}}{{> "systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs"}}{{/if}}
+      {{#if grantedByLabel}}
+        <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{grantedByLabel}}</span>
+      {{/if}}
+    </div>
+    {{#if detail}}
+      <span class="drop-entry-detail">{{detail}}</span>
+    {{/if}}
+
+    {{!-- Action and spell buttons, pf2e style: [d20 Pistol +5] [Damage] (entry-rolls.hbs). Hidden on broken entries. --}}
+    {{#unless broken}}
+      {{#if isRollable}}{{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}{{/if}}
+    {{/unless}}
+  </div>
+
+  {{!-- Stats on the right. Actions and spells always show all three, so the columns line up row to row. --}}
+  {{#if isRollable}}
+    <div class="drop-entry-stats">
+      <div class="drop-entry-stat drop-entry-action-type">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+        <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+      </div>
+      <div class="drop-entry-stat drop-entry-cost">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+        <span class="drop-entry-stat-value">{{cost}}</span>
+      </div>
+      <div class="drop-entry-stat drop-entry-range">
+        <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Range"}}</span>
+        <span class="drop-entry-stat-value">{{rangeLabel}}</span>
+      </div>
+    </div>
+  {{else if hasStats}}
+    <div class="drop-entry-stats">
+      {{#if actionTypeLabel}}
+        <div class="drop-entry-stat drop-entry-action-type">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.ActionType"}}</span>
+          <span class="drop-entry-stat-value">{{actionTypeLabel}}</span>
+        </div>
+      {{/if}}
+      {{#if hasCost}}
+        <div class="drop-entry-stat drop-entry-cost">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Cost"}}</span>
+          <span class="drop-entry-stat-value">{{cost}}</span>
+        </div>
+      {{/if}}
+      {{#if hasDigestion}}
+        <div class="drop-entry-stat drop-entry-digestion-stat">
+          <span class="drop-entry-stat-label">{{localize "LORD_OF_THE_MYSTERIES.Drop.Digestion"}}</span>
+          {{#if @root.editable}}
+            {{#if owned}}
+              <input type="number" class="drop-entry-digestion" min="1" max="20" step="1"
+                     value="{{digestion}}" data-digestion-input data-item-id="{{id}}"
+                     data-tooltip="LORD_OF_THE_MYSTERIES.Drop.DigestionHint">
+            {{else}}
+              <span class="drop-entry-stat-value">{{digestion}}</span>
+            {{/if}}
+          {{else}}
+            <span class="drop-entry-stat-value">{{digestion}}</span>
+          {{/if}}
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{#if @root.editable}}
+    {{#if canMove}}
+      <div class="drop-entry-move">
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{key}}"{{#unless canMoveUp}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{key}}"{{#unless canMoveDown}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    {{/if}}
+    {{#if owned}}
+      <button type="button" class="drop-entry-remove" data-action="{{remove}}" data-item-id="{{id}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    {{else if @root.canHideGrants}}
+      {{!-- NPCs: hide this granted entry (#onHideGrant in base-actor-sheet.mjs). Restore it from the "Hidden" list. --}}
+      <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{hideKey}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Hide" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Hide'}}">
+        <i class="fa-solid fa-eye-slash"></i>
+      </button>
+    {{else}}
+      {{!-- Granted entries can't be removed here; keep the remove button's column so the move buttons line up across rows. --}}
+      <span class="drop-entry-spacer" aria-hidden="true"></span>
+    {{/if}}
+  {{/if}}
+</li>

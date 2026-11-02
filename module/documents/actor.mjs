@@ -1,3 +1,5 @@
+import { prototypeTokenDefaults } from "../helpers/token-settings.mjs";
+
 /**
  * Extend the base Actor document by defining a custom roll data structure which is ideal for the Simple system.
  * @extends {Actor}
@@ -24,6 +26,10 @@ export class LordOfTheMysteriesActor extends Actor {
       const fallback = LordOfTheMysteriesActor.DEFAULT_IMAGES[data.type] ?? "icons/svg/mystery-man.svg";
       this.updateSource({ img: fallback });
     }
+
+    // Token defaults (helpers/token-settings.mjs): Health in bar 1, the world's name / bar display settings,
+    // and player characters linked to their tokens.
+    this.updateSource({ prototypeToken: prototypeTokenDefaults(data.type) });
   }
 
   /** @override */

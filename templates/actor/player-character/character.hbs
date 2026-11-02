@@ -6,13 +6,19 @@
       {{#each attributesList}}
       <div class="attribute-cell">
         <div class="attribute-label ">{{localize this.label}}</div>
-        <a class="attribute-total rollable-number">{{this.total}}</a>
+        <a class="attribute-total modifier rollable-number" data-action="rollAttribute" data-attribute="{{this.key}}">{{this.total}}</a>
         <div class="attribute-breakdown">
           <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
           <span>+</span>
           <input type="number" value="{{this.sequence_bonus}}" title="Sequence Bonus" readonly tabindex="-1" />
           <span>+</span>
           <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
+          {{!-- Education growth from learned skills (base-actor.mjs). Read-only; hover for the count. --}}
+          {{#if this.isEducation}}
+          <span>+</span>
+          <input type="number" class="growth-bonus" value="{{this.growth_bonus}}" readonly tabindex="-1"
+                 data-tooltip="{{this.growthTooltip}}" />
+          {{/if}}
         </div>
       </div>
       {{/each}}
@@ -164,7 +170,8 @@
                   data-skill-name="{{entry.name}}"
                   data-category="{{tab.id}}"
                   data-attribute="{{entry.attribute}}"
-                  data-level="{{entry.level}}"
+                  data-level="{{entry.effectiveLevel}}"
+                  data-teachers="{{entry.teachers}}"
                   data-flat-modifier="{{entry.flatModifier}}">
                 <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
                 <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
@@ -175,6 +182,34 @@
                 <select class="skill-level-select" name="system.skills.{{tab.id}}.{{index}}.level">
                   {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
                 </select>
+                {{!-- Raised by a related skill: the level it's rolled at, with the reason on hover.
+                      The dropdown above keeps the player's own pick. --}}
+                {{#if entry.associated}}
+                <span class="skill-associated" data-tooltip="{{entry.associatedTooltip}}">
+                  <i class="fa-solid fa-link"></i> {{localize (lookup @root.skillLevelOptions entry.effectiveLevel)}}
+                </span>
+                {{/if}}
+                {{!-- Study meter and the button that opens the Study dialog. The percent box is always there
+                      (empty at 0) so every row's columns line up. --}}
+                <span class="skill-study-progress" {{#if entry.studyPercent}}data-tooltip="{{entry.studyTooltip}}"{{/if}}>
+                  {{#if entry.studyPercent}}{{entry.studyPercent}}%{{/if}}
+                </span>
+                {{#if (and @root.editable entry.canStudy)}}
+                <a class="skill-study" data-action="studySkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Learning.StudyTooltip'}}">
+                  <i class="fa-solid fa-book-open"></i>
+                </a>
+                {{else}}
+                <span class="skill-study"></span>
+                {{/if}}
+                {{!-- Learning by Doing: success count and the button, only on skills a Sequence ability teaches. --}}
+                {{#if entry.teachers}}
+                <span class="skill-success-progress" {{#if entry.successText}}data-tooltip="{{entry.successTooltip}}"{{/if}}>{{entry.successText}}</span>
+                {{#if @root.editable}}
+                <a class="skill-success" data-action="recordSkillSuccess" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Learning.Fast.RecordTooltip'}}">
+                  <i class="fa-solid fa-hand-sparkles"></i>
+                </a>
+                {{/if}}
+                {{/if}}
                 {{!-- Analyze (Extraordinary Knowledge). Education skills keep their count here,
                       on the skill; other skills' analyses go to a copy in the ability's tab.
                       The analysis input stays in the form either way so a submit can't reset it. --}}
@@ -207,11 +242,26 @@
 
   </div>
 
-  {{!-- Skills granted by Sequences (their skill increases and training bonus). Read-only references. --}}
-  {{> "systems/lotm/templates/actor/player-character/parts/drop-section.hbs"
-      zone="skills"
-      label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"
-      entries=sections.skills
-      remove="deleteItem"}}
+  {{!-- Skills granted by Sequences (their skill increases and training bonus). Each row has the same roll, level and
+        study controls as the tab rows above (granted-skill-entry.hbs). Still a drop section, so skills dropped here
+        are added like anywhere else on the sheet. --}}
+  <div class="drop-section granted-skills-box" data-drop-zone="skills">
+    <header class="drop-section-header">
+      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}</h3>
+      {{#if editable}}
+        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
+      {{/if}}
+    </header>
+
+    {{#if sections.skills.length}}
+      <ol class="drop-section-list">
+        {{#each sections.skills as |entry|}}
+          {{> "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs" entry}}
+        {{/each}}
+      </ol>
+    {{else}}
+      <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+    {{/if}}
+  </div>
 
 </section>

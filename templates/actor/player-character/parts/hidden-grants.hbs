@@ -1,0 +1,40 @@
+{{!--
+  The granted entries this actor has hidden (NPCs only), as a closed list with a Restore button on each row.
+  Rows come from _prepareSections in base-actor-sheet.mjs (context.hiddenGrants.<section>):
+    { key, uuid, name, img, broken, grantedByLabel }   key = the hide key the Restore button removes.
+
+    {{> "systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs" entries=hiddenGrants.actions}}
+
+  Renders nothing when `entries` is empty, so player sheets never show it.
+--}}
+{{#if entries.length}}
+<details class="hidden-grants">
+  <summary class="hidden-grants-header">
+    <i class="fa-solid fa-chevron-right hidden-grants-chevron"></i>
+    <i class="fa-solid fa-eye-slash"></i>
+    <span class="hidden-grants-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.HiddenTitle" count=entries.length}}</span>
+    <span class="hidden-grants-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.HiddenHint"}}</span>
+  </summary>
+  <ol class="hidden-grants-list">
+    {{#each entries as |row|}}
+    <li class="hidden-grant{{#if row.broken}} broken{{/if}}">
+      <img class="hidden-grant-img" src="{{row.img}}" alt="" width="20" height="20">
+      {{#if row.broken}}
+        <span class="hidden-grant-name">{{row.name}}</span>
+      {{else}}
+        <a class="hidden-grant-name" data-action="openItem" data-uuid="{{row.uuid}}">{{row.name}}</a>
+      {{/if}}
+      {{#if row.grantedByLabel}}
+        <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{row.grantedByLabel}}</span>
+      {{/if}}
+      {{#if @root.editable}}
+        <button type="button" class="hidden-grant-restore" data-action="restoreGrant" data-hide-key="{{row.key}}"
+                data-tooltip="LORD_OF_THE_MYSTERIES.Drop.RestoreHint">
+          <i class="fa-solid fa-eye"></i> {{localize "LORD_OF_THE_MYSTERIES.Drop.Restore"}}
+        </button>
+      {{/if}}
+    </li>
+    {{/each}}
+  </ol>
+</details>
+{{/if}}

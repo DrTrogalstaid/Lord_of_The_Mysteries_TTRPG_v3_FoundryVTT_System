@@ -1,0 +1,14 @@
+{{!-- ActionRollDialog (module/apps/action-roll-dialog.mjs): an action with no skill, rolling its own formula. --}}
+<div class="skill-check-dialog-content">
+    <header class="skill-check-header">
+        <span class="skill-name">{{actionName}}</span>
+        <span class="skill-check-dice">{{localize "LORD_OF_THE_MYSTERIES.SkillCheck.ActionDice"}}: {{actionDice}}</span>
+    </header>
+
+    {{> "systems/lotm/templates/apps/roll-dialog/spirituality.hbs"}}
+
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/footer.hbs"}}
+</div>

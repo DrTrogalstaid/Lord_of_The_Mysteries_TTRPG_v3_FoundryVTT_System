@@ -22,6 +22,41 @@
     </div>
   </div>
 
+  {{!-- Value of one, typed in gold pounds ("£3 10s", "8d", "2.5s"). Saved as pennies by InventoryItemSheet._processFormData. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Money.Value"}}</label>
+    <div class="form-fields">
+      <input type="text" name="valueText" value="{{valueText}}" placeholder="£0" {{#unless editable}}disabled{{/unless}}>
+      {{#if valueLocal}}<span class="value-local">{{valueLocal}}</span>{{/if}}
+      <i class="fa-solid fa-coins value-other" data-tooltip="{{valueTooltip}}"></i>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.ValueHint"}}</p>
+  </div>
+
+  {{!-- Purse / wallet: carries cash. Its balances also show in the character's Money panel. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Money.IsPurse"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.isPurse" {{checked source.isPurse}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.IsPurseHint"}}</p>
+  </div>
+
+  {{#if source.isPurse}}
+    <fieldset class="purse-money">
+      <legend>{{localize "LORD_OF_THE_MYSTERIES.Money.Contents"}}</legend>
+      {{#each moneyRows as |row|}}
+        <div class="form-group">
+          <label>{{localize row.label}}</label>
+          <div class="form-fields">
+            <input type="text" name="moneyText.{{row.key}}" value="{{row.text}}" {{#unless @root.editable}}disabled{{/unless}}>
+          </div>
+        </div>
+      {{/each}}
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.AmountHint"}}</p>
+    </fieldset>
+  {{/if}}
+
   <dl class="inventory-readout">
     <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.SlotsEach"}}</dt><dd>{{slotsEach}}</dd>
     <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.SlotsTotal"}}</dt><dd>{{slotsTotal}}</dd>
@@ -57,6 +92,202 @@
     {{/if}}
   {{/if}}
 
+  {{!-- Armor. "Not armor" for everything else. The numbers come from ARMOR_TYPES (inventory-config.mjs),
+        worked out in gear.mjs _prepareArmor. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Kind"}}</label>
+    <div class="form-fields">
+      <select name="system.armorKind" {{#unless editable}}disabled{{/unless}}>
+        {{selectOptions armorOptions selected=source.armorKind localize=true}}
+      </select>
+    </div>
+    {{#if system.isArmor}}<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.WornHint"}}</p>{{/if}}
+  </div>
+
+  {{#if system.isArmor}}
+    <dl class="inventory-readout">
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Value"}}</dt>
+      <dd>{{system.armorValue}}</dd>
+
+      <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Reduction"}}</dt>
+      <dd>{{#each system.reductionList as |entry|}}{{localize entry.label}} {{entry.value}}{{#unless @last}}, {{/unless}}{{/each}}</dd>
+
+      {{#if system.agilityPenalty}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Agility"}}</dt>
+        <dd>-{{system.agilityPenalty}}</dd>
+      {{/if}}
+
+      {{#if system.strengthNeeds.cannotWear}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.CannotWear" n=system.strengthNeeds.cannotWear}}</dd>
+      {{/if}}
+      {{#if system.strengthNeeds.halfMove}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.HalfMove" n=system.strengthNeeds.halfMove}}</dd>
+      {{/if}}
+      {{#if system.strengthNeeds.immobile}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Attributes.Str.long"}}</dt>
+        <dd>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Immobile" n=system.strengthNeeds.immobile}}</dd>
+      {{/if}}
+
+      {{#if system.unprotected.length}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Unprotected"}}</dt>
+        <dd>{{#each system.unprotected as |location|}}{{localize (concat "LORD_OF_THE_MYSTERIES.Inventory.Armor.Locations." location)}}{{#unless @last}}, {{/unless}}{{/each}}</dd>
+      {{/if}}
+
+      {{#if system.destroyed}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Condition"}}</dt>
+        <dd class="over">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Destroyed"}}</dd>
+      {{/if}}
+    </dl>
+
+    {{!-- Damage the armor has taken. Edited by hand for now; the damage roll will fill these in later. --}}
+    {{#if system.fireLimit}}
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.FireHits"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.armorState.fireHits" value="{{source.armorState.fireHits}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+          <span>/ {{system.fireLimit}}</span>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.FireHitsHint" n=system.fireLimit}}</p>
+      </div>
+    {{/if}}
+
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Breach"}}</label>
+      <div class="form-fields">
+        <select name="system.armorState.breach" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions breachOptions selected=source.armorState.breach localize=true}}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.Expansion"}}</label>
+      <div class="form-fields">
+        <input type="number" name="system.armorState.expansion" value="{{source.armorState.expansion}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+      </div>
+      <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.Armor.ExpansionHint"}}</p>
+    </div>
+  {{/if}}
+
+  {{!-- Firearm: holds rounds. The loading / firing is in helpers/firearms.mjs; the rounds are saved on this Item. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearm"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.isFirearm" {{checked source.isFirearm}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearmHint"}}</p>
+  </div>
+
+  {{#if source.isFirearm}}
+    <fieldset class="firearm-settings">
+      <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearm"}}</legend>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Caliber"}}</label>
+        <div class="form-fields">
+          <input type="text" name="system.firearm.caliber" value="{{source.firearm.caliber}}"
+                 placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Firearm.AnyCaliber'}}" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.CaliberHint"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Capacity"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.firearm.capacity" value="{{source.firearm.capacity}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.CapacityHint"}}</p>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.HasChamber"}}</label>
+        <div class="form-fields">
+          <input type="checkbox" name="system.firearm.hasChamber" {{checked source.firearm.hasChamber}} {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.HasChamberHint"}}</p>
+      </div>
+
+      {{#if source.firearm.hasChamber}}
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.SelfLoading"}}</label>
+          <div class="form-fields">
+            <input type="checkbox" name="system.firearm.selfLoading" {{checked source.firearm.selfLoading}} {{#unless editable}}disabled{{/unless}}>
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.SelfLoadingHint"}}</p>
+        </div>
+      {{/if}}
+
+      {{!-- What's in it right now (firearmStatus in helpers/firearms.mjs). --}}
+      <dl class="inventory-readout">
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Loaded"}}</dt>
+        <dd class="{{#if firearm.empty}}over{{/if}}">{{firearm.label}} · {{firearm.contents}}</dd>
+        {{#if firearm.hasChamber}}
+          <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Chamber"}}</dt>
+          <dd>{{firearm.chamberName}}</dd>
+        {{/if}}
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Next"}}</dt>
+        <dd>{{firearm.nextName}}</dd>
+      </dl>
+
+      {{!-- Handy for guns with no reload actions, and for the GM. Only once a character owns the gun. --}}
+      {{#if actor}}{{#if editable}}
+        <div class="firearm-buttons">
+          <button type="button" data-action="gunReload"><i class="fa-solid fa-box-open"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.reload"}}</button>
+          {{#if firearm.hasChamber}}
+            <button type="button" data-action="gunChamber"><i class="fa-solid fa-circle-dot"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.chamber"}}</button>
+          {{/if}}
+          <button type="button" data-action="gunUnload"><i class="fa-solid fa-eject"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.unload"}}</button>
+        </div>
+      {{/if}}{{/if}}
+    </fieldset>
+  {{/if}}
+
+  {{!-- Ammunition: a box of rounds guns are loaded from. Quantity (above) is the number of boxes. --}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmo"}}</label>
+    <div class="form-fields">
+      <input type="checkbox" name="system.isAmmo" {{checked source.isAmmo}} {{#unless editable}}disabled{{/unless}}>
+    </div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmoHint"}}</p>
+  </div>
+
+  {{#if source.isAmmo}}
+    <fieldset class="ammo-settings">
+      <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsAmmo"}}</legend>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Caliber"}}</label>
+        <div class="form-fields">
+          <input type="text" name="system.ammo.caliber" value="{{source.ammo.caliber}}" {{#unless editable}}disabled{{/unless}}>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.PerBox"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.ammo.perBox" value="{{source.ammo.perBox}}" min="1" step="1" {{#unless editable}}disabled{{/unless}}>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.PerBoxHint"}}</p>
+      </div>
+
+      {{#if (gt source.ammo.perBox 1)}}
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.OpenBox"}}</label>
+          <div class="form-fields">
+            <input type="number" name="system.ammo.rounds" value="{{source.ammo.rounds}}" min="0" max="{{source.ammo.perBox}}" step="1" {{#unless editable}}disabled{{/unless}}>
+          </div>
+        </div>
+      {{/if}}
+
+      <dl class="inventory-readout">
+        <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Total"}}</dt>
+        <dd class="{{#if ammoBox.empty}}over{{/if}}">{{ammoBox.label}}</dd>
+      </dl>
+    </fieldset>
+  {{/if}}
+
   {{!-- What this item grants. Drop abilities / actions from the sidebar or a compendium onto each list.
         The drop handling is in LordOfTheMysteriesGearSheet._onRender. --}}
   {{#each grantLists as |list|}}
@@ -89,6 +320,9 @@
       {{/if}}
     </div>
   {{/each}}
+
+  {{!-- The gear's effects (templates/item/parts/item-effects.hbs). Passive ones only apply while it's held or worn. --}}
+  {{> "systems/lotm/templates/item/parts/item-effects.hbs"}}
 
   <div class="form-group stacked">
     <label>{{localize "LORD_OF_THE_MYSTERIES.Inventory.Description"}}</label>

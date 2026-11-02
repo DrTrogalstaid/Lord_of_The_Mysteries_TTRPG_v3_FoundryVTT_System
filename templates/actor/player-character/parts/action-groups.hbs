@@ -1,0 +1,33 @@
+{{!--
+  The collapsible action sections: Favorites (on sheets that have it), then one per action type.
+  Built by groupActions() in base-actor-sheet.mjs (context.actionGroups); each row is section-entry.hbs.
+
+  Put it inside a drop section with data-drop-zone="actions":
+    {{> "systems/lotm/templates/actor/player-character/parts/action-groups.hbs"}}
+  Used by the player Actions tab (actions.hbs) and the NPC Main tab (npc/main.hbs).
+--}}
+{{#each actionGroups as |group|}}
+  {{!-- <details> opens and closes by itself when its <summary> is clicked. The sheet remembers which ones
+        this player closed (#saveCollapsedGroups), so it only needs to leave "open" off those. --}}
+  <details class="action-group{{#if group.favorites}} favorites{{/if}}" data-action-group="{{group.key}}"{{#unless group.collapsed}} open{{/unless}}>
+    <summary class="action-group-header">
+      <i class="fa-solid fa-chevron-right action-group-chevron"></i>
+      {{#if group.favorites}}<i class="fa-solid fa-star action-group-star"></i>{{/if}}
+      <span class="action-group-title">{{group.label}}</span>
+      <span class="action-group-count">{{group.entries.length}}</span>
+    </summary>
+
+    {{#if group.entries.length}}
+      {{!-- data-favorites: the move buttons in this list reorder Favorites, not the type sections (#onMoveEntry). --}}
+      <ol class="drop-section-list"{{#if group.favorites}} data-favorites{{/if}}>
+        {{#each group.entries as |entry|}}
+          {{> "systems/lotm/templates/actor/player-character/parts/section-entry.hbs" entry remove="deleteAction" favorites=@root.showFavorites}}
+        {{/each}}
+      </ol>
+    {{else}}
+      <p class="drop-section-empty">{{group.emptyText}}</p>
+    {{/if}}
+  </details>
+{{else}}
+  <p class="drop-section-empty">{{localize "LORD_OF_THE_MYSTERIES.Drop.Empty"}}</p>
+{{/each}}

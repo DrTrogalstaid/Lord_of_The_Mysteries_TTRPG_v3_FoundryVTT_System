@@ -1,0 +1,15 @@
+{{!--
+  The Favorites star of an action or spell row (#onToggleFavorite in base-actor-sheet.mjs). A favorite is also
+  listed in Favorites on the Actions tab. Players who can't edit the sheet just see a filled star on favorites.
+  The context is the row's entry; `favorites` must be true (sheets that have Favorites pass @root.showFavorites):
+    {{#if favorites}}{{> "systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs"}}{{/if}}
+--}}
+{{#if @root.editable}}
+  <button type="button" class="drop-entry-favorite{{#if favorite}} active{{/if}}" data-action="toggleFavorite" data-key="{{key}}"
+          data-tooltip="{{#if favorite}}LORD_OF_THE_MYSTERIES.ActionGroups.Unfavorite{{else}}LORD_OF_THE_MYSTERIES.ActionGroups.Favorite{{/if}}"
+          aria-pressed="{{#if favorite}}true{{else}}false{{/if}}">
+    <i class="{{#if favorite}}fa-solid{{else}}fa-regular{{/if}} fa-star"></i>
+  </button>
+{{else if favorite}}
+  <i class="fa-solid fa-star drop-entry-favorite active"></i>
+{{/if}}

@@ -3,26 +3,32 @@
  */
 
 import {
-  ITEM_SIZES, CARRY_MODES, CONTAINER_TYPES, CONTAINER_UPGRADES, DRAW_ACTIONS, labelMap
+  ITEM_SIZES, CARRY_MODES, CONTAINER_TYPES, CONTAINER_UPGRADES, DRAW_ACTIONS, ARMOR_TYPES, ARMOR_BREACH, labelMap
 } from "../../../helpers/inventory-config.mjs";
 import { formatSlots } from "../../../helpers/inventory.mjs";
+import {
+  BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
+} from "../../../helpers/currency.mjs";
+import { ammoBoxStatus, chamberRound, firearmStatus, reloadGun, unloadGun } from "../../../helpers/firearms.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ItemSheetV2 } = foundry.applications.sheets;
 
-
-/** What both sheets share: the form setup, the image picker, and the basic context. */
-class InventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+/**
+ * What both sheets share: the image picker, the money text boxes, and the basic context.
+ * The form setup (save on every change, resizable window) comes from LordOfTheMysteriesItemSheetBase.
+ */
+class InventoryItemSheet extends LordOfTheMysteriesItemSheetBase {
 
   static DEFAULT_OPTIONS = {
-    classes: ["lotm", "sheet", "item", "inventory-item"],
+    classes: ["inventory-item"],
     position: { width: 520, height: "auto" },
-    window: { resizable: true },
-    form: { submitOnChange: true, closeOnSubmit: false },
     actions: {
       editImage: InventoryItemSheet.#onEditImage,
     },
   };
+
+  /** Gear and containers have no Description / Details tabs. */
+  static TABS = {};
 
   /** @override */
   async _prepareContext(options) {
@@ -32,7 +38,43 @@ class InventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     context.source = this.item.toObject().system;   // what's actually saved -- used for the inputs
     context.editable = this.isEditable;
     context.actor = this.item.actor;                // the owning character, or null
+
+    // Value: typed as £/s/d, shown again in the GM's local currency and (on hover) every other one.
+    const value = context.source.value ?? 0;
+    const local = localCurrency();
+    context.valueText = formatMoney(value, BASE_CURRENCY);
+    context.valueLocal = local === BASE_CURRENCY ? "" : `≈ ${formatValue(value, local)}`;
+    context.valueTooltip = valueTooltip(value, BASE_CURRENCY);
     return context;
+  }
+
+  /**
+   * Money is typed as text ("£3 10s", "8d"). Those inputs are named valueText / moneyText.<currency>,
+   * so they're read here and turned into the whole numbers the data model stores. Text that can't be read
+   * is skipped with a warning, and the sheet re-renders with the old value.
+   * @override
+   */
+  _processFormData(event, form, formData) {
+    const data = super._processFormData(event, form, formData);
+    const warn = (text) => ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Money.Errors.BadAmount", { text }));
+
+    if ("valueText" in data) {
+      const pence = parseMoney(data.valueText, BASE_CURRENCY);
+      if (pence === null) warn(data.valueText);
+      else foundry.utils.setProperty(data, "system.value", pence);
+      delete data.valueText;
+    }
+
+    if (data.moneyText) {
+      for (const [key, text] of Object.entries(data.moneyText)) {
+        if (!(key in CURRENCIES)) continue;
+        const amount = parseMoney(text, key);
+        if (amount === null) warn(text);
+        else foundry.utils.setProperty(data, `system.money.${key}`, amount);
+      }
+      delete data.moneyText;
+    }
+    return data;
   }
 
   /** Open the FilePicker to change the Item's image. */
@@ -70,19 +112,29 @@ const GRANT_LISTS = {
 };
 
 
-/** Gear: size, quantity, (once a character owns it) where it's carried, and the abilities / actions it grants. */
+/** Gear: size, quantity, armor, (once a character owns it) where it's carried, and the abilities / actions it grants. */
 export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
   static DEFAULT_OPTIONS = {
     classes: ["gear"],
+    // A fixed starting height instead of "auto": with a gun's settings the sheet is taller than most screens.
+    // The rest scrolls (inventory.css), and the window can still be resized.
+    position: { height: 720 },
     actions: {
       openGrant: LordOfTheMysteriesGearSheet.#onOpenGrant,
       removeGrant: LordOfTheMysteriesGearSheet.#onRemoveGrant,
+      gunReload: LordOfTheMysteriesGearSheet.#onGunReload,
+      gunChamber: LordOfTheMysteriesGearSheet.#onGunChamber,
+      gunUnload: LordOfTheMysteriesGearSheet.#onGunUnload,
     },
   };
 
+  /** The Effects list at the bottom of the sheet (sheets/base-item-sheet.mjs). Gear only lends its passive effects
+   *  while it's held or worn (documents/active-effect.mjs). */
+  static HAS_EFFECTS = true;
+
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs" },
+    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
   };
 
   /** @override */
@@ -92,9 +144,22 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
     context.sizeOptions = labelMap(ITEM_SIZES);
     context.carryOptions = labelMap(CARRY_MODES);
+    context.armorOptions = labelMap(ARMOR_TYPES);     // "Not armor", cotton / leather, ...
+    context.breachOptions = labelMap(ARMOR_BREACH);   // intact / penetrated / broken
     context.slotsEach = formatSlots(system.unitsEach);
     context.slotsTotal = formatSlots(system.units);
     context.stowed = context.source.carry === "stowed";
+
+    // Guns and ammo: what's loaded / how many rounds are left (helpers/firearms.mjs).
+    context.firearm = system.isFirearm ? firearmStatus(this.item) : null;
+    context.ammoBox = system.isAmmo ? ammoBoxStatus(this.item) : null;
+
+    // Purse / wallet: one text box per currency, typed like the value ("£2 5s", "40 verl d'or").
+    context.moneyRows = Object.entries(CURRENCIES).map(([key, currency]) => ({
+      key,
+      label: currency.label,
+      text: formatMoney(context.source.money?.[key] ?? 0, key),
+    }));
 
     // Container choices: the owning character's coats and bags.
     if (context.actor) {
@@ -174,6 +239,19 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     doc?.sheet?.render({ force: true });
   }
 
+  /** The gun buttons: Reload (fill it), Chamber, Unload. They need the character who owns the gun. */
+  static async #onGunReload(event, target) {
+    if (this.isEditable && this.item.actor) await reloadGun(this.item.actor, this.item);
+  }
+
+  static async #onGunChamber(event, target) {
+    if (this.isEditable && this.item.actor) await chamberRound(this.item.actor, this.item);
+  }
+
+  static async #onGunUnload(event, target) {
+    if (this.isEditable && this.item.actor) await unloadGun(this.item.actor, this.item);
+  }
+
   /** Remove an ability / action from its list (data-list = list key, data-uuid = the entry). */
   static async #onRemoveGrant(event, target) {
     if (!this.isEditable) return;
@@ -219,15 +297,19 @@ export class LordOfTheMysteriesContainerSheet extends InventoryItemSheet {
       const info = context.actor.system.carrying?.containers?.[this.item.id];
       context.used = formatSlots(info?.usedUnits ?? 0);
       context.full = info?.full ?? false;
-      context.contents = context.actor.items
-        .filter((item) => item.type === "gear" && item.system.carry === "stowed" && item.system.containerId === this.item.id)
-        .map((item) => ({
-          name: item.name,
-          img: item.img,
-          quantity: item.system.quantity,
-          slots: formatSlots(item.system.units),
-          hidden: item.system.hidden,
-        }));
+      const inside = context.actor.items
+        .filter((item) => item.type === "gear" && item.system.carry === "stowed" && item.system.containerId === this.item.id);
+      context.contents = inside.map((item) => ({
+        name: item.name,
+        img: item.img,
+        quantity: item.system.quantity,
+        slots: formatSlots(item.system.units),
+        hidden: item.system.hidden,
+        value: item.system.value ? formatValue(item.system.value * item.system.quantity) : "",
+      }));
+      // What's inside is worth, apart from the container itself (cash in purses isn't counted here).
+      const contentsPence = inside.reduce((sum, item) => sum + (item.system.value ?? 0) * item.system.quantity, 0);
+      context.contentsWorth = contentsPence ? formatValue(contentsPence) : "";
     }
     return context;
   }

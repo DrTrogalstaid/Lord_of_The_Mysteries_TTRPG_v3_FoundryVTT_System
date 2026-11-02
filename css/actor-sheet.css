@@ -12,7 +12,9 @@
 .lotm.sheet.actor .window-content {
   display: grid;
   grid-template-columns: 190px 1fr;
-  grid-template-rows: auto auto 1fr;
+  /* minmax(0, 1fr): the tab row stays the height of the window. A plain 1fr grows to fit a long tab,
+     which pushes the bottom of the tab out of the window where it can't be scrolled to. */
+  grid-template-rows: auto auto minmax(0, 1fr);
   grid-template-areas:
     "header header"
     "sidebar tabnav"
@@ -77,6 +79,15 @@
   display: block;
 }
 
+/* Every page of the sheet (Character Info, Sequences, Actions, Inventory, Spells, ...) sits in the
+   "content" area and scrolls on its own. These are the tab parts themselves (direct children of the
+   window), so the skill sub-tabs inside the Character page aren't affected. New tabs get this for free. */
+.lotm.sheet.actor .window-content > .tab {
+  grid-area: content;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* -------------------------------------------------------------------- */
 /* Header (Name / Picture / Sequence Title / Pathway / Age.../ etc.)    */
 /* -------------------------------------------------------------------- */
@@ -138,6 +149,18 @@
   font-weight: bold;
   text-decoration: underline;
   margin-right: 6px;
+}
+
+/* The Sequence Title itself (read-only, from the character's Sequences). */
+.lotm.sheet.actor .sequence-title-value {
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.lotm.sheet.actor .sequence-title-value.none {
+  font-weight: normal;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .lotm.sheet.actor .sequence-title-input {
@@ -352,6 +375,30 @@
 .lotm.sheet.actor .damage-resistance-remove:hover,
 .lotm.sheet.actor .language-remove:hover {
   color: #d9534f;
+}
+
+/* Rows that come from the worn armor: read-only text laid out like the editable rows above. */
+.lotm.sheet.actor .damage-resistance-row.from-armor {
+  height: 22px;
+  color: var(--psx-text-dim);
+}
+
+.lotm.sheet.actor .damage-resistance-row.from-armor .damage-resistance-type {
+  padding: 0 5px;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lotm.sheet.actor .damage-resistance-row.from-armor .damage-resistance-value {
+  line-height: 22px;
+}
+
+.lotm.sheet.actor .damage-resistance-source {
+  flex: 0 0 14px;
+  text-align: center;
+  font-size: 11px;
 }
 
 .lotm.sheet.actor .damage-resistance-add-button,
@@ -580,6 +627,15 @@
 .lotm.sheet.actor .skill-level-select {
   flex: 0 0 auto;
   width: 110px;
+}
+
+/* "🔗 Trained" next to a skill raised by a related skill (Advanced Sword raising Melee). */
+.lotm.sheet.actor .skill-associated {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+  white-space: nowrap;
+  cursor: help;
 }
 
 /* -------------------------------------------------------------------- */

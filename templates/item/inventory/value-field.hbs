@@ -1,0 +1,11 @@
+{{!-- Value field shared by the gear and container sheets. Typed in gold pounds ("£3 10s", "8d", "2.5s"),
+      saved as pennies by InventoryItemSheet._processFormData (sheets/item/inventory/inventory-sheets.mjs). --}}
+<div class="form-group">
+  <label>{{localize "LORD_OF_THE_MYSTERIES.Money.Value"}}</label>
+  <div class="form-fields">
+    <input type="text" name="valueText" value="{{valueText}}" placeholder="£0" {{#unless editable}}disabled{{/unless}}>
+    {{#if valueLocal}}<span class="value-local">{{valueLocal}}</span>{{/if}}
+    <i class="fa-solid fa-coins value-other" data-tooltip="{{valueTooltip}}"></i>
+  </div>
+  <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.ValueHint"}}</p>
+</div>

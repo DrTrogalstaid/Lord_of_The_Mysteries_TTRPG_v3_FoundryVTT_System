@@ -1,331 +1,70 @@
 /**
  * Player Character sheet.
+ *
+ * Built on LordOfTheMysteriesActorSheetBase (base-actor-sheet.mjs), which has everything the player and NPC
+ * sheets share: the drop sections, drag and drop, action rows, rolls, moving / deleting entries.
+ * This file only has what's special to player characters: the full skill list from the Skills compendium
+ * (with study, learning by doing and granted-skill tabs), languages, rests, money and the biography pages.
  **/
 
-import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
-import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS } from "./base-actor-sheet.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
+import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
+import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
+import { meterPercent, openStudyDialog, openSuccessDialog } from "../apps/study-dialog.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
-import { autoPlacement, buildInventoryView, placementUpdate } from "../helpers/inventory.mjs";
+import { autoPlacement, buildInventoryView } from "../helpers/inventory.mjs";
+import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
-
-/** Shared partial that renders one drop section (header, entry list, drop target). */
-const DROP_SECTION_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-section.hbs";
-
-/** One entry row (icon, name, stats, move / remove buttons). Used by the Spells tab's grouped lists. */
-const DROP_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/drop-entry.hbs";
-
-/* -------------------------------------------- */
-/*  Drop section configuration                   */
-/* -------------------------------------------- */
+/** One row of the Character tab's Granted Skills box (skills a Sequence raises or trains), with the skill controls. */
+const GRANTED_SKILL_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs";
 
 /**
- * Every section of the sheet that accepts dropped Items.
- * `types` are Item type keys and must match the keys under "Item" in system.json's documentTypes.
- * `types: null` is the catch-all (inventory): any supported Item type not claimed by another section.
+ * Key in _prepareSkillList's result for skills a Sequence gives that aren't on any tab (see there).
+ * It isn't a tab id, so the tabs never list these rows.
  */
-const DROP_SECTIONS = {
-  skills:    { types: ["skill"] },
-  sequences: { types: ["sequence"] },
-  abilities: { types: ["ability"] },
-  actions:   { types: ["action"] },
-  spells:    { types: ["spell"] },
-  inventory: { types: null },
-};
-
-/**
- * Where the manual order of each section is saved on the actor: { [section]: [entry key, ...] }.
- * Flags need no actor data-model change. Entries missing from a saved order (anything added since)
- * are listed after the ordered ones, and keys whose entry no longer exists are ignored.
- */
-const ORDER_FLAG = "flags.lotm.order";
-
-/** Newly added Damage Resistance */
-const DEFAULT_DAMAGE_TYPE = "Physical";
-const DEFAULT_DAMAGE_RESISTANCE = 1;
+const GRANTED_ONLY = "grantedOnly";
 
 const DEFAULT_COMMON_LANGUAGE = "Loenese";
 const DEFAULT_MYSTICAL_LANGUAGE = "Hermes";
 
-/** Bounds of a Sequence's digestionAmount */
-const DIGESTION_MIN = 1;
-const DIGESTION_MAX = 20;
 
-/** Item types that cannot be dropped on a character sheet at all. */
-const UNSUPPORTED_TYPES = ["pathway"];
-
-/**
- * Item types a character can own more than one copy of (two candles, two revolvers). They skip the
- * duplicate check and are keyed by their own uuid, so two copies of the same compendium Item don't collide.
- */
-const STACKABLE_TYPES = ["gear", "container"];
-
-/**
- * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
- * resolved and shown in the tab matching the *resolved* Item's type (the `section` is only a
- * fallback for references that no longer resolve).
- * `pick` is for arrays of objects rather than plain UUID strings: the UUID is read from that property.
- */
-const NESTED_FIELDS = [
-  { path: "abilities_gained", section: "abilities" },                       // Sequence -> Abilities
-  { path: "skill_increase",   section: "skills", pick: "skill_uuid" },      // Sequence -> Skills it raises
-  { path: "trainingBonus",    section: "skills" },                          // Sequence -> Knowledge / Training
-  { path: "spellList.spells", section: "spells" },                          // Ability  -> Spells
-  { path: "actionList",       section: "actions" },                         // Ability  -> Actions
-];
-
-/**
- * Which section an Item type belongs to, or null if it can't be placed on a sheet.
- * @param {string} type
- * @returns {string|null}
- */
-function sectionForType(type) {
-  if (UNSUPPORTED_TYPES.includes(type)) return null;
-  for (const [key, def] of Object.entries(DROP_SECTIONS)) {
-    if (def.types?.includes(type)) return key;
-  }
-  return "inventory";
-}
-
-/** Localization key for a section's title. */
-const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section}`;
-
-/**
- * Flatten an Item into the plain object the drop-section partial renders.
- * @param {Item} item
- * @param {{section: string, owned: boolean, key: string, grantedBy?: string[]}} options
- *   `key` identifies the entry in the saved order: the Item's source UUID, so an owned copy and a
- *   reference to the same Item share one key and a position survives re-renders.
- */
-function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
-  const system = item.system ?? {};
-  const isAction = item.type === "action";
-  // Actions always show a cost (blank counts as 0); for abilities and spells an unset cost is hidden.
-  const cost = isAction ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
-  const actionType = system.actionType || "";
-  const actionTypeText = actionTypeLabel(actionType);
-  const isSequence = item.type === "sequence";
-  return {
-    key,
-    uuid: item.uuid,
-    id: owned ? item.id : null,
-    name: item.name,
-    img: item.img,
-    type: item.type,
-    section,
-    owned,
-    nested: !owned,
-    broken: false,
-    // Shown as labeled stats on the row. A cost of 0 is still shown; only an unset cost is hidden.
-    cost,
-    hasCost: cost !== null,
-    actionType,
-    actionTypeLabel: actionTypeText,
-    // Sequences show their digestion amount
-    digestion: isSequence ? (system.digestionAmount ?? DIGESTION_MIN) : null,
-    hasDigestion: isSequence,
-    hasStats: cost !== null || !!actionTypeText || isSequence,
-    // Sequences show "Sequence 9 · <pathway>" and sort by rank.
-    rank: isSequence ? (system.sequence_number ?? null) : null,
-    detail: isSequence ? sequenceDetail(system) : "",
-    grantedBy: [...grantedBy],
-    grantedByLabel: "",
-    // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
-    spellList,
-    // Actions: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
-    isAction,
-    rangeLabel: isAction && system.range != null
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RangeFeet", { range: system.range })
-      : "",
-    // The attack and damage buttons. They need the character, so #addActionButtons fills them in later.
-    attack: null,
-    damage: null,
-    hasRolls: false,
-  };
-}
-
-/**
- * Add an Item's name to an entry's "Granted by" list, unless it's already there or it's the entry itself.
- * @param {object} entry
- * @param {string} name
- */
-function addGrantedBy(entry, name) {
-  if (entry.name !== name && !entry.grantedBy.includes(name)) entry.grantedBy.push(name);
-}
-
-/** The Spell List name an ability starts with (see ability.mjs). An empty list with this name is not shown. */
-const DEFAULT_SPELL_LIST_NAME = "Spells";
-
-/**
- * Whether an ability's Spell List still has the default name (or no name at all).
- * Those lists only appear on the Spells tab once they contain a spell.
- * @param {Item} ability
- * @returns {boolean}
- */
-function hasDefaultSpellListName(ability) {
-  const name = ability.system?.spellList?.name?.trim() ?? "";
-  return !name || name.toLocaleLowerCase() === DEFAULT_SPELL_LIST_NAME.toLocaleLowerCase();
-}
-
-/**
- * The name an ability's Spell List is shown under on the Spells tab.
- * A blank name falls back to the ability's own name, so unnamed lists don't all merge together.
- * @param {Item} ability
- * @returns {string}
- */
-function spellListName(ability) {
-  const name = ability.system?.spellList?.name?.trim();
-  return name || ability.name;
-}
-
-/**
- * Split the Spells section's entries into one group per Spell List name.
- *
- * Lists with the same name (ignoring upper/lower case and extra spaces) become ONE group, even when
- * they come from different abilities. Spells that aren't in any list (dropped straight on the sheet)
- * go in an "Other Spells" group at the bottom. Entries keep the order they already had, so the
- * saved manual order still applies inside each group.
- *
- * @param {object[]} entries      The already-sorted entries of sections.spells.
- * @param {string[]} [listNames]  Spell List names to show even when they have no spells yet.
- * @returns {{key: string, name: string, entries: object[]}[]}
- */
-function groupSpellLists(entries, listNames = []) {
-  const groups = new Map();   // lower-case list name -> group
-  const unlisted = [];
-
-  // Start with an empty group for every named list, so it shows up before any spell is added to it.
-  for (const name of listNames) {
-    const key = name.toLocaleLowerCase();
-    if (!groups.has(key)) groups.set(key, { key, name, entries: [] });
-  }
-
-  for (const entry of entries) {
-    if (!entry.spellList) {
-      unlisted.push(entry);
-      continue;
-    }
-    const key = entry.spellList.toLocaleLowerCase();
-    if (!groups.has(key)) groups.set(key, { key, name: entry.spellList, entries: [] });
-    groups.get(key).entries.push(entry);
-  }
-
-  const lists = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (unlisted.length) {
-    lists.push({ key: "", name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.UnlistedSpells"), entries: unlisted });
-  }
-
-  // Move buttons only move an entry within its own group, so the first / last of each group can't go further.
-  for (const list of lists) {
-    list.entries.forEach((entry, index) => {
-      entry.canMove = list.entries.length > 1;
-      entry.canMoveUp = index > 0;
-      entry.canMoveDown = index < list.entries.length - 1;
-    });
-  }
-
-  return lists;
-}
-
-/** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
-function actionTypeLabel(key) {
-  if (!key) return "";
-  const langKey = `LORD_OF_THE_MYSTERIES.Action_Type.${key}`;
-  return game.i18n.has(langKey) ? game.i18n.localize(langKey) : key;
-}
-
-/** "Sequence 9 · Pathway" line for a Sequence item's system data. */
-function sequenceDetail(system) {
-  const number = game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.SequenceNumber", { number: system.sequence_number ?? "?" });
-  return system.pathway ? `${number} · ${system.pathway}` : number;
-}
-
-/**
- * Create a blank embedded Item of the given type and open its sheet.
- * @param {PlayerCharacterSheet} sheet
- * @param {string} type
- */
-async function createBlankItem(sheet, type) {
-  const name = Item.implementation.defaultName({ type, parent: sheet.actor });
-  const [created] = await sheet.actor.createEmbeddedDocuments("Item", [{ name, type }]);
-  created?.sheet?.render({ force: true });
-}
-
-
-export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
   /**
-   * Names of every non-default Spell List on the actor's abilities (owned or granted), filled in by
-   * #prepareSections on each render. The Spells tab shows these lists even when they are empty.
-   * @type {string[]}
+   * @override
+   * Only what's new for this sheet. Foundry adds these to the base sheet's options
+   * (its actions, classes, form and drag-and-drop settings), see base-actor-sheet.mjs.
    */
-  #namedSpellLists = [];
-
-
-  /** @override */
   static DEFAULT_OPTIONS = {
-
-    tag: "form",
-    classes: ["lotm", "sheet", "actor", "player-character"],
-    form: {
-      submitOnChange: true,
-      closeOnSubmit: false
-    },
+    classes: ["player-character"],
     position: {
       width: 850,
       height: 830
     },
     window: {
-      resizable: true,
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.PlayerCharacter"
     },
-    // No selector: the whole sheet is a drop target. _onDropDocument decides what happens
-    // based on the [data-drop-zone] section the Item actually landed on.
-    dragDrop: [{ dragSelector: null, dropSelector: null }],
 
-    // NOTE: this used to be two separate `actions` keys, so the second silently replaced the first and
-    // shortRest / longRest / spendLuck / spendSpirituality / editImage never got registered.
     actions: {
       shortRest: PlayerCharacterSheet._onShortRest,
       longRest: PlayerCharacterSheet._onLongRest,
       spendLuck: PlayerCharacterSheet._onSpendLuck,
-      spendSpirituality: PlayerCharacterSheet._onSpendSpirituality,
-      editImage: PlayerCharacterSheet._onEditImage,
-      addDamageResistance: PlayerCharacterSheet._onAddDamageResistance,
-      removeDamageResistance: PlayerCharacterSheet._onRemoveDamageResistance,
       addCommonLanguage: PlayerCharacterSheet._onAddCommonLanguage,
       removeCommonLanguage: PlayerCharacterSheet._onRemoveCommonLanguage,
       addMysticalLanguage: PlayerCharacterSheet._onAddMysticalLanguage,
       removeMysticalLanguage: PlayerCharacterSheet._onRemoveMysticalLanguage,
 
-      rollSkill: PlayerCharacterSheet._onRollSkill,
-      rollAction: PlayerCharacterSheet.#onRollAction,
-      rollDamage: PlayerCharacterSheet.#onRollDamage,
+      studySkill: PlayerCharacterSheet.#onStudySkill,
+      recordSkillSuccess: PlayerCharacterSheet.#onRecordSkillSuccess,
       addGrantedOption: PlayerCharacterSheet._onAddGrantedOption,
       addGrantedCustom: PlayerCharacterSheet._onAddGrantedCustom,
       addGrantedAnalysis: PlayerCharacterSheet._onAddGrantedAnalysis,
       removeGrantedSkill: PlayerCharacterSheet._onRemoveGrantedSkill,
       analyzeSkill: PlayerCharacterSheet._onAnalyzeSkill,
-      
-      editItem: PlayerCharacterSheet._onEditItem,
-      openItem: PlayerCharacterSheet.#onOpenItem,
-      sendToChat: PlayerCharacterSheet.#onSendToChat,
-      moveEntry: PlayerCharacterSheet.#onMoveEntry,
 
-      addSkill: PlayerCharacterSheet.#onAddSkill,
-      deleteSkill: PlayerCharacterSheet.#onDeleteSkill,
-      addSequence: PlayerCharacterSheet.#onAddSequence,
-      deleteSequence: PlayerCharacterSheet.#onDeleteItem,
-      addAbility: PlayerCharacterSheet.#onAddAbility,
-      deleteAbility: PlayerCharacterSheet.#onDeleteItem,
-      addAction: PlayerCharacterSheet.#onAddAction,
-      deleteAction: PlayerCharacterSheet.#onDeleteItem,
-      addSpell: PlayerCharacterSheet.#onAddSpell,
-      deleteSpell: PlayerCharacterSheet.#onDeleteItem,
       addItem: PlayerCharacterSheet.#onAddItem,
-      deleteItem: PlayerCharacterSheet.#onDeleteItem,
+      moneyTransaction: PlayerCharacterSheet.#onMoneyTransaction,
     },
   };
 
@@ -335,12 +74,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
     sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
-    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
-    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
-    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: [DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL], scrollable: [""] },
-    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: [DROP_SECTION_PARTIAL], scrollable: [""] },
+    character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [...SHARED_PARTIALS, GRANTED_SKILL_ENTRY_PARTIAL], scrollable: [""] },
+    sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
+    actions:  { template: "systems/lotm/templates/actor/player-character/parts/actions.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
+    inventory: { template: "systems/lotm/templates/actor/player-character/parts/inventory.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
+    spells:    { template: "systems/lotm/templates/actor/player-character/parts/spells.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
+    abilities: { template: "systems/lotm/templates/actor/player-character/parts/abilities.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
     effects: { template: "systems/lotm/templates/actor/player-character/parts/effects.hbs", scrollable: [""] },
     biography: { template: "systems/lotm/templates/actor/player-character/parts/biography.hbs", scrollable: [""] },
     backstory: { template: "systems/lotm/templates/actor/player-character/parts/backstory.hbs", scrollable: [""] }
@@ -382,49 +121,52 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   /*  Context Preparation                          */
   /* -------------------------------------------- */
 
-  /** @override */
-  /** Creates Basic Datamodel, which is used to fill the HTML together with Handlbars with Data */
+  /**
+   * @override
+   * The base sheet fills in the actor, the page tabs and every drop section (context.sections).
+   * This adds the nested skills sub-tabs.
+   */
   async _prepareContext(options) {
-
     const context = await super._prepareContext(options);
 
-    context.actor = this.actor;
-    context.system = this.actor.system;
-    context.source = this.actor.toObject().system;
-    context.editable = this.isEditable;
-
-    // Two independent tab groups: the "Character Info","Biography", etc. page selector,
-    // and the nested skills sub-tabs.
-    context.tabs = this._prepareTabs("sheet");
     // If the active skill tab belonged to an ability that's since been removed, fall back.
     const skillTabIds = this._getTabsConfig("skills").tabs.map(tab => tab.id);
     if (!skillTabIds.includes(this.tabGroups.skills)) this.tabGroups.skills = PlayerCharacterSheet.TABS.skills.initial;
     context.skillTabs = this._prepareTabs("skills");
 
+    // The header's Sequence Title: the character's lowest-numbered Sequence (base-actor-sheet.mjs). null = none yet.
+    context.currentSequence = this._currentSequence();
+
     // The ability (if any) that regular skills can be analyzed into -- see helpers/granted-skills.mjs.
     const analyzeAbility = this._grantingAbilities().find(item => item.system.analyzeSkills);
     context.analyzeAbility = analyzeAbility && { id: analyzeAbility.id, name: analyzeAbility.name };
-    
-    // Entries for every drop section: the Items the actor owns plus everything nested inside them.
-    context.sections = await this.#prepareSections();
 
     return context;
   }
 
 
-  /** @override */
-  async _preparePartContext(partId, context) {
-    context.partId = `${this.id}-${partId}`;
-
-    // Every tab part needs its own tab state ({{tab.cssClass}}); only some did before.
-    if (context.tabs?.[partId]) context.tab = context.tabs[partId];
+  /**
+   * @override
+   * The base sheet handles the Actions, Spells and sidebar parts; these are the player-only ones.
+   */
+  async _preparePartContext(partId, context, options) {
+    context = await super._preparePartContext(partId, context, options);
 
     switch (partId) {
 
-      case "character":
+      case "character": {
         context.tab = context.tabs.character;
         context.attributesList = this._prepareAttributes();
-        context.skillsByCategory = await this._prepareSkillList();
+        // The abilities (owned or granted) are passed in so skills taught by one get a ✋ success button.
+        // The Granted Skills box's skills are passed in so the ones that aren't on any tab get a row too.
+        const grantedSkills = context.sections?.skills ?? [];
+        context.skillsByCategory = await this._prepareSkillList(
+          context.sections?.abilities ?? [],
+          grantedSkills.filter((entry) => !entry.broken).map((entry) => entry.uuid)
+        );
+        // Each Granted Skills row gets its skill's row, for the roll, level and study controls (granted-skill-entry.hbs).
+        const rowByUuid = new Map(Object.values(context.skillsByCategory).flat().map((row) => [row.uuid, row]));
+        for (const entry of grantedSkills) entry.skill = entry.broken ? null : (rowByUuid.get(entry.uuid) ?? null);
         context.skillLevelOptions = CONFIG.LORD_OF_THE_MYSTERIES.skillLevels;
         context.grantedSkillTabs = await this._prepareGrantedSkills();
         context.attributeOptions = CONFIG.LORD_OF_THE_MYSTERIES.attributes;
@@ -432,15 +174,13 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         context.languageCommonChoices = this._prepareCommonLanguages();
         context.languageMysticalChoices = this._prepareMysticalLanguages();
         break;
-
-      case "spells":
-        // One group per Spell List name
-        context.spellLists = groupSpellLists(context.sections.spells, this.#namedSpellLists);
-        break;
+      }
 
       case "inventory":
         // One group per coat / bag, plus "Held & worn" (see helpers/inventory.mjs)
         context.inventory = buildInventoryView(context.sections.inventory, this.actor);
+        // Cash in purses, deposits, and total worth (see helpers/currency.mjs)
+        context.money = buildMoneyView(this.actor);
         break;
 
       case "abilities":
@@ -476,9 +216,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
             relativeTo: this.actor,
           }
         );
-        break;
-      case "sidebar":
-        context.damageTypeChoices = this._prepareDamageTypes();
         break;
     }
 
@@ -517,6 +254,10 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         beyonder_bonus: attr.beyonder_bonus,
         corruption: attr.corruption,
         sequence_bonus: attr.sequence_bonus,   // derived, display only
+        // Education growth (base-actor.mjs): only Education has it. The hover text explains the count.
+        isEducation: key === "edu",
+        growth_bonus: attr.growth_bonus ?? 0,
+        growthTooltip: key === "edu" ? this.#educationGrowthTooltip() : "",
         total: attr.total                       // derived
       };
     });
@@ -524,10 +265,37 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
 
   /**
-   * Build the full, per-category skill list from the skills_compendium pack's folder structure
+   * Hover text for the Education box's growth number, one part per tier, e.g.
+   *   "Education growth: +1 · Mastery: 7 skill(s), +1 (next +1 at 10) · Lore: ..."
+   * @returns {string}
+   */
+  #educationGrowthTooltip() {
+    const growth = this.actor.system.educationGrowth;
+    if (!growth) return "";
+    const format = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.EducationGrowth.${key}`, data);
+    const lines = [format("Total", { bonus: growth.bonus })];
+    for (const tier of growth.tiers) {
+      lines.push(format("Tier", {
+        level: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[tier.level] ?? tier.level),
+        count: tier.count,
+        bonus: tier.bonus,
+        next: (tier.bonus + 1) * tier.per,
+      }));
+    }
+    lines.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.EducationGrowth.Hint"));
+    // Plain text, not HTML, so it shows the same in every Foundry version's tooltips.
+    return lines.join(" · ");
+  }
+
+
+  /**
+   * Build the full, per-category skill list from the skills_compendium pack's folder structure.
+   * @param {object[]} [abilityEntries]  The Abilities section's entries, for the learning-by-doing buttons.
+   * @param {string[]} [grantedUuids]    The Granted Skills box's skills. Any that aren't on a tab get a row under
+   *                                     GRANTED_ONLY, so that box can show their controls too.
    * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string, attribute: string, flatModifier: number, modifier: number}[]>>}
    */
-  async _prepareSkillList() {
+  async _prepareSkillList(abilityEntries = [], grantedUuids = []) {
     const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
     const skillsByCategory = {};
 
@@ -540,7 +308,9 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
     // Request the two extra system fields the roll dialog needs (the skill's
     // own linked attribute and its flat item modifier) so opening the dialog
     // doesn't need a separate fromUuid() round trip per skill.
-    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier"] });
+    // system.categories (and the old system.category, on skills saved before it existed) feed
+    // related-skill improvement in #applySkillAssociations below.
+    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier", "system.categories", "system.category"] });
 
     for (const [category, folderName] of Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders)) {
       const folder = pack.folders.getName(folderName);
@@ -557,7 +327,11 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       // One row per skill. `entry` is a compendium index entry or, for skills outside the compendium, the
       // resolved Item: both carry uuid / name / img / system.{skill_attribute, modifier}.
       const toRow = (entry, removable) => {
-        const level = storedByUuid.get(entry.uuid)?.level ?? "untrained";
+        // Skills every character starts with (Dodge) never show below their starting level.
+        const level = atLeastLevel(
+          storedByUuid.get(entry.uuid)?.level ?? "untrained",
+          CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[entry.uuid]
+        );
         // NOTE: the sheet's displayed number still uses the tab/category attribute,
         // same as before this change -- unchanged to avoid shifting every skill's
         // displayed modifier as a side effect of this PR. The roll dialog instead
@@ -575,7 +349,15 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
           uuid: entry.uuid,
           name: entry.name,
           img: entry.img,
+          // The level the player picked: what the dropdown shows and saves.
           level,
+          // The level the skill is rolled at. Same as `level` unless a related skill raises it
+          // (#applySkillAssociations fills these three in once every tab's rows exist).
+          effectiveLevel: level,
+          associated: false,
+          associatedTooltip: "",
+          categories: skillCategoriesOf(entry.system),
+          attributeTotal,
           analysis: storedByUuid.get(entry.uuid)?.analysis ?? 0,
           category,
           attribute: entry.system?.skill_attribute ?? category,
@@ -602,7 +384,149 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       skillsByCategory[category] = rows.sort((a, b) => a.name.localeCompare(b.name));
     }
 
+    // Skills a Sequence gives that aren't on any tab: a skill from the world or another compendium that the
+    // character has no level saved for yet. They get a row too, so the Granted Skills box can roll and level them.
+    // Kept under GRANTED_ONLY, which isn't a tab, so the tabs (and the form they're part of) don't list them.
+    // Once one's level is changed it's saved, and from then on it's also listed on its attribute's tab.
+    const onTabs = new Set(Object.values(skillsByCategory).flat().map((row) => row.uuid));
+    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders;
+    const grantedOnly = [];
+    for (const uuid of new Set(grantedUuids)) {
+      if (!uuid || onTabs.has(uuid)) continue;
+      const doc = await fromUuid(uuid).catch(() => null);
+      if (doc?.type !== "skill") continue;
+      const attribute = doc.system?.skill_attribute;
+      // Where a drop would save it (#dropSkill in base-actor-sheet.mjs). "" = it can't be saved, so its level can't change.
+      const category = [attribute].find((key) => key && key in folders) ?? "";
+      const level = atLeastLevel("untrained", CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[uuid]);
+      const attributeKey = category in CONFIG.LORD_OF_THE_MYSTERIES.attributes ? category : (attribute ?? category);
+      const attributeTotal = this.actor.system.attributes[attributeKey]?.total ?? 0;
+      grantedOnly.push({
+        uuid, name: doc.name, img: doc.img,
+        level, effectiveLevel: level, associated: false, associatedTooltip: "",
+        categories: skillCategoriesOf(doc.system),
+        attributeTotal, analysis: 0, category,
+        attribute: attribute ?? category,
+        flatModifier: doc.system?.modifier ?? 0,
+        modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal),
+        removable: false,
+      });
+    }
+    skillsByCategory[GRANTED_ONLY] = grantedOnly;
+
+    // Related categories cross the attribute tabs (Social has Strength, Charisma and Inspiration skills),
+    // so this runs once every tab's rows are built.
+    this.#applySkillAssociations(skillsByCategory);
+    // Study meters count from the level the skill is rolled at, so this comes after the associations.
+    this.#applyStudyProgress(skillsByCategory);
+    await this.#applyFastLearning(skillsByCategory, abilityEntries);
+
     return skillsByCategory;
+  }
+
+
+  /**
+   * Learning by Doing (apps/study-dialog.mjs): which abilities can raise each skill, and its success count.
+   *   row.teachers         uuids of the abilities that teach it, joined with "|" (empty = no ✋ button)
+   *   row.successText      "1/2" when there's at least one success toward the next level
+   *   row.successTooltip   "1 of 2 successes toward Proficient (learning by doing)"
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   * @param {object[]} abilityEntries  The Abilities section's entries (owned and granted), from #prepareSections.
+   */
+  async #applyFastLearning(skillsByCategory, abilityEntries) {
+    // The abilities with Learning by Doing turned on.
+    const docs = await Promise.all(abilityEntries
+      .filter((entry) => !entry.broken)
+      .map((entry) => fromUuid(entry.uuid).catch(() => null)));
+    const teachers = docs.filter((doc) => doc?.system?.fastLearning?.enabled);
+
+    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+
+    for (const row of Object.values(skillsByCategory).flat()) {
+      row.teachers = teachers
+        .filter((ability) => abilityTeaches(ability.system.fastLearning, row)
+          && canTeachTo(row.effectiveLevel, ability.system.fastLearning.maxLevel))
+        .map((ability) => ability.uuid)
+        .join("|");
+
+      const count = successesFor(learning.get(row.uuid), row.effectiveLevel);
+      const next = nextLevel(row.effectiveLevel);
+      row.successText = "";
+      row.successTooltip = "";
+      if (count > 0 && next) {
+        const needed = successesNeeded(row.effectiveLevel);
+        row.successText = `${count}/${needed}`;
+        row.successTooltip = game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.Fast.ProgressTooltip", {
+          count, needed, next: levelLabel(next),
+        });
+      }
+    }
+  }
+
+
+  /**
+   * Each skill row's study meter (apps/study-dialog.mjs): the "46%" next to the book button.
+   *   row.canStudy       false at Grand Master (nothing left to learn)
+   *   row.studyPercent   0 when there's no study toward the next level yet
+   *   row.studyTooltip   "46% of the way to Proficient through study"
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   */
+  #applyStudyProgress(skillsByCategory) {
+    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+
+    for (const row of Object.values(skillsByCategory).flat()) {
+      const next = nextLevel(row.effectiveLevel);
+      row.canStudy = !!next;
+      row.studyPercent = next ? meterPercent(studyProgressFor(learning.get(row.uuid), row.effectiveLevel)) : 0;
+      row.studyTooltip = row.studyPercent
+        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.ProgressTooltip", {
+            percent: row.studyPercent,
+            next: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[next] ?? next),
+          })
+        : "";
+    }
+  }
+
+
+  /**
+   * Related-skill improvement: raise skills whose related skill is Advanced or better (helpers/skill-associations.mjs).
+   * Only the rolled level and the shown modifier change; the dropdown keeps the player's own pick.
+   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
+   */
+  #applySkillAssociations(skillsByCategory) {
+    const rows = Object.values(skillsByCategory).flat();
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+
+    // First the character's Sequences raise their skills (base-actor.mjs sequenceSkillSteps), then related
+    // skills raise each other from those levels: a Sequence that makes Sword Advanced also lifts Melee.
+    const sequenceSteps = this.actor.system.sequenceSkillSteps ?? {};
+    const raised = rows.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
+    const results = computeAssociatedLevels(raised);
+
+    for (const row of rows) {
+      const steps = sequenceSteps[row.uuid] ?? 0;
+      const result = results.get(row.uuid);
+      const effective = result?.level ?? row.level;
+      if (effective === row.level) continue;   // nothing raised it: no badge
+
+      row.effectiveLevel = effective;
+      row.associated = true;
+      row.modifier = PlayerCharacterSheet._calculateSkillModifier(effective, row.attributeTotal);
+
+      // Hover text: why it's higher than the dropdown says. Either reason, or both.
+      const reasons = [];
+      if (steps > 0) {
+        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
+      }
+      if (result?.raised) {
+        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
+          level: levelLabel(result.level),
+          sources: result.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
+        }));
+      }
+      row.associatedTooltip = reasons.join(" · ");
+    }
   }
 
   
@@ -686,20 +610,12 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
       });
     });
 
-    // Digestion inputs on owned Sequence rows belong to the Sequence item, not the actor,
-    // so they have no `name` (the actor form skips them) and save here instead. The value is
-    // clamped to the schema's bounds so an out-of-range number doesn't fail validation.
-    this.element.querySelectorAll(".drop-entry [data-digestion-input]").forEach(input => {
-      input.addEventListener("change", async ev => {
-        const item = this.actor.items.get(ev.currentTarget.dataset.itemId);
-        if (!item || item.type !== "sequence") return;
-        const raw = Math.floor(Number(ev.currentTarget.value));
-        const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
-        ev.currentTarget.value = value;
-        if (value === item.system.digestionAmount) return;
-        await item.update({ "system.digestionAmount": value });
-      });
-    });
+    // Level dropdowns in the Granted Skills box (granted-skill-entry.hbs). No `name`: see #onGrantedSkillLevel.
+    for (const select of this.element.querySelectorAll("[data-granted-skill-level]")) {
+      if (select.dataset.bound) continue;
+      select.dataset.bound = "1";
+      select.addEventListener("change", (event) => this.#onGrantedSkillLevel(event));
+    }
 
     // Enter in the custom-skill box adds it instead of submitting the sheet.
     this.element.querySelectorAll(".granted-skill-custom").forEach(input => {
@@ -709,341 +625,45 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
         PlayerCharacterSheet._onAddGrantedCustom.call(this, ev, ev.currentTarget);
       });
     });
-
-    // Inventory controls (quantity, hidden pocket, equipped) belong to the gear / container Item, not the actor,
-    // so like the digestion inputs they have no `name` and save here instead. `bound` stops a control that
-    // wasn't re-rendered from getting a second listener.
-    for (const input of this.element.querySelectorAll("[data-item-field]")) {
-      if (input.dataset.bound) continue;
-      input.dataset.bound = "1";
-      input.addEventListener("change", (event) => this.#onItemFieldChange(event));
-    }
-
-    // Each gear row's location dropdown: Held, Worn, or one of the character's coats / bags.
-    for (const select of this.element.querySelectorAll("[data-gear-location]")) {
-      if (select.dataset.bound) continue;
-      select.dataset.bound = "1";
-      select.addEventListener("change", async (event) => {
-        const item = this.actor.items.get(event.currentTarget.dataset.itemId);
-        await item?.update(placementUpdate(event.currentTarget.value));
-      });
-    }
-
-    // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
-    for (const zone of this.element.querySelectorAll(".drop-section")) {
-      if (zone.dataset.dropBound) continue;
-      zone.dataset.dropBound = "1";
-      zone.addEventListener("dragover", () => zone.classList.add("drag-over"));
-      zone.addEventListener("dragleave", (event) => {
-        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-      });
-      zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
-    }
   }
 
 
   /**
-   * Save an inventory control to its own Item. The input says which Item (data-item-id) and which
-   * field (data-item-field, e.g. "system.quantity").
+   * A level dropdown in the Granted Skills box: save the new level to that one skill (system.skills[category]).
+   *
+   * The same skill usually also has a dropdown on its attribute tab, and that one is part of the sheet's form.
+   * If this change reached the form, the form would save right away with the tab's OLD level and undo this one,
+   * so the event is stopped here and the level is saved directly. The sheet then redraws both dropdowns.
    * @param {Event} event
    */
-  async #onItemFieldChange(event) {
-    const input = event.currentTarget;
-    const item = this.actor.items.get(input.dataset.itemId);
-    if (!item) return;
+  async #onGrantedSkillLevel(event) {
+    event.stopPropagation();
+    if (!this.isEditable) return;
+    const select = event.currentTarget;
+    const row = select.closest("[data-skill-uuid]");
+    const uuid = row?.dataset.skillUuid;
+    const category = row?.dataset.category;
+    if (!uuid || !category) return;
 
-    let value = input.value;
-    if (input.type === "checkbox") value = input.checked;
-    else if (input.type === "number") value = Math.max(0, Math.floor(Number(input.value) || 0));
-
-    await item.update({ [input.dataset.itemField]: value });
-  }
-
-
-  /**
-   * Build the entry list for every drop section.
-   *
-   * 1. Items embedded on the actor go in the section for their type. These are removable.
-   * 2. Every UUID stored inside those Items (NESTED_FIELDS) is resolved and shown in the section for
-   *    the *resolved* Item's type, marked as granted by whichever Item(s) reference it. This repeats
-   *    through the nested Items themselves (Sequence -> Ability -> Spell/Action), so anything at any
-   *    depth shows up in its tab. Nested entries are read-only; remove them from the Item that grants them.
-   *
-   * Each source UUID appears once: an Item the actor owns *and* is granted by something else is shown
-   * once (as owned) with the granting Items listed, and reference loops (A -> B -> A) terminate.
-   * @returns {Promise<Record<string, object[]>>}
-   */
-  async #prepareSections() {
-    const sections = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
-    const bySource = new Map();     // source uuid -> entry already shown
-    const ignored = new Set();      // source uuids of unsupported types
-    const abilityByName = new Map(); // lower-case ability name -> entry: a character has each ability once
-    const queue = [];
-    const actionRows = [];          // [entry, action Item] pairs: their roll buttons are filled in at the end
-    this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
-
-    // 1. Owned Items
-    for (const item of this.actor.items) {
-      const section = sectionForType(item.type);
-      if (!section) continue;
-      // Gear and containers can be owned twice from the same source, so they use their own uuid.
-      const source = STACKABLE_TYPES.includes(item.type) ? null : item._stats?.compendiumSource;
-      const key = source ?? item.uuid;
-      const entry = buildEntry(item, { section, owned: true, key });
-      sections[section].push(entry);
-      bySource.set(key, entry);
-      if (item.type === "action") actionRows.push([entry, item]);
-      if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
-      queue.push(item);
-    }
-
-    // 2. Nested Items, breadth first
-    while (queue.length) {
-      const parent = queue.shift();
-
-      // Every ability with a renamed Spell List gets a group on the Spells tab, spells or not.
-      if (parent.type === "ability" && !hasDefaultSpellListName(parent)) {
-        this.#namedSpellLists.push(spellListName(parent));
-      }
-
-      for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
-        const raw = foundry.utils.getProperty(parent.system ?? {}, path);
-        if (!Array.isArray(raw)) continue;
-        const uuids = pick ? raw.map((row) => row?.[pick]) : raw;
-
-        // Spells reached through an ability's Spell List remember that list's name, for grouping on the Spells tab.
-        const listName = path === "spellList.spells" ? spellListName(parent) : "";
-
-        for (const uuid of uuids) {
-          if (!uuid || ignored.has(uuid)) continue;
-
-          // Actions on gear are always listed again, even when the character already has that action
-          // (two revolvers = two "Shoot" actions). Each gear Item's copy gets its own key, so it doesn't merge
-          // with other entries and keeps its own place when moved up / down.
-          const gearAction = parent.type === "gear" && path === "actionList";
-          const key = gearAction ? `${parent.uuid}#${uuid}` : uuid;
-
-          const existing = bySource.get(key);
-          if (existing) {
-            addGrantedBy(existing, parent.name);
-            // An owned spell that is also in a Spell List is shown in that list. A spell in two
-            // differently-named lists stays in the first one found (each spell is shown once).
-            if (listName && !existing.spellList) existing.spellList = listName;
-            continue;
-          }
-
-          const doc = await fromUuid(uuid).catch(() => null);
-
-          if (!doc || doc.documentName !== "Item") {
-            const broken = {
-              key, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
-              img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
-              owned: false, nested: true, broken: true, cost: null, hasCost: false,
-              actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
-              hasStats: false, rank: null, detail: "",
-              grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
-            };
-            bySource.set(key, broken);
-            sections[fallbackSection].push(broken);
-            continue;
-          }
-
-          const section = sectionForType(doc.type);
-          if (!section) {
-            ignored.add(uuid);
-            continue;
-          }
-
-          // A character has each ability once. If one with this name is already listed (owned, or granted by
-          // something else, even from a different source), this Item is added to its "Granted by" instead.
-          if (doc.type === "ability") {
-            const sameName = abilityByName.get(doc.name.toLocaleLowerCase());
-            if (sameName) {
-              addGrantedBy(sameName, parent.name);
-              bySource.set(uuid, sameName);
-              continue;
-            }
-          }
-
-          const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
-          bySource.set(key, entry);
-          sections[section].push(entry);
-          if (doc.type === "action") actionRows.push([entry, doc]);
-          if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
-          // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
-          if (!gearAction) queue.push(doc);
-        }
-      }
-    }
-
-    // Order each section: the saved manual order first, then anything not in it (new entries land at the
-    // bottom) in the default order: owned before granted, then by Sequence number (lowest = strongest, so
-    // the current Sequence leads) where there is one, then alphabetical.
-    const savedOrder = foundry.utils.getProperty(this.actor, ORDER_FLAG) ?? {};
-    for (const [sectionKey, entries] of Object.entries(sections)) {
-      const saved = Array.isArray(savedOrder[sectionKey]) ? savedOrder[sectionKey] : [];
-      const position = new Map(saved.map((key, index) => [key, index]));
-
-      entries.sort((a, b) => {
-        const pa = position.get(a.key);
-        const pb = position.get(b.key);
-        if (pa !== undefined && pb !== undefined) return pa - pb;
-        if (pa !== undefined) return -1;
-        if (pb !== undefined) return 1;
-
-        if (a.owned !== b.owned) return a.owned ? -1 : 1;
-        if (a.rank != null && b.rank != null && a.rank !== b.rank) return a.rank - b.rank;
-        return a.name.localeCompare(b.name);
-      });
-
-      entries.forEach((entry, index) => {
-        entry.grantedByLabel = entry.grantedBy.join(", ");
-        entry.canMove = entries.length > 1;
-        entry.canMoveUp = index > 0;
-        entry.canMoveDown = index < entries.length - 1;
-      });
-    }
-
-    // Attack and damage buttons on every action row. Promise.all looks up all the actions' skills at once
-    // instead of one after another.
-    await Promise.all(actionRows.map(([entry, action]) => this.#addActionButtons(entry, action)));
-
-    return sections;
-  }
-
-
-  /**
-   * Fill in an action row's buttons:
-   *   entry.attack  "Pistol +5" (missing when the action has no skill, or its skill is gone)
-   *   entry.damage  hover text like "1d8+3 Physical" (missing when the action has no damage formula)
-   * @param {object} entry   The row from buildEntry.
-   * @param {Item} action
-   */
-  async #addActionButtons(entry, action) {
-    entry.attack = await getActionAttackSummary(this.actor, action);
-    const damageTooltip = getDamageTooltip(this.actor, action);
-    entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
-    entry.hasRolls = !!(entry.attack || entry.damage);
-  }
-
-  /* -------------------------------------------- */
-  /*  Drag & Drop                                  */
-  /* -------------------------------------------- */
-
-  /**
-   * Handle a Document being dropped onto the sheet. ActorSheetV2 has already parsed the drop
-   * event and resolved it to a Document; this decides which section takes it.
-   *
-   * - Dropped on a section: the Item must belong in that section, otherwise it is rejected.
-   * - Dropped anywhere else on the sheet: it is placed in the section for its type.
-   * @override
-   */
-  async _onDropDocument(event, document) {
-    if (document.documentName !== "Item") return super._onDropDocument(event, document);
-    if (!this.isEditable) return null;
-
-    // Gear dropped on a coat / bag (or on "Held & worn") in the Inventory tab goes there.
-    const place = event.target?.closest?.("[data-inventory-place]")?.dataset.inventoryPlace;
-    const placement = (document.type === "gear" && place !== undefined) ? placementUpdate(place) : null;
-
-    // Already on this actor: move it if it was dropped on an inventory group, otherwise leave it to Foundry (re-sorting).
-    if (document.parent === this.actor) {
-      if (placement) return document.update(placement);
-      return super._onDropDocument(event, document);
-    }
-
-    const section = sectionForType(document.type);
-    if (!section) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Unsupported", { name: document.name }));
-      return null;
-    }
-
-    const zone = event.target?.closest?.("[data-drop-zone]")?.dataset.dropZone ?? null;
-    if (zone && zone !== section) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.WrongSection", {
-        name: document.name,
-        section: game.i18n.localize(sectionLabel(zone)),
-      }));
-      return null;
-    }
-
-    if (section === "skills") return this.#dropSkill(document);
-    return this.#dropEmbedded(document, placement);
-  }
-
-  
-  /**
-   * Copy an Item onto the actor as an embedded Item. The source UUID is kept in
-   * _stats.compendiumSource so duplicates are caught and nested references to the same
-   * Item are recognised as the one the actor already owns.
-   * @param {Item} item
-   * @param {object|null} [placement]  For gear: where it was dropped (see placementUpdate). When it wasn't
-   *                                   dropped on a coat / bag, it goes in the first one with room.
-   * @returns {Promise<Item|null>}
-   */
-  async #dropEmbedded(item, placement = null) {
-    // Same Item already owned (by source), or, for abilities, one with the same name: _onDropItem below holds the
-    // same rule, but drops from outside the actor are handled here and never reach it.
-    // Gear and containers can be owned more than once, so they skip this.
-    const alreadyOwned = !STACKABLE_TYPES.includes(item.type) && this.actor.items.some((owned) =>
-      owned._stats?.compendiumSource === item.uuid
-      || (item.type === "ability" && owned.type === "ability" && owned.name === item.name)
-    );
-    if (alreadyOwned) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
-      return null;
-    }
-
-    const data = item.toObject();
-    delete data._id;
-    delete data.folder;
-    delete data.sort;
-    delete data.ownership;
-    foundry.utils.setProperty(data, "_stats.compendiumSource", item.uuid);
-
-    // Gear: put it somewhere. Its old containerId (from another actor) means nothing here, so it's always replaced.
-    if (item.type === "gear") {
-      const where = placement ?? autoPlacement(this.actor, data);
-      foundry.utils.mergeObject(data, foundry.utils.expandObject(where));
-    }
-
-    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
-    return created ?? null;
-  }
-
-  /**
-   * Skills are not embedded: the actor only stores a level per skill UUID
-   * (system.skills[category] = [{ skill, level }]) and the Character tab lists them under their attribute.
-   * Any skill Item can be dropped, from a compendium or the world. Dropping records it at "trained"; a skill
-   * the actor already lists as "untrained" (every compendium skill is, once a field has been edited) is raised
-   * to "trained" instead of being rejected as a duplicate.
-   * @param {Item} item
-   * @returns {Promise<Item|null>}
-   */
-  async #dropSkill(item) {
-    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-    const category = [item.system.category, item.system.skill_attribute].find((key) => key && key in folders);
-    if (!category) {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.NoSkillCategory", { name: item.name }));
-      return null;
-    }
-
+    const level = select.value;
     const current = this.actor.toObject().system.skills?.[category] ?? [];
-    const index = current.findIndex((entry) => entry.skill === item.uuid);
-
-    let updated;
-    if (index < 0) {
-      updated = [...current, { skill: item.uuid, level: "trained" }];
-    } else if (current[index].level === "untrained") {
-      updated = current.map((entry, i) => (i === index ? { ...entry, level: "trained" } : entry));
-    } else {
-      ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
-      return null;
-    }
-
+    const index = current.findIndex((entry) => entry.skill === uuid);
+    const updated = index < 0
+      ? [...current, { skill: uuid, level }]
+      : current.map((entry, i) => (i === index ? { ...entry, level } : entry));
     await this.actor.update({ [`system.skills.${category}`]: updated });
-    return item;
   }
+
+
+  /**
+   * Money panel buttons: Receive / Pay / Move / Exchange (data-mode). Opens the transaction dialog.
+   * @this {PlayerCharacterSheet}
+   */
+  static async #onMoneyTransaction(event, target) {
+    if (!this.isEditable) return;
+    await openMoneyDialog(this.actor, target.dataset.mode);
+  }
+
 
   /* -------------------------------------------- */
   /*  Actions                                      */
@@ -1090,68 +710,6 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   static _onSpendLuck(event, target) {
     console.log(`${this.actor.name}: Spend Luck triggered (not yet implemented)`);
     // TODO: call the Spend Luck macro.
-  }
-
-
-  static _onSpendSpirituality(event, target) {
-    console.log(`${this.actor.name}: Spend Spirituality triggered (not yet implemented)`);
-    // TODO: call the Spend Spirituality macro.
-  }
-
-
-  /**
-   * Open the core FilePicker to change the actor's portrait image.
-   */
-  static _onEditImage(event, target) {
-    const attr = target.dataset.edit || "img";
-    const current = foundry.utils.getProperty(this.actor, attr);
-    const fp = new foundry.applications.apps.FilePicker.implementation({
-      type: "image",
-      current,
-      callback: path => this.actor.update({ [attr]: path })
-    });
-    return fp.browse();
-  }
-
-  /**
-   * Damage types for Damage Resistance dropdown
-   * @returns {Record<string, string>}
-   */
-  _prepareDamageTypes() {
-    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.DamageTypes") ?? {};
-    
-    return Object.fromEntries(
-      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.DamageTypes.${key}`)])
-    );
-  }
-
-
-  /**
-   * Add Damage Resistance
-   */
-  static async _onAddDamageResistance(event, target) {
-    if (!this.isEditable) return;
-    
-    const current = this.actor.toObject().system.damage_resistance ?? [];
-    
-    await this.actor.update({
-      "system.damage_resistance": [...current, { damageType: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
-    });
-  }
-
-
-  /**
-   * Remove Damage Resistance
-   */
-  static async _onRemoveDamageResistance(event, target) {
-    if (!this.isEditable) return;
-    
-    const index = Number(target.dataset.index);
-    const current = this.actor.toObject().system.damage_resistance ?? [];
-    
-    if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
-    
-    await this.actor.update({ "system.damage_resistance": current.filter((_, i) => i !== index) });
   }
 
 
@@ -1239,44 +797,35 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
   }
 
   /**
-   * Open SkillCheckDialog for the clicked skill. All the data the dialog
-   * needs (uuid/name/level/category/attribute) travels in via data-*
-   * attributes on the skill row, set from _prepareSkillList()'s entry -
-   * see templates/actor/player-character/character.hbs.
+   * The book button on a skill row: open the Study dialog (apps/study-dialog.mjs).
+   * data-level on the row is the level the skill is rolled at, so study carries on from a related skill's raise.
    */
-  static _onRollSkill(event, target) {
+  static async #onStudySkill(event, target) {
+    if (!this.isEditable) return;
     const row = target.closest("[data-skill-uuid]");
     if (!row) return;
-
-    SkillCheckDialog.prompt(this.actor, {
+    await openStudyDialog(this.actor, {
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
-      category: row.dataset.category,
-      attribute: row.dataset.attribute || row.dataset.category,
       level: row.dataset.level,
-      flatModifier: Number(row.dataset.flatModifier) || 0
     });
   }
 
 
   /**
-   * Roll an action with its skill (data-uuid = the action). Works for any action on the sheet, whether the
-   * character owns it or it's granted by a Sequence, ability or gear. All the rolling lives in
-   * helpers/action-roll.mjs, so the sheet, hotbar macros and the chat damage button share one path.
+   * The ✋ button on a skill row: record a success with an ability that teaches the skill (apps/study-dialog.mjs).
+   * data-teachers on the row lists those abilities' uuids, separated by "|".
    */
-  static async #onRollAction(event, target) {
-    const action = await fromUuid(target.dataset.uuid).catch(() => null);
-    if (action) await rollActionAttack(this.actor, action);
-  }
-
-
-  /**
-   * Roll an action's damage straight from the sheet (data-uuid = the action), without rolling the attack first.
-   * Same roll and chat message as the "Roll Damage" button in chat.
-   */
-  static async #onRollDamage(event, target) {
-    const action = await fromUuid(target.dataset.uuid).catch(() => null);
-    if (action) await rollActionDamage(this.actor, action);
+  static async #onRecordSkillSuccess(event, target) {
+    if (!this.isEditable) return;
+    const row = target.closest("[data-skill-uuid]");
+    const teachers = row?.dataset.teachers?.split("|").filter(Boolean) ?? [];
+    if (!teachers.length) return;
+    await openSuccessDialog(this.actor, {
+      uuid: row.dataset.skillUuid,
+      name: row.dataset.skillName,
+      level: row.dataset.level,
+    }, teachers);
   }
 
 
@@ -1391,168 +940,29 @@ export class PlayerCharacterSheet extends HandlebarsApplicationMixin(ActorSheetV
 
 
   /**
-   * Open an owned item's sheet (the Abilities tab's edit control).
+   * The Inventory tab's "+" button: ask whether to make gear or a piece of clothing / a bag, create a blank one,
+   * and open its sheet. New gear goes in the first pocket or bag with room, the same as a dropped item.
    */
-  static _onEditItem(event, target) {
-    const item = this.actor.items.get(target.closest("[data-item-id]")?.dataset.itemId);
-    item?.sheet.render(true);
-  }
-
-
-  /**
-   * Remove an owned item from the actor (the Abilities tab's delete control).
-   */
-  static async _onDeleteItem(event, target) {
-    const item = this.actor.items.get(target.closest("[data-item-id]")?.dataset.itemId);
-    await item?.deleteDialog();
-  }
-
-
-  /* -------------------------------------------- */
-  /*  Drag & Drop                                  */
-  /* -------------------------------------------- */
-
-  /**
-   * ActorSheetV2 already turns a dropped compendium/world Item into an owned copy;
-   * this only stops the same ability being added twice.
-   * @override
-   */
-  async _onDropItem(event, item) {
-    const alreadyOwned = item.type === "ability"
-      && item.parent?.uuid !== this.actor.uuid
-      && this.actor.items.some(owned => owned.type === "ability"
-        && (owned._stats?.compendiumSource === item.uuid || owned.name === item.name));
-    if (alreadyOwned) {
-      ui.notifications.warn(`${this.actor.name} already has ${item.name}.`);
-      return null;
-    }
-    return super._onDropItem(event, item);
-  }
-  
-  /** Open the sheet of an entry's Item, whether the actor owns it or it is only referenced. */
-  static async #onOpenItem(event, target) {
-    const doc = await fromUuid(target.dataset.uuid);
-    doc?.sheet?.render({ force: true });
-  }
-
-
-  /**
-   * Move an entry one place up or down within its section (data-direction="up"|"down", data-key = entry key).
-   * Works for owned and granted entries alike. The order on screen is the source of truth: swap the entry with
-   * its neighbour in that list and save the whole section's order, which also drops keys of entries that no
-   * longer exist.
-   */
-  static async #onMoveEntry(event, target) {
+  static async #onAddItem(event, target) {
     if (!this.isEditable) return;
 
-    const zone = target.closest("[data-drop-zone]");
-    const section = zone?.dataset.dropZone;
-    if (!section) return;
-
-    // Every entry in the whole section, top to bottom. This full list is what gets saved.
-    const keys = [...zone.querySelectorAll(".drop-section-list > .drop-entry")].map((li) => li.dataset.key);
-
-    // The entries in the same list as the clicked one. Most sections have one list, so this is the same as
-    // `keys`; on the Spells tab each Spell List group is its own list, and an entry only moves inside its group.
-    const list = target.closest(".drop-section-list");
-    const siblings = list
-      ? [...list.children].filter((li) => li.matches(".drop-entry")).map((li) => li.dataset.key)
-      : keys;
-
-    const from = siblings.indexOf(target.dataset.key);
-    const to = from + (target.dataset.direction === "up" ? -1 : 1);
-    if (from < 0 || to < 0 || to >= siblings.length) return;
-
-    // Swap the two neighbours' places in the full list.
-    const a = keys.indexOf(siblings[from]);
-    const b = keys.indexOf(siblings[to]);
-    [keys[a], keys[b]] = [keys[b], keys[a]];
-    await this.actor.update({ [`${ORDER_FLAG}.${section}`]: keys });
-  }
-
-
-  /**
-   * Post an entry's Item to chat: image, name and description, spoken as this actor.
-   * Works for owned Items and for ones that are only referenced (granted by another Item).
-   */
-  static async #onSendToChat(event, target) {
-    const doc = await fromUuid(target.dataset.uuid);
-    if (!doc) return;
-
-    const description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-      doc.system?.description ?? "",
-      { secrets: doc.isOwner, relativeTo: doc }
-    );
-    const name = Handlebars.escapeExpression(doc.name);
-    const img = Handlebars.escapeExpression(doc.img);
-
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      content: `<div class="lotm chat-item">
-        <header class="chat-item-header"><img src="${img}" width="36" height="36" alt=""><h3>${name}</h3></header>
-        <div class="chat-item-description">${description}</div>
-      </div>`,
+    // Closing the dialog gives null (rejectClose: false), so nothing is made.
+    const type = await foundry.applications.api.DialogV2.wait({
+      window: { title: "LORD_OF_THE_MYSTERIES.Inventory.Add.Title" },
+      content: `<p>${game.i18n.localize("LORD_OF_THE_MYSTERIES.Inventory.Add.Prompt")}</p>`,
+      buttons: [
+        { action: "gear", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Gear", icon: "fa-solid fa-toolbox", default: true },
+        { action: "container", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Container", icon: "fa-solid fa-shirt" },
+      ],
+      rejectClose: false,
     });
-  }
+    if (type !== "gear" && type !== "container") return;
 
-  // Skills and inventory Items come from compendiums / the sidebar, so those buttons just point at drag and drop.
-  static async #onAddSkill(event, target) {
-    ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintSkills"));
-  }
+    const data = { name: Item.implementation.defaultName({ type, parent: this.actor }), type };
+    if (type === "gear") foundry.utils.mergeObject(data, foundry.utils.expandObject(autoPlacement(this.actor, data)));
 
-  static async #onAddSequence(event, target) {
-    return createBlankItem(this, "sequence");
-  }
-
-  static async #onAddAbility(event, target) {
-    return createBlankItem(this, "ability");
-  }
-
-  static async #onAddAction(event, target) {
-    return createBlankItem(this, "action");
-  }
-
-  static async #onAddSpell(event, target) {
-    return createBlankItem(this, "spell");
-  }
-
-  static async #onAddItem(event, target) {
-    ui.notifications.info(game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.DragHintInventory"));
-  }
-
-
-  /**
-   * Remove a skill the actor has recorded. Expects data-uuid (skill) and data-category on the button.
-   */
-  static async #onDeleteSkill(event, target) {
-    const { uuid, category } = target.dataset;
-    if (!uuid || !category) return;
-    const current = this.actor.toObject().system.skills?.[category] ?? [];
-    await this.actor.update({ [`system.skills.${category}`]: current.filter((entry) => entry.skill !== uuid) });
-  }
-
-
-  /**
-   * Remove an embedded Item (shared by deleteSequence / deleteAbility / deleteAction / deleteSpell /
-   * deleteItem). Hold Shift to skip the confirmation. Only owned entries get a delete button;
-   * granted ones are removed from the Item that grants them.
-   */
-  static async #onDeleteItem(event, target) {
-    // The id sits on the button in the drop sections, and on the row around it in the Abilities tab's own list.
-    const item = this.actor.items.get(target.dataset.itemId ?? target.closest("[data-item-id]")?.dataset.itemId);
-    if (!item) return;
-
-    if (!event.shiftKey) {
-      const confirmed = await foundry.applications.api.DialogV2.confirm({
-        window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
-        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(item.name) })}</p>`,
-        rejectClose: false,
-        modal: true,
-      });
-      if (!confirmed) return;
-    }
-
-    await item.delete();
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
+    created?.sheet?.render({ force: true });
   }
 
 }

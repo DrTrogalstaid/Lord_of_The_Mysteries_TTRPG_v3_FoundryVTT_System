@@ -1,0 +1,431 @@
+/* -------------------------------------------------------------------- */
+/* Effects tab (player and NPC sheets): status toggles and effect rows  */
+/* templates/actor/player-character/parts/effects.hbs                   */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor {
+  --lotm-status-active: #c9a227;
+}
+
+.lotm.sheet.actor .effects-section {
+  margin-bottom: 10px;
+}
+
+/* One button per status, in a wrapping grid. Off: faded and grey. On: full colour with a gold ring. */
+.lotm.sheet.actor .status-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 4px;
+}
+
+.lotm.sheet.actor .status-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 2px;
+  margin: 0;
+  background: var(--psx-panel);
+  border: 1px solid var(--psx-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .status-toggle img {
+  width: 28px;
+  height: 28px;
+  border: none;
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.lotm.sheet.actor .status-toggle:hover img {
+  opacity: 0.7;
+}
+
+.lotm.sheet.actor .status-toggle.active {
+  border-color: var(--lotm-status-active);
+  box-shadow: 0 0 0 1px var(--lotm-status-active);
+}
+
+.lotm.sheet.actor .status-toggle.active img {
+  opacity: 1;
+  filter: none;
+}
+
+.lotm.sheet.actor .status-toggle:disabled {
+  cursor: default;
+}
+
+/* Effect rows: icon, name and details, time left, buttons. Actor Effects tabs and item Effects lists. */
+.lotm.sheet .effect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lotm.sheet .effect-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  background: var(--psx-panel, rgba(127, 127, 127, 0.12));
+  border: 1px solid var(--psx-border, rgba(0, 0, 0, 0.25));
+  border-radius: 4px;
+}
+
+/* Switched off, or suppressed (gear that's stowed). */
+.lotm.sheet .effect-row.inactive {
+  opacity: 0.55;
+}
+
+.lotm.sheet .effect-img {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+}
+
+.lotm.sheet .effect-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lotm.sheet .effect-name {
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lotm.sheet .effect-detail {
+  color: var(--psx-text-dim, #666);
+  font-size: 11px;
+}
+
+.lotm.sheet .effect-duration {
+  flex: 0 0 auto;
+  color: var(--psx-text-dim, #666);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.lotm.sheet .effect-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.sheet .effect-control {
+  color: var(--psx-text-dim, #666);
+}
+
+.lotm.sheet .effect-control:hover {
+  color: var(--psx-text, inherit);
+}
+
+.lotm.sheet .effect-button {
+  flex: 0 0 auto;
+  width: auto;
+  height: 22px;
+  line-height: 1;
+  padding: 0 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------- */
+/* Sidebar: Physical Defense / Movement changed by a status             */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .status-modified {
+  border-color: var(--lotm-status-active);
+}
+
+.lotm.sheet.actor .status-modified input {
+  color: var(--lotm-status-active);
+}
+
+/* -------------------------------------------------------------------- */
+/* Chat: start-of-turn card (effects/turn-start.mjs)                    */
+/* -------------------------------------------------------------------- */
+
+.lotm.chat-turn-start .chat-turn-start-title {
+  margin: 0 0 4px;
+  font-weight: bold;
+}
+
+.lotm.chat-turn-start .turn-start-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lotm.chat-turn-start .turn-start-status {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.lotm.chat-turn-start .turn-start-status img {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+}
+
+.lotm.chat-turn-start .turn-start-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm.chat-turn-start .turn-start-buttons button {
+  flex: 1 1 auto;
+  margin: 0;
+  width: auto;
+}
+
+/* -------------------------------------------------------------------- */
+/* Rolls with a DC: the dialog's "DC 15" line, and the chat card's result */
+/* -------------------------------------------------------------------- */
+
+.lotm.roll-dialog .roll-dc {
+  margin: 4px 0;
+  text-align: center;
+  font-weight: bold;
+}
+
+.roll-dc-result {
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.roll-dc-result.success {
+  color: #3d7a46;
+}
+
+.roll-dc-result.failure {
+  color: #b33a3a;
+}
+
+/* -------------------------------------------------------------------- */
+/* Statuses in rolls: status modifier rows, notes, and "Used despite"   */
+/* apps/roll-dialog.mjs, effects/status-rolls.mjs, status-restrictions.mjs */
+/* -------------------------------------------------------------------- */
+
+/* A modifier row that came from a status: its icon before the name. */
+.lotm.roll-dialog .modifiers li.status-modifier .mod-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.roll-dialog .modifiers .mod-status-img {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: none;
+}
+
+/* Notes from statuses (Deaf, Blind, an Invisible target): in the dialog and on the chat card. */
+.lotm.roll-dialog ul.roll-status-notes {
+  list-style: none;
+  margin: 6px 0;
+  padding: 4px 6px;
+  border-left: 3px solid var(--lotm-status-active, #c9a227);
+  font-size: 0.9em;
+}
+
+.lotm.roll-dialog ul.roll-status-notes li + li {
+  margin-top: 2px;
+}
+
+.lotm.roll-status-notes {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border-left: 3px solid #c9a227;
+  font-size: 0.9em;
+}
+
+.lotm.roll-status-notes p {
+  margin: 2px 0;
+}
+
+/* "Used despite: Bound" on the chat card of an action used after the warning. */
+.lotm.chat-used-despite {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border-left: 3px solid #b33a3a;
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.lotm-restriction-list {
+  margin: 4px 0 8px;
+}
+
+/* Item sheets: the Traits checkboxes (templates/item/parts/action-traits.hbs). */
+.lotm.sheet.item .action-traits multi-checkbox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.lotm.sheet.item .action-traits multi-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------- */
+/* Item sheets: the Effects list (templates/item/parts/item-effects.hbs) */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.item .item-effects {
+  margin: 8px 0;
+  padding: 4px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+}
+
+/* An effect dragged over the list. */
+.lotm.sheet.item .item-effects.drag-over {
+  border-color: var(--lotm-status-active, #c9a227);
+}
+
+.lotm.sheet.item .item-effects-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.lotm.sheet.item .item-effects-header .item-effects-create {
+  flex: 0 0 auto;
+  width: auto;
+  height: 24px;
+  line-height: 1;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.lotm.sheet.item .item-effects .effect-row {
+  cursor: grab;
+}
+
+.lotm.sheet.item .item-effects .hint {
+  margin-top: 6px;
+}
+
+/* -------------------------------------------------------------------- */
+/* Effect sheet: the LotM tab (apps/effect-config.mjs)                  */
+/* -------------------------------------------------------------------- */
+
+.lotm-effect-config .lotm-effect-tab .lotm-source-name {
+  flex: 1;
+  font-weight: bold;
+}
+
+.lotm-effect-config .lotm-effect-tab .form-fields button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.lotm-effect-config .lotm-granted-from {
+  font-style: italic;
+}
+
+/* -------------------------------------------------------------------- */
+/* Chat: Apply buttons on attack cards, and "X applies Y to Z"           */
+/* effects/effect-application.mjs                                        */
+/* -------------------------------------------------------------------- */
+
+.lotm-effect-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lotm-effect-buttons .lotm-apply-effect {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.lotm-effect-buttons .lotm-apply-effect img {
+  border: none;
+}
+
+.lotm.chat-effect-applied {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.chat-effect-applied img {
+  flex: 0 0 auto;
+  border: none;
+}
+
+/* -------------------------------------------------------------------- */
+/* Area effects: who gets it (effects/effect-areas.mjs)                  */
+/* -------------------------------------------------------------------- */
+
+.lotm-area-tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.lotm-area-token {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lotm-area-token input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.lotm-area-token img {
+  flex: 0 0 auto;
+  border: none;
+  object-fit: contain;
+}
+
+/* -------------------------------------------------------------------- */
+/* Effects tab: granted abilities' effects out of date (granted-effects.mjs) */
+/* -------------------------------------------------------------------- */
+
+.lotm.sheet.actor .granted-out-of-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--lotm-status-active, #c9a227);
+  border-radius: 4px;
+  font-size: 12px;
+}

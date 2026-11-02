@@ -1,0 +1,90 @@
+{{!--
+  One row of the Character tab's Granted Skills box: a skill one of the character's Sequences raises or trains.
+  The context is the entry from _prepareSections (base-actor-sheet.mjs), and entry.skill is that skill's row from
+  _prepareSkillList (player-character-sheet.mjs), the same row the attribute tabs show. With it, this row has the
+  same controls as a tab row: roll, level, study and learning by doing.
+
+  The level dropdown has no `name`. It saves through PlayerCharacterSheet.#onGrantedSkillLevel, so it can't fight
+  with the same skill's dropdown on its attribute tab (that one is part of the form).
+  Granted skills can't be removed here; take them off the Sequence.
+--}}
+<li class="drop-entry granted granted-skill-entry{{#if broken}} broken{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"
+    {{#if skill}}data-skill-uuid="{{skill.uuid}}" data-skill-name="{{skill.name}}" data-category="{{skill.category}}"
+    data-attribute="{{skill.attribute}}" data-level="{{skill.effectiveLevel}}" data-teachers="{{skill.teachers}}"
+    data-flat-modifier="{{skill.flatModifier}}"{{/if}}>
+
+  {{#if broken}}
+    <span class="drop-entry-icon">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+    </span>
+  {{else}}
+    <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}">
+      <img class="drop-entry-img" src="{{img}}" alt="" width="28" height="28">
+      <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
+    </button>
+  {{/if}}
+
+  {{#if skill}}
+    <a class="modifier rollable-number granted-skill-modifier" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+      {{numberFormat skill.modifier decimals=0 sign=true}}
+    </a>
+  {{/if}}
+
+  <div class="drop-entry-main">
+    <div class="drop-entry-title-row">
+      {{#if broken}}
+        <span class="drop-entry-name">{{name}}</span>
+      {{else}}
+        <a class="drop-entry-name" data-action="openItem" data-uuid="{{uuid}}">{{name}}</a>
+      {{/if}}
+      {{#if grantedByLabel}}
+        <span class="drop-entry-source">{{localize "LORD_OF_THE_MYSTERIES.Drop.GrantedBy"}} {{grantedByLabel}}</span>
+      {{/if}}
+    </div>
+  </div>
+
+  {{#with skill as |row|}}
+    {{!-- Raised by a Sequence or a related skill: the level it's rolled at, with the reason on hover. --}}
+    {{#if row.associated}}
+      <span class="skill-associated" data-tooltip="{{row.associatedTooltip}}">
+        <i class="fa-solid fa-link"></i> {{localize (lookup @root.skillLevelOptions row.effectiveLevel)}}
+      </span>
+    {{/if}}
+    <select class="skill-level-select" data-granted-skill-level {{#unless (and @root.editable row.category)}}disabled{{/unless}}>
+      {{selectOptions @root.skillLevelOptions selected=row.level localize=true}}
+    </select>
+    {{!-- Study meter and button, same as the tab rows. --}}
+    <span class="skill-study-progress" {{#if row.studyPercent}}data-tooltip="{{row.studyTooltip}}"{{/if}}>
+      {{#if row.studyPercent}}{{row.studyPercent}}%{{/if}}
+    </span>
+    {{#if (and @root.editable row.canStudy)}}
+      <a class="skill-study" data-action="studySkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Learning.StudyTooltip'}}">
+        <i class="fa-solid fa-book-open"></i>
+      </a>
+    {{else}}
+      <span class="skill-study"></span>
+    {{/if}}
+    {{!-- Learning by Doing: only on skills a Sequence ability teaches. --}}
+    {{#if row.teachers}}
+      <span class="skill-success-progress" {{#if row.successText}}data-tooltip="{{row.successTooltip}}"{{/if}}>{{row.successText}}</span>
+      {{#if @root.editable}}
+        <a class="skill-success" data-action="recordSkillSuccess" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Learning.Fast.RecordTooltip'}}">
+          <i class="fa-solid fa-hand-sparkles"></i>
+        </a>
+      {{/if}}
+    {{/if}}
+  {{/with}}
+
+  {{#if @root.editable}}
+    {{#if canMove}}
+      <div class="drop-entry-move">
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="up" data-key="{{key}}"{{#unless canMoveUp}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button type="button" class="drop-entry-move-btn" data-action="moveEntry" data-direction="down" data-key="{{key}}"{{#unless canMoveDown}} disabled{{/unless}}>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+      </div>
+    {{/if}}
+  {{/if}}
+</li>
