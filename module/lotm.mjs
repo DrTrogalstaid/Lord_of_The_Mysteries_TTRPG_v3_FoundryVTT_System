@@ -29,6 +29,7 @@ import { registerEffectQueries } from './effects/effect-application.mjs';
 import { ZONE_BEHAVIOR_TYPE, registerZones } from './effects/effect-areas.mjs';
 import LotmApplyEffectBehavior from './data/region-behavior/apply-effect.mjs';
 import { syncGrantedEffects } from './effects/granted-effects.mjs';
+import { GunHandling } from './helpers/gun-handling.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -55,6 +56,9 @@ Hooks.once('init', function () {
     // Bring an actor's copies of granted abilities' passive effects up to date (effects/granted-effects.mjs).
     // Used by module/macros/sync-granted-effects.js.
     syncGrantedEffects,
+    // A gun's Reload / Chamber / Rotate / Unload (helpers/gun-handling.mjs), for macros, e.g.
+    //   await game.lotm.GunHandling.get(gun, "reload")?.perform(actor);
+    GunHandling,
   };
 
   // Add custom constants for configuration.

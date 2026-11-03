@@ -9,7 +9,8 @@ import { formatSlots } from "../../../helpers/inventory.mjs";
 import {
   BASE_CURRENCY, CURRENCIES, localCurrency, formatMoney, formatValue, valueTooltip, parseMoney
 } from "../../../helpers/currency.mjs";
-import { ammoBoxStatus, chamberRound, firearmStatus, reloadGun, unloadGun } from "../../../helpers/firearms.mjs";
+import { FEEDS, ammoBoxStatus, chamberRound, feedOf, firearmStatus, reloadGun, rotateCylinder, unloadGun } from "../../../helpers/firearms.mjs";
+import { GunHandling } from "../../../helpers/gun-handling.mjs";
 import { LordOfTheMysteriesItemSheetBase, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
 
@@ -125,6 +126,7 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
       removeGrant: LordOfTheMysteriesGearSheet.#onRemoveGrant,
       gunReload: LordOfTheMysteriesGearSheet.#onGunReload,
       gunChamber: LordOfTheMysteriesGearSheet.#onGunChamber,
+      gunRotate: LordOfTheMysteriesGearSheet.#onGunRotate,
       gunUnload: LordOfTheMysteriesGearSheet.#onGunUnload,
     },
   };
@@ -152,6 +154,21 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
 
     // Guns and ammo: what's loaded / how many rounds are left (helpers/firearms.mjs).
     context.firearm = system.isFirearm ? firearmStatus(this.item) : null;
+    // Feed dropdown: magazine / cylinder / barrels (helpers/gun-feed.mjs).
+    context.feedOptions = FEEDS;
+    // Handling: Reload / Chamber / Rotate / Unload (whichever the feed has), each with its Action Type dropdown and a
+    // button (helpers/gun-handling.mjs). sheetAction: the button's data-action, e.g. "gunReload".
+    context.handling = system.isFirearm
+      ? GunHandling.listFor(this.item).map((handling) => ({
+        use: handling.use,
+        label: handling.label,
+        actionType: handling.actionType,
+        tooltip: handling.tooltip,
+        sheetAction: `gun${handling.use[0].toUpperCase()}${handling.use.slice(1)}`,
+      }))
+      : [];
+    context.reloadRounds = system.firearm?.handling?.reload?.rounds ?? 0;
+    context.actionTypeOptions = CONFIG.LORD_OF_THE_MYSTERIES.actionTypes;
     context.ammoBox = system.isAmmo ? ammoBoxStatus(this.item) : null;
 
     // Purse / wallet: one text box per currency, typed like the value ("£2 5s", "40 verl d'or").
@@ -239,9 +256,36 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     doc?.sheet?.render({ force: true });
   }
 
-  /** The gun buttons: Reload (fill it), Chamber, Unload. They need the character who owns the gun. */
+  /**
+   * A loaded gun keeps its feed: its rounds are stored per feed (helpers/gun-feed.mjs), so switching would hide them.
+   * Unload it first. (A gun with no feed saved yet works like the one its sheet shows: feedOf(...).type.)
+   * @override
+   */
+  _processFormData(event, form, formData) {
+    const data = super._processFormData(event, form, formData);
+    const feed = data.system?.firearm?.feed;
+    const current = this.item.system.isFirearm ? feedOf(this.item) : null;
+    if (feed && current && feed !== current.type) {
+      const loaded = current.firingOrder().some((slot) => slot.round);
+      if (loaded) {
+        ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Firearm.Warnings.UnloadFirst", { gun: this.item.name }));
+        delete data.system.firearm.feed;
+        this.render();   // put the dropdown back
+      }
+    }
+    return data;
+  }
+
+  /*  The gun buttons: Reload, Chamber, Rotate, Unload. They need the character who owns the gun.  */
+
+  /** Reload: asks which ammo and how many. Shift-click fills it with the first ammo that fits. */
   static async #onGunReload(event, target) {
-    if (this.isEditable && this.item.actor) await reloadGun(this.item.actor, this.item);
+    if (this.isEditable && this.item.actor) await reloadGun(this.item.actor, this.item, { fast: event.shiftKey });
+  }
+
+  /** Revolvers: pick the chamber under the hammer. */
+  static async #onGunRotate(event, target) {
+    if (this.isEditable && this.item.actor) await rotateCylinder(this.item.actor, this.item);
   }
 
   static async #onGunChamber(event, target) {

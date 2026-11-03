@@ -1,6 +1,6 @@
 import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
-import { AMMO_USES } from "../../../helpers/firearms.mjs";
+import { AMMO_USES, OLD_AMMO_USES } from "../../../helpers/firearms.mjs";
 
 
 export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBase {
@@ -47,8 +47,16 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
     // The Traits checkboxes (templates/item/parts/action-traits.hbs).
     context.traitOptions = this._traitOptions();
 
-    // "Uses ammo" dropdown: none / fire / reload / chamber / unload (helpers/firearms.mjs).
-    context.ammoUseOptions = AMMO_USES;
+    // "Uses ammo" dropdown: No / Fires rounds (helpers/firearms.mjs). An old Reload / Pull Bolt action keeps its old
+    // choice in the list, marked as old, so it isn't changed by accident (the Retire Gun Actions macro looks for it).
+    const ammoUse = context.system.ammoUse;
+    context.isOldAmmoUse = ammoUse in OLD_AMMO_USES;
+    context.ammoUseOptions = context.isOldAmmoUse
+      ? {
+        ...AMMO_USES,
+        [ammoUse]: game.i18n.format("LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.OldOption", { use: game.i18n.localize(OLD_AMMO_USES[ammoUse]) }),
+      }
+      : AMMO_USES;
 
     // Special Results (Great Success / Big Failure events): each row needs its position, for its text box's name
     // (system.specialResults.<index>) and its delete button.

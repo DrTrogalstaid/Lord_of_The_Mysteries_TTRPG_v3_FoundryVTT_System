@@ -4,7 +4,7 @@ import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
 import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
-import { canFire, fireGun, gunFor } from "./firearms.mjs";
+import { fireGun, gunFor, prepareShot } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
@@ -239,8 +239,11 @@ function actionChatExtras(actor, action, { note = "" } = {}) {
  * rolls the Attack Roll Macro straight away (rollActionWithoutSkill below).
  *
  * Actions set to "Fires rounds" (system.ammoUse, see helpers/firearms.mjs) also use up ammo:
- *   - before rolling, the gun must have the rounds ready, otherwise nothing is rolled ("Click. Revolver is empty.")
+ *   - before rolling, the gun must have the rounds ready, otherwise nothing is rolled ("Click. Revolver is empty.";
+ *     a revolver's empty chamber clicks and turns the cylinder). A shotgun whose barrels hold different rounds asks
+ *     which barrel first.
  *   - the rounds are only taken out once the attack is actually rolled, so closing the dialog costs nothing.
+ *     Special rounds then set off their spells (activateBullets in helpers/firearms.mjs).
  *
  * If one of the character's statuses stops the action (Bound and a movement action, Silence and a speech action...),
  * a warning comes first, with Use Anyway (effects/status-restrictions.mjs). Used anyway: the chat card says so.
@@ -250,9 +253,12 @@ function actionChatExtras(actor, action, { note = "" } = {}) {
  * @param {string} [options.gunId]  The gun the action came from (set by the character sheet for actions listed
  *                                  under a gun). Without it, the gun in the character's hand is used.
  * @param {boolean} [options.fast]  Shift-click: roll right away with the dialog's defaults, without showing it.
+ * @param {boolean} [options.isBulletSpell]  A spell a special bullet set off (its Cast button): its Spirituality was
+ *                                           paid when the bullet was fired, and the shot already passed the status
+ *                                           warnings, so neither comes up again.
  * @returns {Promise<Roll|null>}  The roll, or null if it was cancelled or couldn't happen.
  */
-export async function rollActionAttack(actor, action, { gunId, fast = false } = {}) {
+export async function rollActionAttack(actor, action, { gunId, fast = false, isBulletSpell = false } = {}) {
   if (!actor) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.NoActor", { name: action.name }));
     return null;
@@ -262,14 +268,17 @@ export async function rollActionAttack(actor, action, { gunId, fast = false } = 
   const isShot = action.system.ammoUse === "fire";
   const gun = isShot ? gunFor(actor, gunId) : null;
   const amount = Math.max(1, action.system.ammoAmount ?? 0);
-  if (isShot && (!gun || !canFire(gun, amount))) return null;
+  if (isShot && !gun) return null;
+  const shot = isShot ? await prepareShot(actor, gun, amount) : null;
+  if (isShot && !shot) return null;
 
   // A status that stops this action: warn first. Cancelled = nothing happens.
-  const { proceed, note } = await confirmStatusRestrictions(actor, action);
+  const { proceed, note } = isBulletSpell ? { proceed: true, note: "" } : await confirmStatusRestrictions(actor, action);
   if (!proceed) return null;
 
-  const roll = await rollAttackDice(actor, action, { fast, note });
-  if (roll && isShot) await fireGun(actor, gun, { amount });   // null = the dialog was closed, so nothing was fired
+  const roll = await rollAttackDice(actor, action, { fast, note, isSpiritualityPaid: isBulletSpell });
+  // null = the dialog was closed, so nothing was fired.
+  if (roll && isShot) await fireGun(actor, gun, { amount, positions: shot.positions });
   return roll;
 }
 
@@ -280,10 +289,11 @@ export async function rollActionAttack(actor, action, { gunId, fast = false } = 
  * @param {object} [options]
  * @param {boolean} [options.fast]  Shift-click: skip the dialog.
  * @param {string} [options.note]   "Used despite: ..." for the chat card (see rollActionAttack).
+ * @param {boolean} [options.isSpiritualityPaid]  The Spirituality Cost was already paid: no checkbox in the dialog.
  * @returns {Promise<Roll|null>}
  */
-async function rollAttackDice(actor, action, { fast = false, note = "" } = {}) {
-  if (!(await rollSkillUuid(action))) return rollActionWithoutSkill(actor, action, { fast, note });
+async function rollAttackDice(actor, action, { fast = false, note = "", isSpiritualityPaid = false } = {}) {
+  if (!(await rollSkillUuid(action))) return rollActionWithoutSkill(actor, action, { fast, note, isSpiritualityPaid });
 
   const info = await resolveActionSkill(actor, action);
   if (!info) {
@@ -302,6 +312,7 @@ async function rollAttackDice(actor, action, { fast = false, note = "" } = {}) {
     action,
     // Added to the chat message: the flags and damage buttons (see actionChatExtras).
     chat: actionChatExtras(actor, action, { note }),
+    isSpiritualityPaid,
   }, { fast });
 }
 
@@ -314,15 +325,16 @@ async function rollAttackDice(actor, action, { fast = false, note = "" } = {}) {
  * @param {object} [options]
  * @param {boolean} [options.fast]  Shift-click: skip the dialog.
  * @param {string} [options.note]   "Used despite: ..." for the chat card (see rollActionAttack).
+ * @param {boolean} [options.isSpiritualityPaid]  The Spirituality Cost was already paid: no checkbox in the dialog.
  * @returns {Promise<Roll|null>}
  */
-async function rollActionWithoutSkill(actor, action, { fast = false, note = "" } = {}) {
+async function rollActionWithoutSkill(actor, action, { fast = false, note = "", isSpiritualityPaid = false } = {}) {
   const formula = getAttackFormula(action);
   if (!formula || !Roll.validate(formula)) {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidAttack", { name: action.name }));
     return null;
   }
-  return ActionRollDialog.prompt(actor, action, formula, { chat: actionChatExtras(actor, action, { note }), fast });
+  return ActionRollDialog.prompt(actor, action, formula, { chat: actionChatExtras(actor, action, { note }), fast, isSpiritualityPaid });
 }
 
 /* -------------------------------------------- */
@@ -757,6 +769,7 @@ async function postDamageTaken(token, result, source, { ignoreReduction = false 
  * Make the chat buttons work. Called once from the init hook in lotm.mjs.
  *   Attack messages:  "Roll Damage" and "Big Success" (older messages have only the one damage button),
  *                     and "Apply <effect>" for each effect the action hands out
+ *   Special bullet messages:  "Cast <spell>" for each spell the bullet set off
  *   Damage messages:  "Damage" and "Heal"
  * The buttons are written into the message's flavor, which Foundry shows above the roll, so they're moved
  * below it into the message's content.
@@ -785,6 +798,13 @@ export function registerActionChatListeners() {
       }
     }
 
+    // Cast <spell> on a special bullet's card (activateBullets in helpers/firearms.mjs). Each works once.
+    const used = message.getFlag("lotm", "bulletCast") ?? [];
+    for (const button of html.querySelectorAll("button[data-lotm-bullet-spell]")) {
+      if (used.includes(button.dataset.lotmBulletSpell)) button.disabled = true;
+      button.addEventListener("click", () => castBulletSpell(message, button));
+    }
+
     // Damage / Heal
     const applyButtons = html.querySelectorAll("button[data-lotm-apply]");
     if (applyButtons.length) {
@@ -798,6 +818,37 @@ export function registerActionChatListeners() {
       }
     }
   });
+}
+
+/**
+ * A Cast button on a special bullet's card: roll that spell for the character who fired it. Its Spirituality was
+ * paid when the bullet was fired, so it isn't charged again. Once it's been rolled, the button is greyed out for good.
+ * Only the character's owners (and the GM) can use it.
+ * @param {ChatMessage} message
+ * @param {HTMLButtonElement} button
+ */
+async function castBulletSpell(message, button) {
+  const spellUuid = button.dataset.lotmBulletSpell;
+  const actor = await fromUuid(message.getFlag("lotm", "actorUuid")).catch(() => null);
+  const spell = await fromUuid(spellUuid).catch(() => null);
+  if (!actor || !spell) {
+    ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Gone"));
+    return;
+  }
+  if (!actor.isOwner) return;
+  const activated = message.getFlag("lotm", "bulletSpells") ?? [];
+  const used = message.getFlag("lotm", "bulletCast") ?? [];
+  if (!activated.includes(spellUuid) || used.includes(spellUuid)) return;
+
+  button.disabled = true;
+  const roll = await rollActionAttack(actor, spell, { isBulletSpell: true });
+  if (!roll) {
+    button.disabled = false;   // the dialog was closed: still unused
+    return;
+  }
+  if (message.canUserModify(game.user, "update")) {
+    await message.setFlag("lotm", "bulletCast", [...used, spellUuid]);
+  }
 }
 
 /**

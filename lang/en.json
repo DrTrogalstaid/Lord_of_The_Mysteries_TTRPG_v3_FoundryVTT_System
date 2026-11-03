@@ -1010,14 +1010,21 @@
 
     "Firearm": {
       "IsFirearm": "Firearm",
-      "IsFirearmHint": "Holds rounds. Its actions can fire, reload, chamber and unload it.",
+      "IsFirearmHint": "Holds rounds. Give it a Shoot action (Uses ammo: Fires rounds); its Reload, Unload and other buttons come with it (see Handling).",
       "Caliber": "Caliber",
       "AnyCaliber": "any",
       "CaliberHint": "Only ammunition with the same caliber loads into it. Leave blank to take any ammunition.",
       "Capacity": "Capacity",
-      "CapacityHint": "Rounds the magazine or cylinder holds, not counting the chamber.",
+      "CapacityHint": "Magazine: rounds it holds, not counting the chamber. Cylinder: chambers. Barrels: barrels.",
+      "Feed": {
+        "Label": "Feed",
+        "Hint": "How it holds its rounds. Magazine: the last round loaded fires first (rifles, pistols, pump shotguns). Cylinder: the chamber under the hammer fires, then the cylinder turns (revolvers). Barrels: one round per barrel (break-action shotguns). Until one is chosen, a gun with a chamber is a magazine, one holding 1 or 2 rounds has barrels, and any other a cylinder. Unload it before changing this.",
+        "magazine": "Magazine",
+        "cylinder": "Cylinder (revolver)",
+        "barrels": "Barrels (break-action)"
+      },
       "HasChamber": "Has a chamber",
-      "HasChamberHint": "Fires from a chamber that has to be loaded first (rack the slide, work the bolt). Leave off for revolvers.",
+      "HasChamberHint": "Fires from a chamber that has to be loaded first (rack the slide, work the bolt, pump it).",
       "SelfLoading": "Self-loading",
       "SelfLoadingHint": "After a shot, the next round goes into the chamber by itself. Leave off for bolt and lever actions.",
       "Loaded": "Loaded",
@@ -1025,6 +1032,12 @@
       "Next": "Next shot",
       "Empty": "Empty",
       "NeedsChambering": "None: chamber a round first",
+      "EmptyChamber": "Empty chamber (it will click)",
+      "EmptySlot": "empty",
+      "ChamberN": "Chamber {n}",
+      "BarrelN": "Barrel {n}",
+      "FiringOrder": "Firing order",
+      "Special": "Special round: its spells go off when it's fired",
       "Round": "Round",
       "LooseRounds": "Loose rounds",
       "Rounds": "{n} rounds",
@@ -1037,21 +1050,53 @@
       "Total": "Total rounds",
       "PickAmmo": "Load which ammunition?",
       "PickAmmoTitle": "Reload {gun}",
-      "AmmoAmount": "Rounds per use",
-      "AmmoAmountHint": "Fire: rounds used each time (0 = 1). Reload: rounds loaded each time (0 = fill it up).",
+      "LoadAmount": "How many",
+      "LoadAmountHint": "Up to {n}. Load again to add a different kind.",
+      "LoadChamber": "Straight into the chamber",
+      "LoadChamberHint": "Puts one round in the empty chamber, so it fires next.",
+      "LoadHint": {
+        "magazine": "The last round loaded is on top and fires first.",
+        "cylinder": "Empty chambers are filled starting with the one under the hammer, so the first round loaded fires first.",
+        "barrels": "Empty barrels are filled in order."
+      },
+      "ChooseBarrelTitle": "Fire {gun}",
+      "ChooseBarrel": "Fire which barrel?",
+      "RotateTitle": "Rotate {gun}'s cylinder",
+      "RotateIntro": "Which chamber goes under the hammer (fires next)?",
+      "Bullet": {
+        "Fired": "{round} fired from {gun}",
+        "Cost": "−{cost} Spirituality",
+        "NotEnough": "didn't go off: not enough Spirituality ({cost} needed)",
+        "Cast": "Cast {name}"
+      },
+      "AmmoAmount": "Rounds per shot",
+      "AmmoAmountHint": "Rounds used each time (0 = 1; 2 fires both barrels).",
       "AmmoUse": {
         "Label": "Uses ammo",
-        "Hint": "What this action does to the gun it comes from (or, if the character owns it directly, the gun they're holding).",
+        "Hint": "Fires rounds: the attack uses up rounds from the gun this action comes from (or, if the character owns it directly, the gun they're holding). Its row also gets the gun's Reload, Unload and other buttons, set on the gun's sheet (Handling).",
         "none": "No",
         "fire": "Fires rounds",
         "reload": "Reloads",
         "chamber": "Chambers a round",
-        "unload": "Unloads"
+        "rotate": "Rotates the cylinder",
+        "unload": "Unloads",
+        "OldOption": "{use} (old)",
+        "OldHint": "Reloading, chambering, rotating and unloading are now buttons on the gun's Shoot action, set on the gun's sheet (Handling). This action does nothing now: take it off the gun, or run the Retire Gun Actions macro."
+      },
+      "Handling": {
+        "Label": "Handling",
+        "Hint": "What can be done to it besides firing, and how long each takes. Each is a button on the gun's Shoot action; hovering over one shows its Action Type.",
+        "Rounds": "Rounds per Reload",
+        "RoundsHint": "The most one Reload loads (0 = as many as fit).",
+        "Tooltip": "{name}: {type} action",
+        "TooltipRounds": "{name}: {type} action. Loads up to {n}.",
+        "TooltipAllRounds": "{name}: {type} action. Loads as many as fit."
       },
       "Buttons": {
         "fire": "Fire",
         "reload": "Reload",
         "chamber": "Chamber",
+        "rotate": "Rotate",
         "unload": "Unload"
       },
       "Warnings": {
@@ -1060,6 +1105,9 @@
         "NotAFirearm": "{name} isn't a firearm.",
         "Empty": "Click. {gun} is empty.",
         "NotChambered": "Click. {gun} has no round in the chamber.",
+        "Click": "Click. Chamber {n} of {gun} is empty; the cylinder turns to the next one.",
+        "NoCylinder": "{gun} has no cylinder to rotate.",
+        "UnloadFirst": "Unload {gun} before changing its feed.",
         "NotEnough": "{gun} only has {n} ready to fire.",
         "Full": "{gun} is already full.",
         "NoAmmo": "No ammunition for {gun} on hand (caliber: {caliber}).",
@@ -1072,6 +1120,8 @@
         "fire": "Fired {n} from {gun} ({rounds}).",
         "reload": "Loaded {n} × {ammo} into {gun} ({loaded}/{capacity}).",
         "chamber": "Chambered a round in {gun} ({round}).",
+        "loadChamber": "Loaded {ammo} straight into {gun}'s chamber.",
+        "rotate": "Turned {gun}'s cylinder: chamber {n} ({round}) fires next.",
         "unload": "Unloaded {n} rounds from {gun}."
       }
     }

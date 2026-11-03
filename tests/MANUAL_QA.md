@@ -18,7 +18,7 @@ dialogs, chat cards, tokens and scenes.
 - [ ] Run `npm test` in the system folder: every test passes
 - [ ] A test world with:
   - Klein: a player character with skills at a few levels (not only Untrained), a Sequence that grants abilities and
-    skills, a gun with Shoot / Reload actions, a spell, an action with a Spirituality Cost, and a coat or bag
+    skills, a gun with a Shoot action, a spell, an action with a Spirituality Cost, and a coat or bag
   - an NPC, with a token on a scene that has a grid, plus three goblin tokens and Klein's token on the same scene
   - a second user (a player who owns Klein but not the goblins), for the permission checks. Log in with them in a
     second browser where a step says "as a player"
@@ -44,6 +44,7 @@ things start in report-only mode (`APPLY = false`): check the report, then set `
 | `check-leftover-effects.js` | Lists effects with statuses the system doesn't know (Foundry's old Prone, Poisoned, ...), and old-type effects. `APPLY` deletes the old Token HUD ones | After importing old actors or removing a module that added statuses |
 | `tag-action-traits.js` | Adds Traits (speech, reaction, grapple, parry, aimed) to actions and spells by name, in the compendiums, world Items and owned Items | After adding actions or spells that should have Traits; edit its list first |
 | `sync-granted-effects.js` | Brings every actor's copies of granted abilities' passive effects up to date (world actors and unlinked tokens) | After editing abilities in a compendium or the sidebar |
+| `retire-gun-actions.js` | Copies old Reload / Pull Bolt / Rotate / Unload actions' Action Type onto their gun's Handling and takes them off the gun's action list (compendium, world, actors, unlinked tokens). Lists the old actions to delete by hand | Once, after the gun handling update, or after importing old guns |
 | `assign-skill-categories.js` | Gives the Skills compendium's skills the rulebook's related-skill categories | After adding skills to the compendium |
 
 ---
@@ -156,6 +157,8 @@ Ability:
 Action:
 
 - [ ] Description, Details and Effects tabs switch; Action Type, Uses Ammo and the other fields save
+- [ ] Uses Ammo offers No / Fires rounds; Rounds per shot only shows for Fires rounds. An old Reload or Pull Bolt
+      action shows its old choice marked "(old)" and a warning that it does nothing now
 - [ ] Skill slot: drop a skill, open it, remove it
 - [ ] Special Results (Description tab): saved ones show one row each; "Add Special Result" adds a blank row whose text
       sticks; the trash button removes only that row. On a locked compendium action the buttons do nothing
@@ -187,7 +190,7 @@ Gear and clothing / bags:
 - [ ] No tabs. Click the image: the file picker opens and the new image saves
 - [ ] Value "£3 10s" saves and shows as £3 10s; "nonsense" warns and keeps the old value. A purse's money boxes the same
 - [ ] On a character: carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
-      remove, open), and a gun's Reload / Chamber / Unload buttons work
+      remove, open), and a gun's Reload / Chamber / Rotate / Unload buttons work (more under **Firearms**)
 - [ ] A coat or bag on a character lists what's inside and how full it is
 - [ ] Gear has an Effects list above its description; containers don't
 
@@ -282,6 +285,87 @@ Files: `module/helpers/spirituality.mjs`, `module/apps/roll-dialog.mjs`
 - [ ] A spell with a cost: the roll button AND "Spend N" (cast one way or the other, not both)
 - [ ] An action with a cost and a roll: no "Spend N"; the cost goes through the roll dialog
 - [ ] The same from a hotbar macro
+
+## Firearms and special bullets
+
+Files: `module/helpers/gun-feed.mjs` (unit-tested), `module/helpers/firearms.mjs`, `module/helpers/gun-handling.mjs`,
+`module/helpers/action-roll.mjs`, `module/data/item/character_building/gear.mjs`, `module/sheets/base-actor-sheet.mjs`,
+`module/sheets/item/inventory/inventory-sheets.mjs`, `templates/item/inventory/gear-sheet.hbs`,
+`templates/actor/player-character/parts/entry-rolls.hbs`, `module/macros/retire-gun-actions.js`
+
+Setup: run the Retire Gun Actions macro first (report, then `APPLY = true`). Klein holds the Revolver and the Bolt
+Action Rifle from the compendium, plus a double-barrel shotgun (gear, Firearm ticked, Feed: Barrels, capacity 2, with
+a Shoot action) and ammo for each. A special bullet: Pistol ammo with an ability whose Spell List has a spell costing
+3 Spirituality and one costing more than Klein has.
+
+Retiring the old gun actions:
+
+- [ ] The macro's report lists each gun with its old actions and the Action Type each becomes (Reload (Revolver) →
+      Reload: Attack, Pull Bolt → Chamber: Free), and the old actions to delete by hand. Nothing changes yet
+- [ ] With `APPLY = true`: the guns' action lists keep only Shoot; their Handling shows the copied Action Types. Run it
+      again: no guns to update
+- [ ] Klein's Actions tab: no Reload or Pull Bolt rows; each Shoot row has the gun's buttons
+
+Gun buttons on the Shoot row:
+
+- [ ] Revolver's Shoot row: attack, Damage, Reload, Rotate, Unload and the "5/6" count. Rifle: Reload, Chamber, Unload.
+      Shotgun: Reload, Unload
+- [ ] Hover over each: "Reload: Attack action. Loads as many as fit.", "Rotate: Quick action", "Chamber: Free action",
+      "Unload: Attack action"
+- [ ] Change the Revolver's Reload to Full and Rounds per Reload to 2 on its sheet: the tooltip says "Reload: Full
+      action. Loads up to 2."; the Load dialog can't go over 2, and Shift-click loads 2
+- [ ] A full gun's Reload and an empty gun's Unload are faded but still show their tooltip; clicking says why nothing
+      happens ("already full", "already empty")
+- [ ] A gun with two Shoot actions: both rows have the buttons. Starring only one in Favorites: its buttons are there too
+- [ ] A Shoot action Klein owns directly (not on a gun): its buttons work the gun in his hand. Holding no gun or two
+      guns: no gun buttons
+- [ ] The same buttons on an NPC's sheet
+- [ ] Macro: `game.lotm.GunHandling.get(gun, "reload")?.perform(actor)` reloads, with the dialog
+
+The gun sheet:
+
+- [ ] The compendium Revolver (no feed saved yet) shows Feed: Cylinder; the Bolt Action Rifle shows Magazine. A new
+      gun starts as Cylinder (capacity 6); with a capacity of 1 or 2 it shows Barrels. Pick Magazine for rifles and
+      pistols
+- [ ] Magazine shows Has Chamber (and Self-Loading once it's ticked); Cylinder and Barrels don't
+- [ ] Handling: one Action Type dropdown per button the feed has (Reload, Chamber only with a chamber, Rotate only for
+      a cylinder, Unload) and Rounds per Reload. Changes save. The buttons at the bottom match, with the same tooltips
+- [ ] A loaded gun: change its Feed: "Unload Revolver before changing its feed." and the dropdown goes back. Empty:
+      the feed changes. Changing anything else on a loaded older gun gives no warning
+- [ ] The firing order list: every round (and empty chamber or barrel) in the order they fire; the next one has an
+      arrow; special rounds have a star (hover: the tooltip). Loaded and Next match the list
+
+Loading:
+
+- [ ] Reload: the dialog lists only ammo that fits, special ammo with ✦. The amount starts at what fits (or what's in
+      the box) and can't go over the room left. The hint says which round fires first
+- [ ] Revolver: load 1 special bullet, then reload with ordinary ammo: only the 5 that fit load; the boxes drop by 1
+      and 5; the special bullet is under the hammer
+- [ ] Shift-click Reload (gun sheet or Shoot row): fills it from the first ammo that fits, no dialog
+- [ ] Rifle: fill the magazine; the last round loaded is listed first (it fires first). With the chamber empty, "Straight
+      into the chamber" loads just one round there: "... straight into Rifle's chamber"
+- [ ] Shotgun: load a slug, then a special shell: Barrel 1 slug, Barrel 2 special
+- [ ] Unload: every round goes back to its box. Delete the special bullets' box first: they come back as a loose stack
+      that keeps the ability
+
+Firing:
+
+- [ ] Revolver: Shoot fires the chamber under the hammer and the cylinder turns one chamber
+- [ ] Rotate (gun sheet or Shoot row): pick a chamber; it's under the hammer, chat says which. Rotate to an
+      empty chamber and Shoot: "Click. Chamber N of Revolver is empty ...", no roll, and the cylinder turns
+- [ ] An empty gun: "Click. Revolver is empty." and the cylinder doesn't move
+- [ ] Rifle: Shoot fires the chambered round; then "no round in the chamber" until Chamber
+- [ ] Shotgun with different rounds in its barrels: Shoot asks which barrel (cancel: no roll). With one loaded
+      barrel, or the same round in both: no question
+
+Special bullets:
+
+- [ ] Fire the special bullet: Spirituality drops by the cheap spell's cost straight away. A card lists the spells:
+      the one paid for has a "Cast" button; the expensive one says it didn't go off (not enough Spirituality)
+- [ ] Cast: the spell's roll dialog has no Spirituality box, and rolling doesn't spend any more. The button is greyed
+      out after, also after reloading the world. Closing the dialog without rolling leaves it usable
+- [ ] As a player who doesn't own Klein: Cast does nothing
+- [ ] Ordinary rounds post no card
 
 ---
 
@@ -402,8 +486,9 @@ nothing, Use Anyway goes ahead.
 - [ ] Dead: everything warns
 - [ ] Use Anyway on a roll: the card says "Used despite: Bound" above the damage button
 - [ ] Use Anyway on "Spend N": it spends, then a chat line says it was used despite the status. Cancel spends nothing
-- [ ] Reload / Chamber / Unload (e.g. Reload while Dying): Use Anyway reloads, then the "Used despite" line; Cancel
-      leaves the gun alone; a reload that can't happen (no ammo) posts no "Used despite" line
+- [ ] A gun's Reload button while Dying (Reload is an Attack action): the warning names "Reload (Revolver)"; Use
+      Anyway reloads, then the "Used despite" line; Cancel leaves the gun alone; a reload that can't happen (no ammo)
+      posts no "Used despite" line. Chamber (a Free action) and Rotate (Quick) don't warn
 - [ ] Shift-click and hotbar macros show the warning too
 - [ ] Blind with an empty gun: "Click. Revolver is empty." with no warning. Loaded: the warning; Use Anyway rolls and
       uses the round; Cancel keeps it

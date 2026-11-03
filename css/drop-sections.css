@@ -417,10 +417,15 @@
 }
 /* ---- Guns and ammo on the Actions and Inventory tabs (helpers/firearms.mjs) ---- */
 
-/* Reload / Chamber / Unload: grey-green, so it doesn't look like an attack or damage roll. */
+/* Fire / Reload / Chamber / Rotate / Unload: grey-green, so they don't look like an attack or damage roll. */
 .lotm.sheet.actor .drop-entry-roll-btn.ammo {
   background: #3d5a40;
   border-color: #283c2a;
+}
+
+/* Nothing to do right now (a full gun's Reload, an empty gun's Unload): faded, but still clickable and hoverable. */
+.lotm.sheet.actor .drop-entry-roll-btn.ammo.idle {
+  opacity: 0.55;
 }
 
 /* "Spend 2": an action's Spirituality Cost, for actions with nothing to roll. */

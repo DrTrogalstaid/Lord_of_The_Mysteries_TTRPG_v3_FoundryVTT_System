@@ -53,6 +53,7 @@ export default class SkillCheckDialog extends LotmRollDialog {
      *                                        name (window title, chat card), system.attackRollMacro (rolled instead of
      *                                        the plain 1d20), system.modifiers (added as a removable modifier) and
      *                                        system.spiritualityCost (the Spirituality checkbox).
+     * @param {boolean} [skillEntry.isSpiritualityPaid]  The action's Spirituality Cost was already paid: no checkbox.
      * @param {object} [skillEntry.chat]      Extra things to put on the chat message:
      * @param {object} [skillEntry.chat.flags]   Message flags (actions save which action/character this was).
      * @param {string} [skillEntry.chat.footer]  HTML added after the flavor text (actions add the damage buttons).
@@ -63,7 +64,8 @@ export default class SkillCheckDialog extends LotmRollDialog {
             // The action's own Modifiers field starts in the modifier list, labelled with the action's name,
             // so the player sees it in the breakdown and can remove it for this roll if it doesn't apply.
             modifiers: action ? [{ label: action.name, value: Number(action.system.modifiers) || 0 }] : [],
-            spirituality: action ? { cost: spiritualityCost(action), reason: action.name } : null,
+            // No Spirituality checkbox when it's already been paid (a special bullet's spell, helpers/firearms.mjs).
+            spirituality: action && !skillEntry.isSpiritualityPaid ? { cost: spiritualityCost(action), reason: action.name } : null,
             chat: skillEntry.chat ?? {},
             ...options
         });
