@@ -133,6 +133,11 @@ const STATUSES = {
     page: "pUHQzg0XGTg1OKhM",
     targetNote: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.TargetInvisible", kinds: ["action", "skill"] },
   },
+  // Ghosts, wraiths and other spirit bodies: only Spirit Sight and Death Sight can see the token
+  // (canvas/spirit-vision.mjs). No rules page yet.
+  ethereal: {
+    img: `${ICONS}/aura.svg`,
+  },
   blind: {
     img: `${ICONS}/blind.svg`,
     page: "Y4uaYfoMn45r6p3l",
@@ -233,4 +238,6 @@ export function registerStatusEffects({ invisibleHidesToken = false } = {}) {
   CONFIG.specialStatusEffects.DEFEATED = "dead";      // the combat tracker's Defeated marker
   CONFIG.specialStatusEffects.BLIND = "blind";        // the token can't see
   CONFIG.specialStatusEffects.INVISIBLE = invisibleHidesToken ? "invisible" : null;
+  // Not one of Foundry's: the system's own senses check it (canvas/spirit-vision.mjs).
+  CONFIG.specialStatusEffects.ETHEREAL = "ethereal";   // only Spirit Sight and Death Sight see the token
 }

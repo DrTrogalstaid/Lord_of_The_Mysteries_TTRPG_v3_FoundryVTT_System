@@ -183,7 +183,8 @@
         "invisible": "Invisible",
         "blind": "Blind",
         "deaf": "Deaf",
-        "shock": "Shock"
+        "shock": "Shock",
+        "ethereal": "Ethereal"
       },
       "TheSource": "its source",
       "Buttons": {
@@ -344,7 +345,18 @@
         "InvisibleHidesToken": {
             "Name": "Invisible Hides Tokens",
             "Hint": "On: the Invisible status works like Foundry's own invisibility, and the token is hidden from anyone who can't see invisible creatures. Off: Invisible is only a status, and players find the creature with Spot / Listen against its Stealth. Changing this reloads the world."
+        },
+        "ReduceSpiritVisionEffects": {
+            "Name": "Reduce Spirit Vision Effects",
+            "Hint": "Turns off the colours and glowing auras of Spirit Vision and Death Vision on this computer. Ghosts and other Ethereal creatures are still revealed. Use this if the canvas runs slowly. Changing this reloads Foundry."
         }
+    },
+
+    "Vision": {
+        "SpiritVision": "Spirit Vision",
+        "DeathVision": "Death Vision",
+        "SpiritSight": "Spirit Sight",
+        "DeathSight": "Death Sight"
     },
 
     "Abilities": {
@@ -657,6 +669,10 @@
       "Name": "Name",
       "Organization": "Organization",
       "OrganizationPlaceholder": "Who they belong to",
+      "SpiritAura": "Spirit Aura",
+      "SpiritAuraHint": "Its aura colour in Spirit Vision: mood, nature. Leave empty and the colour shows its Health (gold to red).",
+      "Undead": "Undead",
+      "UndeadHint": "It glows brightly in Death Vision.",
       "NoSequence": "No Sequence",
       "SequenceLine": "Sequence {number} · {name} ({pathway})",
       "SequenceLineNoPathway": "Sequence {number} · {name}",

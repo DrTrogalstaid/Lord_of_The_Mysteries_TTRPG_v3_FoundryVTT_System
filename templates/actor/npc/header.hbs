@@ -1,4 +1,5 @@
-{{!-- NPC header: portrait, name, the strongest Sequence (worked out by NpcSheet.#sequenceLine) and organization. --}}
+{{!-- NPC header: portrait, name, the strongest Sequence (worked out by NpcSheet.#sequenceLine), organization,
+     and how it looks to Spirit Vision / Death Vision (system.spirit, see canvas/spirit-aura.mjs). --}}
 <header class="npc-header">
   <div class="portrait-box npc-portrait">
     <img class="portrait-img" src="{{actor.img}}" data-edit="img" data-action="editImage" alt="{{actor.name}}" />
@@ -14,6 +15,17 @@
         <span>{{localize "LORD_OF_THE_MYSTERIES.NPC.Organization"}}</span>
         <input type="text" name="system.organization" value="{{system.organization}}"
                placeholder="{{localize 'LORD_OF_THE_MYSTERIES.NPC.OrganizationPlaceholder'}}" />
+      </label>
+    </div>
+    <div class="npc-header-row npc-spirit-row">
+      <label class="npc-spirit-aura" data-tooltip="LORD_OF_THE_MYSTERIES.NPC.SpiritAuraHint">
+        <i class="fa-solid fa-eye"></i>
+        <span>{{localize "LORD_OF_THE_MYSTERIES.NPC.SpiritAura"}}</span>
+        <color-picker name="system.spirit.auraColor" value="{{system.spirit.auraColor}}"></color-picker>
+      </label>
+      <label class="npc-spirit-undead" data-tooltip="LORD_OF_THE_MYSTERIES.NPC.UndeadHint">
+        <input type="checkbox" name="system.spirit.isUndead" {{checked system.spirit.isUndead}} />
+        <span>{{localize "LORD_OF_THE_MYSTERIES.NPC.Undead"}}</span>
       </label>
     </div>
   </div>

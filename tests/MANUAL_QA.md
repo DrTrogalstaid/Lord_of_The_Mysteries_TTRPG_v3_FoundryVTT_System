@@ -70,6 +70,8 @@ skills from the Skills compendium ready to drag.
 
 - [ ] Tabs: Main, Abilities, Spells, Inventory, Sequences, Effects, Notes
 - [ ] Header: change the name and Organization; both save. With no Sequence the header says "No Sequence"
+- [ ] Header, second row: pick a Spirit Aura colour and tick Undead; both save. Clear the colour: it stays empty
+      (what they do: **Spirit Vision and Death Vision**)
 - [ ] Drop a Sequence: the header shows "Sequence N · Name (Pathway)", and Health / Spirituality maximums and the
       defenses go up the same as a player character's with the same attributes and Sequence
 - [ ] Change an attribute's base on Main: the total, defenses and maximums update. Hover a box for the breakdown.
@@ -376,9 +378,9 @@ Special bullets:
 Files: `module/effects/status-effects.mjs`, `module/effects/status-rule.mjs`, `module/documents/active-effect.mjs`,
 `templates/actor/player-character/parts/effects.hbs`
 
-- [ ] The Token HUD's status icons are the 17 system statuses (Loss of Balance ... Shock); hovering shows the name;
-      turning one on puts its icon on the token and a row on the Effects tab
-- [ ] Effects tab (player and NPC): a grid of the 17 statuses, off ones faded, on ones in colour with a gold ring.
+- [ ] The Token HUD's status icons are the 18 system statuses (Loss of Balance ... Shock, with Ethereal after
+      Invisible); hovering shows the name; turning one on puts its icon on the token and a row on the Effects tab
+- [ ] Effects tab (player and NPC): a grid of the 18 statuses, off ones faded, on ones in colour with a gold ring.
       Clicking toggles, and the Token HUD agrees
 - [ ] Each effect row has its icon, name, Rules (book), Turn off / on, Edit and Delete
 - [ ] Rules opens that status's page in LOTM Rules > Status Effects (Advantage and Disadvantage share a page, as do Dying
@@ -501,7 +503,8 @@ nothing, Use Anyway goes ahead.
 
 Files: `packs/effects/`, `system.json`
 
-- [ ] The Effects compendium has 17 entries, one per status, each with its icon and a link to its rules page
+- [ ] The Effects compendium has 17 entries, one per status (Ethereal isn't in it yet), each with its icon and a link
+      to its rules page
 - [ ] As the GM, drag Fear onto a goblin: the token shows Fear and its Effects tab lists it (no source)
 - [ ] Drag Helpless onto a token: Helpless and its linked Bound both appear
 
@@ -618,3 +621,52 @@ Zones made by hand (GM):
 - [ ] With a Source: copies name that actor, and it isn't affected unless "Affects its source too" is ticked
 - [ ] Changing the behavior's effects while tokens are inside swaps their copies
 - [ ] Foundry's own "Apply Active Effect" behavior still works (its copies have no source)
+
+---
+
+# Vision
+
+## Spirit Vision and Death Vision
+
+Files: `module/canvas/` (spirit-vision.mjs, spirit-vision-shader.mjs, spirit-vision-glsl.mjs, spirit-aura.mjs,
+token.mjs), `module/effects/status-effects.mjs` (Ethereal), `module/data/actor/base-actor.mjs` (`system.spirit`),
+`templates/actor/npc/header.hbs`
+
+Setup: a dark scene (Darkness 1) with walls, a light source in one room, and token vision on. Klein (no darkvision:
+Basic Sight range 0) in the lit room, a goblin next to him, and a "Ghost" NPC token with the Ethereal status in the
+same room. In a dark room nearby, within 30 ft and in line of sight: another goblin and a second Ethereal ghost.
+Klein gets an effect "Spirit Vision" with three changes, all Override: `token.sight.visionMode` = `lotmSpiritVision`,
+`token.detectionModes.lotmSpiritSight.enabled` = `true`, `token.detectionModes.lotmSpiritSight.range` = `30`.
+Test as a player who owns Klein (the GM sees everything).
+
+- [ ] Effect off: the room looks normal; the Ghost can't be seen, even in the light
+- [ ] Effect on: everything Klein can see is repainted in strong colours, with cyan outlines - the whole lit room,
+      even though he has no darkvision. Details (rug pattern, furniture, tokens) can still be made out. The colour
+      edges ripple slowly. The dark room stays dark
+- [ ] Walk Klein out of the light and back, so part of the map is explored but out of sight: those parts show their
+      normal colours under the fog; only what he can see right now is recoloured. The border follows the edge of
+      the light and walls as he moves
+- [ ] No "LotM | Foundry's sprite shader is different" warning in the console (F12) once the effect is on. With that
+      warning the room looks normal: the effect switched itself off rather than break the canvas
+- [ ] Move Klein around the room: the ripples stay where they are on the map; they don't slide along with him
+- [ ] Pan and zoom: the ripples stay attached to the map and keep their size on the map
+- [ ] The nearby goblin has an aura, easy to see over the bright colours: a wide gold glow, almost white at its edge,
+      tinting the token's rim, with a soft dark ring around it. It breathes slowly. Zoom in and out: it stays the same
+      size compared with the token, and stays visible
+- [ ] Damage the goblin to half Health: the aura turns orange-red; near 0: deep red
+- [ ] The Ghost is visible, with a pale blue glow
+- [ ] Spirit Vision isn't darkvision: the goblin and the ghost in the dark room can't be seen. Give Klein a light that
+      reaches them, or Basic Sight range 30 (darkvision): both show up, the ghost with its pale blue glow
+- [ ] With the room lit, move the Ghost more than 30 ft from Klein: it disappears (Spirit Sight's range)
+- [ ] On the Ghost's NPC sheet header, pick a red Spirit Aura: its glow turns red. Clear it: pale blue again
+- [ ] Remove Ethereal from the Ghost: it's an ordinary creature again (seen in the light, gold glow)
+- [ ] Give Klein Blind: the effect and the glows stop
+- [ ] Configure Settings > Core > "Photosensitive Mode" on: the colours stay but stop moving, and auras stop breathing
+- [ ] Change the effect to `lotmDeathVision` / `lotmDeathSight`: the room drains to pale green with drifting mist.
+      The Ghost's aura is bright green; goblins' auras are faint, stronger when hurt. Tick Undead on a goblin's header: it
+      glows bright green. The dark room's creatures still can't be seen
+- [ ] Token Config > Vision lists "Spirit Vision" and "Death Vision"; Detection Modes lists "Spirit Sight" and
+      "Death Sight"
+- [ ] Configure Settings > "Reduce Spirit Vision Effects" on (the world reloads): the room looks normal and nothing
+      glows, but the Ghost is still revealed. Turn it off again
+- [ ] An unlinked goblin token: damaging it changes its glow, not the goblin in the sidebar

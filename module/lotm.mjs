@@ -17,6 +17,10 @@ import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/s
 import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
 import LotmActiveEffectConfig from './apps/effect-config.mjs';
 
+// Import canvas classes.
+import { LordOfTheMysteriesToken } from './canvas/token.mjs';
+import { registerSpiritVision } from './canvas/spirit-vision.mjs';
+
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
@@ -160,6 +164,12 @@ Hooks.once('init', function () {
 
   // The system's statuses replace Foundry's own list (Token HUD, Effects tab).
   registerStatusEffects({ invisibleHidesToken: game.settings.get('lotm', 'invisibleHidesToken') });
+
+  // Spirit Vision and Death Vision: their vision and detection modes, the Ethereal status's effect on ordinary
+  // senses, and the per-player "Reduce Spirit Vision Effects" setting (canvas/spirit-vision.mjs).
+  // The system's Token draws the spirit auras (canvas/token.mjs).
+  registerSpiritVision();
+  CONFIG.Token.objectClass = LordOfTheMysteriesToken;
 
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);
