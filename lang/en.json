@@ -306,6 +306,7 @@
         "ShiftHint": "Tip: Shift-click a roll to skip this window.",
         "Bonus": "Bonus",
         "Penalty": "Penalty",
+        "CheckBonus": "{attribute} check bonus",
       "DC": "DC {dc}",
       "DCResult": "DC {dc}: {result}",
       "Success": "Success",

@@ -639,7 +639,8 @@ Klein has a Spirit Vision ability, which grants the "Activate Spirit Vision" act
 action (in the compendium), add an effect "Spirit Vision", Use: Toggle, Spirituality per round 1, with three
 changes, all Override:
 `token.sight.visionMode` = `lotmSpiritVision`, `token.detectionModes.lotmSpiritSight.enabled` = `true`,
-`token.detectionModes.lotmSpiritSight.range` = `30`. Klein has at least 2 Spirituality.
+`token.detectionModes.lotmSpiritSight.range` = `30`; and a fourth, Add: `system.attributes.ins.checkBonus` = `2`.
+Klein has at least 2 Spirituality.
 Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" below means: its button is On.
 
 - [ ] On Klein's Actions tab, Activate Spirit Vision has a grey "Off" button (no "Spend 1" button). Hover: it says
@@ -648,6 +649,10 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Spirit Vision off: the room looks normal; the Ghost can't be seen, even in the light
 - [ ] Click Off: it turns gold, "On". Klein's Spirituality goes down by 1; chat: "Klein switches on Spirit Vision."
       with "-1 Spirituality". The Effects tab lists Spirit Vision
+- [ ] Spirit Vision on: Klein's Inspiration and maximum Spirituality are the same as before. Click Inspiration on the
+      sheet: the roll window lists "Spirit Vision +2", and the roll adds it. A skill check that uses Inspiration lists
+      it too; switch that check's attribute to another one in the window: the row goes; switch back: it returns.
+      A Strength check doesn't list it. Spirit Vision off: no row
 - [ ] Spirit Vision on: everything Klein can see is repainted in strong colours, with cyan outlines - the whole lit room,
       even though he has no darkvision. Details (rug pattern, furniture, tokens) can still be made out. The colour
       edges ripple slowly. The dark room stays dark

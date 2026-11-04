@@ -3,6 +3,7 @@ import { signedTerm } from "../helpers/skill-check-formula.mjs";
 import { defaultMessageMode, messageModeButtons, postRoll } from "../helpers/message-modes.mjs";
 import { currentSpirituality, spendSpirituality, spiritualityNote } from "../helpers/spirituality.mjs";
 import { statusRollExtras, targetedActors } from "../effects/status-rolls.mjs";
+import { checkBonusRows } from "../helpers/check-bonuses.mjs";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -133,6 +134,25 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     return null;
   }
 
+  /** The attribute this roll uses, for its check bonus (helpers/check-bonuses.mjs). null when it isn't known. */
+  get checkAttributeKey() {
+    return this.attributeKey ?? null;
+  }
+
+  /**
+   * Put the check bonus rows for the roll's attribute in the modifiers list ("Spirit Vision +2"), replacing the
+   * ones for any attribute picked before. Removable for this roll like any other row.
+   */
+  refreshCheckBonuses() {
+    this.modifiers = this.modifiers.filter((m) => !m.checkBonus);
+    const key = this.checkAttributeKey;
+    if (!key) return;
+    for (const row of checkBonusRows(this.actor, key)) {
+      const label = row.label.replace(/[[\]]/g, "");   // it goes into the formula as "+2[Spirit Vision]"
+      this.modifiers.push({ id: foundry.utils.randomID(), label, value: row.value, img: row.img, checkBonus: true });
+    }
+  }
+
   /**
    * Add what the roller's and their targets' statuses bring to this roll (effects/status-rolls.mjs): their
    * modifiers as rows in the list, removable like any other, and their notes. Done once, when the dialog opens.
@@ -152,6 +172,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
       this.modifiers.push({ id: foundry.utils.randomID(), label, value: modifier.value, img: modifier.img, status: true });
     }
     this.statusNotes = notes;
+    this.refreshCheckBonuses();
   }
 
   /** Data for the dialog's own section of the template. @returns {object|Promise<object>} */

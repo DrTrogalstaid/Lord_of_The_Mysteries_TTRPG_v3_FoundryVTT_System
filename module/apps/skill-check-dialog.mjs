@@ -233,6 +233,7 @@ export default class SkillCheckDialog extends LotmRollDialog {
         super._onRender(context, options);
         this.element.querySelector("select[name=attribute]")?.addEventListener("change", (ev) => {
             this.attributeKey = ev.target.value;
+            this.refreshCheckBonuses();   // the new attribute's check bonus, instead of the old one's
             this.render();
         });
     }
