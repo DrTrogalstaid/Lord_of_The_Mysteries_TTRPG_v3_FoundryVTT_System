@@ -18,12 +18,21 @@
  *     senses (basic sight, light perception, see / sense invisibility, tremor) can't see an Ethereal token, unless
  *     the one looking is Ethereal too. "See All" and "Sense All" still see everything.
  *   Auras: while a player looks through a token with Spirit or Death Vision, creatures in range glow, that token too
- *     (colours in spirit-aura.mjs, drawn by LordOfTheMysteriesToken in token.mjs).
+ *     (colours in spirit-aura.mjs, drawn by LordOfTheMysteriesToken in token.mjs). A spirit sense on its own (Death
+ *     Sight without Spirit Vision) gives auras only to the creatures it alone reveals: spirits.
  *
- * An ability turns it on with an Active Effect on the actor (all three changes Override):
- *   token.sight.visionMode                         lotmSpiritVision   (or lotmDeathVision)
- *   token.detectionModes.lotmSpiritSight.enabled   true               (or lotmDeathSight)
- *   token.detectionModes.lotmSpiritSight.range     its range in the scene's units, e.g. 30
+ * Abilities turn these on with Active Effects on the actor (all changes Override):
+ *   Spirit Vision - the effect on the "Activate Spirit Vision" action, Use: Toggle (effects/toggle-effects.mjs), so
+ *   using the action switches it on and off. Every pathway shares it:
+ *     token.sight.visionMode                         lotmSpiritVision
+ *     token.detectionModes.lotmSpiritSight.enabled   true
+ *     token.detectionModes.lotmSpiritSight.range     its range in the scene's units, e.g. 30
+ *   Death Vision - a passive effect of the Death pathway, always on:
+ *     token.detectionModes.lotmDeathSight.enabled    true
+ *     token.detectionModes.lotmDeathSight.range      e.g. 30
+ *   With Death Sight on, a token always sees Ethereal and undead creatures (where there's light to see by), and
+ *   when it uses Spirit Vision it gets the Death Vision look instead (visionModeFor). lotmDeathVision can also be
+ *   set directly, e.g. in Token Config for testing.
  *
  * The player setting "Reduce Spirit Vision Effects" (saved per computer) turns off the colours and auras for
  * slower computers. Ethereal creatures are still revealed. Changing it reloads Foundry.
@@ -32,7 +41,7 @@
  */
 
 import { SpiritVisionShader, DeathVisionShader, SpiritAuraFilter } from "./spirit-vision-shader.mjs";
-import { auraGlowColor, isWithinSpiritRange, VISION_KINDS } from "./spirit-aura.mjs";
+import { auraGlowColor, auraReach, isWithinSpiritRange, VISION_KINDS } from "./spirit-aura.mjs";
 
 const { VisionMode, DetectionMode } = foundry.canvas.perception;
 const { Token } = foundry.canvas.placeables;
@@ -45,10 +54,10 @@ export const DEATH_VISION = "lotmDeathVision";
 export const SPIRIT_SIGHT = "lotmSpiritSight";
 export const DEATH_SIGHT = "lotmDeathSight";
 
-/** For each vision mode: its detection mode (whose range is also how far auras show) and its aura colours. */
+/** For each vision mode: the spirit senses whose range is how far auras show, and the aura colours to use. */
 const SENSES = {
-  [SPIRIT_VISION]: { sight: SPIRIT_SIGHT, kind: VISION_KINDS.SPIRIT },
-  [DEATH_VISION]: { sight: DEATH_SIGHT, kind: VISION_KINDS.DEATH },
+  [SPIRIT_VISION]: { sights: [SPIRIT_SIGHT], kind: VISION_KINDS.SPIRIT },
+  [DEATH_VISION]: { sights: [DEATH_SIGHT, SPIRIT_SIGHT], kind: VISION_KINDS.DEATH },
 };
 
 /** Foundry's ordinary senses, which can't see Ethereal tokens. */
@@ -93,13 +102,23 @@ export function isUndead(actor) {
 
 
 /** The system's aura glows are tagged, so the token can tell them apart from other glows (See Invisibility). */
-export function markAsSpiritFilter(filter) {
+export function markAsSpiritFilter(filter, kind = null) {
   filter.isLotmSpiritAura = true;
+  filter.lotmAuraKind = kind;   // the senses' own glows say which aura colours they stand for ("spirit" / "death")
   return filter;
 }
 
 export function isSpiritFilter(filter) {
   return filter?.isLotmSpiritAura === true;
+}
+
+/**
+ * Which aura colours a spirit sense's glow stands for: "spirit" (Spirit Sight), "death" (Death Sight), or null.
+ * @param {PIXI.Filter|null} filter   A token's detection filter, as Foundry chose it.
+ * @returns {string|null}
+ */
+export function spiritFilterKind(filter) {
+  return isSpiritFilter(filter) ? (filter.lotmAuraKind ?? null) : null;
 }
 
 
@@ -128,9 +147,9 @@ function canSeeAuraOf(visionSource, token) {
   const viewer = visionSource.object;
   if (!visionSource.active || !sense || !viewer) return false;   // not using Spirit / Death Vision
 
-  // As far as the Spirit / Death Sight range, or the token's sight range when that sense isn't on.
-  const sightMode = viewer.document.detectionModes?.[sense.sight];
-  const range = sightMode?.enabled ? sightMode.range : viewer.document.sight.range;
+  // As far as its farthest spirit sense reaches (auraReach in spirit-aura.mjs).
+  const detectionModes = viewer.document.detectionModes ?? {};
+  const range = auraReach(sense.sights.map((id) => detectionModes[id]), viewer.document.sight.range);
   return isWithinSpiritRange({
     viewer: { x: visionSource.x ?? visionSource.data?.x ?? 0, y: visionSource.y ?? visionSource.data?.y ?? 0 },
     target: { x: token.center.x, y: token.center.y, size: Math.min(token.w, token.h) },
@@ -162,6 +181,28 @@ export function spiritAuraColor(token, kind) {
 /* -------------------------------------------- */
 /*  Vision modes                                 */
 /* -------------------------------------------- */
+
+/**
+ * Does this token have Death Sight on (the Death pathway's passive Death Vision)?
+ * @param {TokenDocument} tokenDocument
+ * @returns {boolean}
+ */
+export function hasDeathSight(tokenDocument) {
+  return tokenDocument?.detectionModes?.[DEATH_SIGHT]?.enabled === true;
+}
+
+
+/**
+ * The vision mode a token really uses. Spirit Vision looks like Death Vision for a token with Death Sight, so one
+ * shared Spirit Vision ability works for every pathway. Used by LordOfTheMysteriesToken (token.mjs).
+ * @param {TokenDocument} tokenDocument
+ * @param {string} visionMode   The mode its sight is set to (token.sight.visionMode).
+ * @returns {string}
+ */
+export function visionModeFor(tokenDocument, visionMode) {
+  if (visionMode === SPIRIT_VISION && hasDeathSight(tokenDocument)) return DEATH_VISION;
+  return visionMode;
+}
 
 /**
  * A Spirit / Death vision mode. They only differ in id, label and shader.
@@ -206,10 +247,15 @@ class SpiritSenseDetectionMode extends DetectionMode {
   /** [r, g, b, strength] of the aura on tokens only this sense can see (token.mjs swaps in the creature's own). */
   static GLOW_COLOR = [1, 1, 1, 1];
 
+  /** Which aura colours this sense uses (VISION_KINDS), for creatures only it can see. */
+  static AURA_KIND = VISION_KINDS.SPIRIT;
+
   static getDetectionFilter() {
     if (effectsAreReduced) return undefined; // still revealed, just without the glow
     // Each sense makes its own glow once. (hasOwn: Death Sight mustn't reuse Spirit Sight's, or the other way round.)
-    if (!Object.hasOwn(this, "glow")) this.glow = markAsSpiritFilter(SpiritAuraFilter.create({ auraColor: this.GLOW_COLOR }));
+    if (!Object.hasOwn(this, "glow")) {
+      this.glow = markAsSpiritFilter(SpiritAuraFilter.create({ auraColor: this.GLOW_COLOR }), this.AURA_KIND);
+    }
     return this.glow;
   }
 
@@ -254,9 +300,13 @@ class SpiritSightDetectionMode extends SpiritSenseDetectionMode {
 }
 
 
-/** Death Sight: Ethereal and undead creatures. The living still show up through ordinary sight. */
+/**
+ * Death Sight: Ethereal and undead creatures. The living still show up through ordinary sight.
+ * The Death pathway has it on all the time (a passive effect); it also turns Spirit Vision into Death Vision.
+ */
 class DeathSightDetectionMode extends SpiritSenseDetectionMode {
   static GLOW_COLOR = [0.55, 1, 0.71, 1];
+  static AURA_KIND = VISION_KINDS.DEATH;
 
   sees(target) {
     return isEthereal(target) || isUndead(target.actor);

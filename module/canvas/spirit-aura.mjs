@@ -103,3 +103,18 @@ export function isWithinSpiritRange({ viewer, target, range, distancePixels }) {
   const reach = (Number(range) * distancePixels) + (target.size / 2);
   return Math.hypot(target.x - viewer.x, target.y - viewer.y) <= reach;
 }
+
+
+/**
+ * How far a token's auras reach: as far as its farthest spirit sense that's on (Spirit Sight, Death Sight), or its
+ * sight range when none of them is.
+ * @param {({enabled: boolean, range: number|null}|undefined)[]} senses   The token's detection modes to consider.
+ * @param {number|null} sightRange   The token's sight range (token.sight.range).
+ * @returns {number|null|undefined}  In the scene's units; null (or undefined) = no limit.
+ */
+export function auraReach(senses, sightRange) {
+  const active = senses.filter((sense) => sense?.enabled);
+  if (!active.length) return sightRange;
+  if (active.some((sense) => sense.range === null || sense.range === undefined)) return null;
+  return Math.max(...active.map((sense) => Number(sense.range) || 0));
+}

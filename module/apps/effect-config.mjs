@@ -79,6 +79,8 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
       use,
       uses,
       isArea: use === "area" || use === "zone",
+      isToggle: use === "toggle",
+      upkeep: source.upkeep ?? 0,
       shape: source.application?.shape ?? "circle",
       shapes: Object.fromEntries(Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.effectAreaShapes).map(([key, label]) => [key, localize(label)])),
       size: source.application?.size ?? 1,
@@ -95,16 +97,16 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
   }
 
 
-  /** Show Shape and Size only while Use is Area or Zone. @override */
+  /** Show Shape and Size only while Use is Area or Zone, and the per-round cost only while it's Toggle. @override */
   async _onRender(context, options) {
     await super._onRender(context, options);
     const select = this.element.querySelector("select[name=lotmUse]");
     const area = this.element.querySelector("[data-lotm-area-fields]");
-    if (select && area) {
-      select.addEventListener("change", () => {
-        area.hidden = !["area", "zone"].includes(select.value);
-      });
-    }
+    const toggle = this.element.querySelector("[data-lotm-toggle-fields]");
+    select?.addEventListener("change", () => {
+      if (area) area.hidden = !["area", "zone"].includes(select.value);
+      if (toggle) toggle.hidden = select.value !== "toggle";
+    });
   }
 
   /* -------------------------------------------- */

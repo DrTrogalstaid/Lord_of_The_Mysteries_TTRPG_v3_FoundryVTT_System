@@ -635,12 +635,20 @@ token.mjs), `module/effects/status-effects.mjs` (Ethereal), `module/data/actor/b
 Setup: a dark scene (Darkness 1) with walls, a light source in one room, and token vision on. Klein (no darkvision:
 Basic Sight range 0) in the lit room, a goblin next to him, and a "Ghost" NPC token with the Ethereal status in the
 same room. In a dark room nearby, within 30 ft and in line of sight: another goblin and a second Ethereal ghost.
-Klein gets an effect "Spirit Vision" with three changes, all Override: `token.sight.visionMode` = `lotmSpiritVision`,
-`token.detectionModes.lotmSpiritSight.enabled` = `true`, `token.detectionModes.lotmSpiritSight.range` = `30`.
-Test as a player who owns Klein (the GM sees everything).
+Klein has a Spirit Vision ability, which grants the "Activate Spirit Vision" action (Spirituality Cost 1). On that
+action (in the compendium), add an effect "Spirit Vision", Use: Toggle, Spirituality per round 1, with three
+changes, all Override:
+`token.sight.visionMode` = `lotmSpiritVision`, `token.detectionModes.lotmSpiritSight.enabled` = `true`,
+`token.detectionModes.lotmSpiritSight.range` = `30`. Klein has at least 2 Spirituality.
+Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" below means: its button is On.
 
-- [ ] Effect off: the room looks normal; the Ghost can't be seen, even in the light
-- [ ] Effect on: everything Klein can see is repainted in strong colours, with cyan outlines - the whole lit room,
+- [ ] On Klein's Actions tab, Activate Spirit Vision has a grey "Off" button (no "Spend 1" button). Hover: it says
+      it's off, switching on costs 1 Spirituality, and keeping it on costs 1 per round in combat
+- [ ] The effect's LotM tab shows "Spirituality per round (while on)" only while Use is Toggle
+- [ ] Spirit Vision off: the room looks normal; the Ghost can't be seen, even in the light
+- [ ] Click Off: it turns gold, "On". Klein's Spirituality goes down by 1; chat: "Klein switches on Spirit Vision."
+      with "-1 Spirituality". The Effects tab lists Spirit Vision
+- [ ] Spirit Vision on: everything Klein can see is repainted in strong colours, with cyan outlines - the whole lit room,
       even though he has no darkvision. Details (rug pattern, furniture, tokens) can still be made out. The colour
       edges ripple slowly. The dark room stays dark
 - [ ] Walk Klein out of the light and back, so part of the map is explored but out of sight: those parts show their
@@ -649,11 +657,14 @@ Test as a player who owns Klein (the GM sees everything).
 - [ ] No "LotM | Foundry's sprite shader is different" warning in the console (F12) once the effect is on. With that
       warning the room looks normal: the effect switched itself off rather than break the canvas
 - [ ] Move Klein around the room: the ripples stay where they are on the map; they don't slide along with him
+- [ ] Token art (faces, armour, frames) is recoloured but stays crisp: it doesn't ripple and has only faint outlines.
+      Move a goblin: the calm area moves with it, and the floor it left ripples again
 - [ ] Pan and zoom: the ripples stay attached to the map and keep their size on the map
 - [ ] The nearby goblin has an aura, easy to see over the bright colours: a wide gold glow, almost white at its edge,
       tinting the token's rim, with a soft dark ring around it. It breathes slowly. Zoom in and out: it stays the same
       size compared with the token, and stays visible
 - [ ] Damage the goblin to half Health: the aura turns orange-red; near 0: deep red
+- [ ] Klein's own token has an aura too, in his own colour (his Health, or his Spirit Aura if set)
 - [ ] The Ghost is visible, with a pale blue glow
 - [ ] Spirit Vision isn't darkvision: the goblin and the ghost in the dark room can't be seen. Give Klein a light that
       reaches them, or Basic Sight range 30 (darkvision): both show up, the ghost with its pale blue glow
@@ -662,9 +673,27 @@ Test as a player who owns Klein (the GM sees everything).
 - [ ] Remove Ethereal from the Ghost: it's an ordinary creature again (seen in the light, gold glow)
 - [ ] Give Klein Blind: the effect and the glows stop
 - [ ] Configure Settings > Core > "Photosensitive Mode" on: the colours stay but stop moving, and auras stop breathing
-- [ ] Change the effect to `lotmDeathVision` / `lotmDeathSight`: the room drains to pale green with drifting mist.
-      The Ghost's aura is bright green; goblins' auras are faint, stronger when hurt. Tick Undead on a goblin's header: it
-      glows bright green. The dark room's creatures still can't be seen
+- [ ] Click On: it goes back to Off, no Spirituality spent; chat: "Klein switches off Spirit Vision." The room looks
+      normal again and the Ghost disappears. Switch it on again, then delete Spirit Vision from the Effects tab: the
+      button shows Off
+- [ ] With 0 Spirituality, click Off: a warning, and it stays off
+- [ ] Combat, with Klein and a goblin, Klein on 3 Spirituality: switch Spirit Vision on (3 -> 2). Next Turn until
+      Klein's turn starts: chat "Klein spends 1 Spirituality on Spirit Vision." (2 -> 1). The goblin's turns cost
+      Klein nothing. Next round, Klein's turn: 1 -> 0. The round after: chat "Klein doesn't have the Spirituality
+      to keep up Spirit Vision, so it ends."; the button shows Off and the room looks normal. No pop-up for the GM
+- [ ] Out of combat, Spirit Vision stays on without costing anything per round
+- [ ] Give Activate Spirit Vision the Speech trait for a moment, and Klein Silence: switching on shows the usual
+      "Use Anyway" warning; switching off never asks. Undo both
+- [ ] Death pathway: switch Spirit Vision off and give Klein a second, always-on effect "Death Vision" with
+      two changes, both Override: `token.detectionModes.lotmDeathSight.enabled` = `true`,
+      `token.detectionModes.lotmDeathSight.range` = `30`. The room looks normal, and the Ghost is visible all the
+      time (in the light), with a bright green aura. The goblins look normal, with no aura. The dark room's ghost
+      still can't be seen
+- [ ] Switch Spirit Vision back on (the same action and effect): the room drains to pale green with
+      drifting mist instead of the Spirit Vision colours. The Ghost's aura is bright green; goblins' auras are faint,
+      stronger when hurt. Tick Undead on a goblin's header: its aura is bright green. Switch Spirit Vision off: the
+      normal look again; the Ghost keeps its green aura, the goblins lose theirs
+- [ ] Turn the "Death Vision" effect off while Spirit Vision is on: the Spirit Vision colours come back
 - [ ] Token Config > Vision lists "Spirit Vision" and "Death Vision"; Detection Modes lists "Spirit Sight" and
       "Death Sight"
 - [ ] Configure Settings > "Reduce Spirit Vision Effects" on (the world reloads): the room looks normal and nothing

@@ -1,5 +1,5 @@
 {{!--
-  The roll buttons of an action or spell row: [d20 Pistol +5] [Damage], the gun's buttons, "Spend N", the gun's rounds.
+  The roll buttons of an action or spell row: [d20 Pistol +5] [Damage], ammo buttons, "Spend N", On / Off, the gun's rounds.
   The context is the row's entry (buildEntry / #addActionButtons in base-actor-sheet.mjs). Renders nothing when
   the entry has nothing to roll (hasRolls). Used by section-entry.hbs and drop-entry.hbs:
     {{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}
@@ -22,15 +22,13 @@
       {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
     </button>
   {{/if}}
-  {{!-- A Shoot row's gun buttons (#onUseAmmo in base-actor-sheet.mjs): Fire (only when there's no attack roll), then the
-        gun's handling, Reload / Chamber / Rotate / Unload (helpers/gun-handling.mjs). Hover: its Action Type.
-        "idle" = nothing to do right now (full, empty...): faded, but it can still be clicked. --}}
+  {{!-- Reload / Chamber / Rotate / Unload (#onUseAmmo in base-actor-sheet.mjs -> useAmmoAction in helpers/firearms.mjs).
+        A reload action gets two: Reload and Unload. --}}
   {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
   {{#each ammoButtons as |button|}}
-    <button type="button" class="drop-entry-roll-btn ammo{{#if button.idle}} idle{{/if}}" data-action="useAmmo"
-            data-uuid="{{../uuid}}" data-gun-id="{{button.gunId}}" data-ammo-use="{{button.use}}"
-            {{#if button.tooltip}}data-tooltip="{{button.tooltip}}"{{/if}}>
-      <i class="fa-solid {{#if (eq button.use 'reload')}}fa-box-open{{else if (eq button.use 'chamber')}}fa-circle-dot{{else if (eq button.use 'rotate')}}fa-rotate{{else if (eq button.use 'unload')}}fa-eject{{else}}fa-gun{{/if}}"></i>
+    <button type="button" class="drop-entry-roll-btn ammo" data-action="useAmmo" data-uuid="{{../uuid}}"
+            data-gun-id="{{../gunId}}" data-ammo-use="{{button.use}}"{{#if button.disabled}} disabled{{/if}}>
+      <i class="fa-solid {{#if (eq button.use 'unload')}}fa-eject{{else if (eq button.use 'rotate')}}fa-rotate{{else}}fa-gun{{/if}}"></i>
       <span class="drop-entry-roll-label">{{button.label}}</span>
     </button>
   {{/each}}
@@ -41,6 +39,14 @@
             data-tooltip="LORD_OF_THE_MYSTERIES.Spirituality.UseTooltip">
       <i class="fa-solid fa-sparkles"></i>
       <span class="drop-entry-roll-label">{{spiritButton.label}}</span>
+    </button>
+  {{/if}}
+  {{!-- On / Off: an action with a Toggle effect, like Activate Spirit Vision (#onToggleAction in base-actor-sheet.mjs). --}}
+  {{#if toggle}}
+    <button type="button" class="drop-entry-roll-btn toggle{{#if toggle.isOn}} on{{/if}}" data-action="toggleAction"
+            data-uuid="{{uuid}}" data-tooltip="{{toggle.tooltip}}" aria-pressed="{{#if toggle.isOn}}true{{else}}false{{/if}}">
+      <i class="fa-solid {{#if toggle.isOn}}fa-toggle-on{{else}}fa-toggle-off{{/if}}"></i>
+      <span class="drop-entry-roll-label">{{toggle.label}}</span>
     </button>
   {{/if}}
   {{#if gunStatus}}

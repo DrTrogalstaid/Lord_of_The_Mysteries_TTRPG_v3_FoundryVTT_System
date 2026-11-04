@@ -9,6 +9,8 @@
  *   area      the user places a shape on the scene; everyone inside gets a copy, once, after a confirm list
  *             (effect-areas.mjs). Source: the caster.
  *   zone      a shape stays on the scene; tokens have a copy while inside it (effect-areas.mjs). Source: the caster.
+ *   toggle    switched on and off: using it puts a copy on the caster, using it again removes it
+ *             (toggle-effects.mjs). For abilities that are kept up, like Spirit Vision.
  *
  * Where it's handed out from:
  *   - the Apply buttons on an action's or spell's attack card in chat (effectButtonsHTML / applyEffectFromMessage)
@@ -40,7 +42,7 @@ const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
 /**
  * How an effect is used: "passive" (an Item lends it to its owner), or how it's handed out
- * ("targets", "self", "area", "zone").
+ * ("targets", "self", "area", "zone", "toggle").
  * @param {ActiveEffect} effect
  * @returns {string}
  */
@@ -200,6 +202,12 @@ export async function applyItemEffect(effect, { caster = null } = {}) {
       return createZone(effect, { caster });
     }
 
+    // On the caster until used again (loaded when needed, like the shapes).
+    case "toggle": {
+      const { toggleEffect } = await import("./toggle-effects.mjs");
+      return toggleEffect(effect, caster);
+    }
+
     default:
       return null;
   }
@@ -319,7 +327,8 @@ export function effectButtonsHTML(item) {
   const effects = (item?.effects?.contents ?? []).filter((effect) => effectUse(effect) !== "passive");
   if (!effects.length) return "";
   const buttons = effects.map((effect) => {
-    const label = format("LORD_OF_THE_MYSTERIES.Effects.Apply.Button", { name: escape(effect.name) });
+    const labelKey = effectUse(effect) === "toggle" ? "LORD_OF_THE_MYSTERIES.Effects.Toggle.Button" : "LORD_OF_THE_MYSTERIES.Effects.Apply.Button";
+    const label = format(labelKey, { name: escape(effect.name) });
     const hint = escape(useLabel(effect));
     return `<button type="button" class="lotm-apply-effect" data-lotm-apply-effect="${effect.id}" data-tooltip="${hint}">`
       + `<img src="${escape(effect.img)}" alt="" width="16" height="16"> ${label}</button>`;

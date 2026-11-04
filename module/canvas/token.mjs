@@ -15,8 +15,10 @@ import {
   areSpiritEffectsReduced,
   isSpiritFilter,
   markAsSpiritFilter,
+  spiritFilterKind,
   spiritAuraColor,
   viewerSpiritVision,
+  visionModeFor,
 } from "./spirit-vision.mjs";
 import { SpiritAuraFilter } from "./spirit-vision-shader.mjs";
 
@@ -41,14 +43,40 @@ export class LordOfTheMysteriesToken extends foundry.canvas.placeables.Token {
     // Another sense chose a glow (See Invisibility): keep it.
     if (this.detectionFilter && !isSpiritFilter(this.detectionFilter)) return;
 
-    const kind = viewerSpiritVision(this);
+    // Looking with Spirit / Death Vision: every creature in range has an aura. Otherwise, only creatures a spirit
+    // sense alone reveals: a ghost seen with the Death pathway's Death Sight glows in Death Vision colours.
+    const kind = viewerSpiritVision(this) ?? spiritFilterKind(this.detectionFilter);
     if (!kind) return;
     const color = spiritAuraColor(this, kind);
     if (!color) return;
 
-    this.#auraFilter ??= markAsSpiritFilter(SpiritAuraFilter.create({ auraColor: color }));
+    this.#auraFilter ??= markAsSpiritFilter(SpiritAuraFilter.create({ auraColor: color }), kind);
+    this.#auraFilter.lotmAuraKind = kind;
     this.#auraFilter.uniforms.auraColor = color;
     this.detectionFilter = this.#auraFilter;
+  }
+
+
+  /**
+   * The data Foundry builds this token's vision from. Spirit Vision becomes Death Vision for a token with Death
+   * Sight (visionModeFor in spirit-vision.mjs).
+   * @override
+   */
+  _getVisionSourceData() {
+    const data = super._getVisionSourceData();
+    data.visionMode = visionModeFor(this.document, data.visionMode);
+    return data;
+  }
+
+
+  /**
+   * Turning Death Sight on or off can change the look of Spirit Vision (visionModeFor), so rebuild this token's
+   * vision when its detection modes change.
+   * @override
+   */
+  _onUpdate(changed, options, userId) {
+    super._onUpdate(changed, options, userId);
+    if (changed?.detectionModes && this.vision) this.initializeVisionSource();
   }
 
 

@@ -202,6 +202,7 @@ LORD_OF_THE_MYSTERIES.effectApplicationModes = {
     self: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.self',
     area: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.area',
     zone: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.zone',
+    toggle: 'LORD_OF_THE_MYSTERIES.Effects.Application.Modes.toggle',
 };
 
 /** The shape placed on the scene for an "area" or "zone" effect (system.application.shape). */

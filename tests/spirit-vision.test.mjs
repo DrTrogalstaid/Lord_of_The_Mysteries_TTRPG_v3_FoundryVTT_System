@@ -46,7 +46,7 @@ class FakeBasicSight extends FakeDetectionMode {}
 
 /** A token on the canvas: position, size, statuses, actor, and its own senses. */
 class FakeToken {
-  constructor({ x = 0, y = 0, size = 100, actor = null, statuses = [], sightRange = 0, detectionModes = {} } = {}) {
+  constructor({ x = 0, y = 0, size = 100, actor = null, statuses = [], sightRange = 0, detectionModes = {}, visionMode = "basic" } = {}) {
     this.center = { x, y };
     this.w = size;
     this.h = size;
@@ -56,12 +56,19 @@ class FakeToken {
     this.statuses = new Set(statuses);
     this.document = {
       hasStatusEffect: (id) => this.statuses.has(id),
-      sight: { range: sightRange },
+      sight: { range: sightRange, visionMode },
       detectionModes,
     };
     this.renderFlags = { set: (flags) => (this.flagsSet = flags) };
   }
   _refreshVisibility() {}
+  _onUpdate() {}
+  initializeVisionSource() {
+    this.visionInitialized = (this.visionInitialized ?? 0) + 1;
+  }
+  _getVisionSourceData() {
+    return { x: this.center.x, y: this.center.y, visionMode: this.document.sight.visionMode };
+  }
   _renderDetectionFilter() {
     this.drewDetectionFilter = true;
   }
@@ -214,6 +221,15 @@ test("an unknown vision has no aura", () => {
   assert.equal(aura.auraGlowColor({ vision: "basic" }), null);
 });
 
+test("aura reach: the farthest spirit sense that's on; no limit wins; sight range when none is on", () => {
+  const on = (range) => ({ enabled: true, range });
+  const off = (range) => ({ enabled: false, range });
+  assert.equal(aura.auraReach([on(10), on(30)], 5), 30);
+  assert.equal(aura.auraReach([on(10), off(60)], 5), 10, "a sense that's off doesn't count");
+  assert.equal(aura.auraReach([on(10), on(null)], 5), null);
+  assert.equal(aura.auraReach([undefined, off(60)], 5), 5);
+});
+
 test("range reaches the creature's edge; no range means no limit", () => {
   // 100 px grid of 5 ft spaces: 20 px per foot. A 100 px token: 50 px from centre to edge.
   const near = { viewer: { x: 0, y: 0 }, target: { x: 650, y: 0, size: 100 }, distancePixels: 20 };
@@ -230,7 +246,8 @@ test("range reaches the creature's edge; no range means no limit", () => {
 test("shader code: every preset setting and per-frame value is a uniform; the vertex shader gives both positions", () => {
   const keys = Object.keys(glsl.SPIRIT_VISION_UNIFORMS);
   assert.deepEqual(Object.keys(glsl.DEATH_VISION_UNIFORMS), keys, "both presets have the same settings");
-  for (const key of [...keys, "lotmTime", "lotmGridUv", "lotmScreenToGrid", "lotmVisionMask", "sampler", "tintAlpha"]) {
+  for (const key of [...keys, "lotmTime", "lotmGridUv", "lotmScreenToGrid", "lotmVisionMask", "lotmTokens", "lotmTokenCount",
+    "sampler", "tintAlpha"]) {
     assert.match(glsl.SPIRIT_VISION_FRAGMENT, new RegExp(`uniform\\s+\\w+\\s+${key}\\b`), key);
   }
   for (const varying of ["vUvs", "vLotmScreen"]) {
@@ -263,6 +280,21 @@ test("camera: a spot on screen turns back into the right spot on the map", () =>
   const [xScale, yScale, xOffset, yOffset] = lotmScreenToGrid;
   const onMap = [screenSpot[0] * xScale + xOffset, screenSpot[1] * yScale + yOffset];
   assert.deepEqual(onMap.map((n) => Math.round(n * 1e9) / 1e9), [12, 9], "map point (1200, 900) is grid square (12, 9)");
+});
+
+test("token areas: grid squares, the ones nearest the middle of the screen first, at most MAX_TOKENS", () => {
+  const near = { x: 150, y: 250, width: 100, height: 200 };
+  const far = { x: 5000, y: 0, width: 100, height: 100 };
+  const { lotmTokens, lotmTokenCount } = glsl.tokenAreaUniforms([far, near], { gridSize: 100, focus: { x: 0, y: 0 } });
+  assert.equal(lotmTokenCount, 2);
+  assert.equal(lotmTokens.length, glsl.MAX_TOKENS * 4, "always the full size the shader expects");
+  assert.deepEqual([...lotmTokens.slice(0, 8)], [1.5, 2.5, 0.5, 1, 50, 0, 0.5, 0.5], "nearest first; centre and half size");
+
+  const crowd = Array.from({ length: glsl.MAX_TOKENS + 5 }, (_, i) => ({ x: i * 100, y: 0, width: 100, height: 100 }));
+  const many = glsl.tokenAreaUniforms(crowd, { gridSize: 100, focus: { x: 0, y: 0 } });
+  assert.equal(many.lotmTokenCount, glsl.MAX_TOKENS);
+  assert.equal(many.lotmTokens.at(-4), glsl.MAX_TOKENS - 1, "the farthest ones are left out");
+  assert.match(glsl.SPIRIT_VISION_FRAGMENT, new RegExp(`#define LOTM_MAX_TOKENS ${glsl.MAX_TOKENS}\\b`));
 });
 
 /* -------------------------------------------- */
@@ -341,6 +373,14 @@ test("each frame: picture, vision mask, clock and camera; only the camera (not t
   delete canvas.masks;
   shader._preRender(picture, {});
   assert.equal(shader.uniforms.lotmVisionMask, "plain white", "no vision mask: recolour everything rather than nothing");
+  assert.equal(shader.uniforms.lotmTokenCount, 0, "no tokens layer: no tokens");
+
+  // Tokens: only the ones this player can see, with their art's size (scaled art is bigger than its space).
+  const placed = (x, visible, scaleX = 1) => ({ visible, center: { x, y: 0 }, w: 100, h: 100, document: { texture: { scaleX, scaleY: 1 } } });
+  canvas.tokens = { placeables: [placed(1100, true, -1.5), placed(1200, false)] };
+  shader._preRender(picture, {});
+  assert.equal(shader.uniforms.lotmTokenCount, 1, "the hidden one is left out");
+  assert.deepEqual([...shader.uniforms.lotmTokens.slice(0, 4)], [11, 0, 0.75, 0.5], "mirrored art (-1.5) still counts as 1.5 wide");
 });
 
 /* -------------------------------------------- */
@@ -456,10 +496,13 @@ test("aura hooks: actor and token changes redraw auras", () => {
 /* -------------------------------------------- */
 
 test("aura size: a share of the token's size on screen, never too thin or too wide", () => {
-  assert.equal(glsl.auraWidthOnScreen(100, 1), 100 * glsl.AURA_SIZE.shareOfToken);
-  assert.equal(glsl.auraWidthOnScreen(100, 0.5), 50 * glsl.AURA_SIZE.shareOfToken, "zoomed out: smaller on screen");
-  assert.equal(glsl.auraWidthOnScreen(100, 0.01), glsl.AURA_SIZE.minPixels);
-  assert.equal(glsl.auraWidthOnScreen(1000, 3), glsl.AURA_SIZE.maxPixels);
+  const { shareOfToken, minPixels, maxPixels } = glsl.AURA_SIZE;
+  // A token size that lands between the limits, whatever the settings are tuned to.
+  const size = (minPixels + maxPixels) / 2 / shareOfToken;
+  assert.equal(glsl.auraWidthOnScreen(size, 1), size * shareOfToken);
+  assert.ok(glsl.auraWidthOnScreen(size, 0.8) < glsl.auraWidthOnScreen(size, 1), "zoomed out: smaller on screen");
+  assert.equal(glsl.auraWidthOnScreen(size, 0.0001), minPixels);
+  assert.equal(glsl.auraWidthOnScreen(size, 1000), maxPixels);
 });
 
 test("aura filter: its own shader code; every setting is a uniform; PIXI's inputs are where PIXI expects them", () => {
@@ -521,6 +564,21 @@ test("token aura: a creature in range glows with its aura colour", () => {
   assert.deepEqual(token.detectionFilter.uniforms.auraColor, [1, 0, 0, 1]);
 });
 
+test("token aura: the token being looked through glows too, in its own colour", () => {
+  const sense = { enabled: true, range: 30 };
+  const klein = new LordOfTheMysteriesToken({
+    x: 0, y: 0, detectionModes: { lotmSpiritSight: sense },
+    actor: { system: { resources: { hp: HP(10) }, spirit: { auraColor: "#00ff00" } } },
+  });
+  globalThis.canvas = {
+    dimensions: { distancePixels: 20 },
+    effects: { visionSources: [{ active: true, visionMode: { id: "lotmSpiritVision" }, object: klein, x: 0, y: 0 }] },
+  };
+  klein._refreshVisibility();
+  assert.ok(spirit.isSpiritFilter(klein.detectionFilter));
+  assert.deepEqual(klein.detectionFilter.uniforms.auraColor, [0, 1, 0, 1]);
+});
+
 test("token aura: out of range, ordinary vision, or no actor: no aura", () => {
   const far = scene({ sightRange: 10 }).token;          // 200 px + 50 px to its edge < 400 px
   far._refreshVisibility();
@@ -568,6 +626,62 @@ test("token aura: in Death Vision a dying creature glows pale green", () => {
   const { token } = scene({ visionMode: "lotmDeathVision", creature: { actor: { system: { resources: { hp: HP(0) } } } } });
   token._refreshVisibility();
   assert.deepEqual(round(token.detectionFilter.uniforms.auraColor), round([...aura.hexToRgb(aura.AURA_COLORS.death), 1]));
+});
+
+/* -------------------------------------------- */
+/*  The Death pathway: Death Sight always on     */
+/* -------------------------------------------- */
+
+const deathSight = (range = 30) => ({ lotmDeathSight: { enabled: true, range } });
+
+test("Death pathway: with Death Sight on, using Spirit Vision gives the Death Vision look", () => {
+  assert.equal(spirit.visionModeFor({ detectionModes: deathSight() }, "lotmSpiritVision"), "lotmDeathVision");
+  assert.equal(spirit.visionModeFor({ detectionModes: {} }, "lotmSpiritVision"), "lotmSpiritVision", "other pathways");
+  assert.equal(spirit.visionModeFor({ detectionModes: { lotmDeathSight: { enabled: false, range: 30 } } }, "lotmSpiritVision"),
+    "lotmSpiritVision", "Death Sight turned off");
+  assert.equal(spirit.visionModeFor({ detectionModes: deathSight() }, "basic"), "basic", "not using Spirit Vision: normal look");
+
+  const corpseCollector = new LordOfTheMysteriesToken({ visionMode: "lotmSpiritVision", detectionModes: deathSight() });
+  assert.equal(corpseCollector._getVisionSourceData().visionMode, "lotmDeathVision", "the token's vision uses it");
+  const seer = new LordOfTheMysteriesToken({ visionMode: "lotmSpiritVision" });
+  assert.equal(seer._getVisionSourceData().visionMode, "lotmSpiritVision");
+
+  // Death Sight switched on or off: the token's vision is rebuilt, so the look changes straight away.
+  corpseCollector.vision = {};
+  corpseCollector._onUpdate({ detectionModes: { lotmDeathSight: { enabled: false } } }, {}, "user");
+  assert.equal(corpseCollector.visionInitialized, 1);
+  corpseCollector._onUpdate({ name: "Renamed" }, {}, "user");
+  assert.equal(corpseCollector.visionInitialized, 1, "other changes leave it alone");
+});
+
+test("Death pathway: Death Sight alone shows ghosts without an aura; auras come with Spirit Vision", () => {
+  const sense = { lotmDeathSight: { enabled: true, range: 30 } };
+  const viewer = new FakeToken({ detectionModes: sense });
+  const ghostToken = new LordOfTheMysteriesToken({ x: 400, y: 0, actor: { system: {} }, statuses: ["ethereal"] });
+  const look = (visionMode) => {
+    globalThis.canvas = {
+      dimensions: { distancePixels: 20 },
+      effects: { visionSources: [{ active: true, visionMode: { id: visionMode }, object: viewer, x: 0, y: 0 }] },
+    };
+    // Foundry picked Death Sight's glow, because only Death Sight sees the ghost.
+    ghostToken.detectionFilter = CONFIG.Canvas.detectionModes.lotmDeathSight.constructor.getDetectionFilter();
+    ghostToken._refreshVisibility();
+    return ghostToken.detectionFilter;
+  };
+  assert.equal(look("basic"), null, "seen, but no glow");
+  const withSpiritVision = look("lotmDeathVision");
+  assert.ok(spirit.isSpiritFilter(withSpiritVision), "Spirit Vision on: the aura");
+  assert.deepEqual(round(withSpiritVision.uniforms.auraColor), round([...aura.hexToRgb(aura.AURA_COLORS.death), 1]));
+});
+
+test("Death Vision: auras reach as far as Death Sight or Spirit Sight, whichever is farther", () => {
+  const viewer = new FakeToken({ detectionModes: { lotmDeathSight: { enabled: true, range: 10 }, lotmSpiritSight: { enabled: true, range: 30 } } });
+  const goblin = new LordOfTheMysteriesToken({ x: 500, y: 0, actor: { system: { resources: { hp: HP(10) } } } });
+  globalThis.canvas = {
+    dimensions: { distancePixels: 20 },
+    effects: { visionSources: [{ active: true, visionMode: { id: "lotmDeathVision" }, object: viewer, x: 0, y: 0 }] },
+  };
+  assert.equal(spirit.viewerSpiritVision(goblin), "death", "500 px is past Death Sight's 200 px, within Spirit Sight's 600 px");
 });
 
 /* -------------------------------------------- */

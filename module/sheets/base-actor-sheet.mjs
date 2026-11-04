@@ -34,6 +34,7 @@ import { GunHandling } from "../helpers/gun-handling.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
 import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
 import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
+import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -201,6 +202,7 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     attack: null,
     damage: null,
     spiritButton: null,  // "Spend 2": for a spell with a Spirituality Cost, or an action with one but nothing to roll
+    toggle: null,        // On / Off: for an action with a Toggle effect, like Activate Spirit Vision (effects/toggle-effects.mjs)
     hasRolls: false,
     // Guns and ammo (helpers/firearms.mjs). gunId is set on actions that come from a gun's own action list.
     gunId: "",
@@ -456,6 +458,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       useAmmo: LordOfTheMysteriesActorSheetBase.#onUseAmmo,
       spendSpirituality: LordOfTheMysteriesActorSheetBase.#onSpendSpirituality,
       useSpirituality: LordOfTheMysteriesActorSheetBase.#onUseSpirituality,
+      toggleAction: LordOfTheMysteriesActorSheetBase.#onToggleAction,
 
       editItem: LordOfTheMysteriesActorSheetBase._onEditItem,
       openItem: LordOfTheMysteriesActorSheetBase.#onOpenItem,
@@ -1041,12 +1044,16 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     //   - an action with a cost but nothing to roll
     //   - every spell with a cost, next to its roll button: spells are often cast without an attack roll,
     //     and every spell can roll (with Occultism by default), so they'd never get the button otherwise.
+    // An action with a Toggle effect (Activate Spirit Vision) gets an On / Off button instead: switching it on spends
+    // the cost (effects/toggle-effects.mjs).
+    entry.toggle = toggleButton(this.actor, action);
     const cost = spiritualityCost(action);
-    entry.spiritButton = (cost > 0 && (!entry.attack || entry.isSpell))
+    entry.spiritButton = (!entry.toggle && cost > 0 && (!entry.attack || entry.isSpell))
       ? { label: game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.UseButton", { cost }) }
       : null;
 
-    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus || entry.spiritButton);
+    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus || entry.spiritButton
+      || entry.toggle);
   }
 
   /* -------------------------------------------- */
@@ -1328,6 +1335,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     if (!this.isEditable) return;
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
     if (action) await useActionSpirituality(this.actor, action);
+  }
+
+
+  /**
+   * The On / Off button on an action with a Toggle effect (data-uuid = the action): switch it on or off
+   * (useToggleAction in effects/toggle-effects.mjs). The sheet redraws itself when the effect comes or goes.
+   */
+  static async #onToggleAction(event, target) {
+    if (!this.isEditable) return;
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await useToggleAction(this.actor, action);
   }
 
 

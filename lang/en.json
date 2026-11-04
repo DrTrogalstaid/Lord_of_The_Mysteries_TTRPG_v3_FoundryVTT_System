@@ -58,7 +58,8 @@
           "targets": "Targets",
           "self": "Self",
           "area": "Area (once)",
-          "zone": "Zone (while inside)"
+          "zone": "Zone (while inside)",
+          "toggle": "Toggle (you, until used again)"
         },
         "Shapes": {
           "circle": "Circle",
@@ -70,6 +71,18 @@
       },
       "Use": {
         "passive": "Passive (lent to the owner)"
+      },
+      "Toggle": {
+        "On": "On",
+        "Off": "Off",
+        "TooltipOn": "{name} is on. Click to switch it off.",
+        "TooltipOff": "{name} is off. Click to switch it on.",
+        "TooltipOffCost": "{name} is off. Click to switch it on ({cost} Spirituality).",
+        "Button": "Switch {name} on / off",
+        "ChatOn": "{name} switches on {effect}.",
+        "ChatOff": "{name} switches off {effect}.",
+        "TooltipUpkeep": "Keeping it on costs {upkeep} Spirituality per round in combat.",
+        "RanOut": "{name} doesn't have the Spirituality to keep up {effect}, so it ends."
       },
       "Apply": {
         "Button": "Apply {name}",
@@ -125,7 +138,9 @@
         "Clear": "Clear the source",
         "TargetOne": "Target exactly one token to make it the source.",
         "UseLabel": "Use",
-        "UseHint": "Passive: applies to whoever owns the item. Targets: your targeted tokens. Self: you. Area: everyone in a shape you place, once. Zone: everyone inside a shape that stays on the scene.",
+        "Upkeep": "Spirituality per round (while on)",
+        "UpkeepHint": "Spent at the start of each of the owner's turns in combat while it's on. Not enough: it switches off. 0 = free to keep up. The action's Spirituality Cost is still paid to switch it on.",
+        "UseHint": "Passive: applies to whoever owns the item. Targets: your targeted tokens. Self: you. Area: everyone in a shape you place, once. Zone: everyone inside a shape that stays on the scene. Toggle: you, until you use it again (an On / Off button on the action).",
         "Shape": "Shape",
         "Size": "Size ({units})",
         "StatusLabel": "Status",
