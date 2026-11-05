@@ -671,9 +671,18 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Damage the goblin to half Health: the aura turns orange-red; near 0: deep red
 - [ ] Klein's own token has an aura too, in his own colour (his Health, or his Spirit Aura if set)
 - [ ] The Ghost is visible, with a pale blue glow
-- [ ] Spirit Vision isn't darkvision: the goblin and the ghost in the dark room can't be seen. Give Klein a light that
-      reaches them, or Basic Sight range 30 (darkvision): both show up, the ghost with its pale blue glow
+- [ ] In the dark: the dark room itself stays dark (not recoloured, its floor can't be made out), but the goblin and
+      the ghost in it show as their glowing auras (gold, pale blue). Spirit Vision off: neither can be seen
 - [ ] With the room lit, move the Ghost more than 30 ft from Klein: it disappears (Spirit Sight's range)
+- [ ] Through walls (Spirit Vision on, both rooms lit, all within 30 ft). Next to Klein's room:
+      a room behind one ordinary wall (one line) with a goblin: Klein sees the goblin's glowing aura through it
+      (an outline: the wall still hides the room itself);
+      a room behind a thick wall drawn as two lines 2 ft apart: seen; two lines 6 ft apart: not seen;
+      a room two walls away: not seen;
+      a room behind a terrain wall (Sight: Limited), however thin: not seen.
+      Open a door in the second wall of the "two walls away" room: seen again. Turn Klein so the goblin is outside
+      his vision angle (if he has one): not seen. A goblin in a DARK room behind one wall: seen, glowing
+- [ ] Death Vision through walls: the same, for the Ghost and undead only; living goblins behind a wall aren't shown
 - [ ] On the Ghost's NPC sheet header, pick a red Spirit Aura: its glow turns red. Clear it: pale blue again
 - [ ] Remove Ethereal from the Ghost: it's an ordinary creature again (seen in the light, gold glow)
 - [ ] Give Klein Blind: the effect and the glows stop
@@ -692,8 +701,8 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Death pathway: switch Spirit Vision off and give Klein a second, always-on effect "Death Vision" with
       two changes, both Override: `token.detectionModes.lotmDeathSight.enabled` = `true`,
       `token.detectionModes.lotmDeathSight.range` = `30`. The room looks normal, and the Ghost is visible all the
-      time (in the light), with a bright green aura. The goblins look normal, with no aura. The dark room's ghost
-      still can't be seen
+      time, with a bright green aura - the dark room's ghost too, glowing in the dark. The goblins look normal,
+      with no aura; the dark room's goblin can't be seen
 - [ ] Switch Spirit Vision back on (the same action and effect): the room drains to pale green with
       drifting mist instead of the Spirit Vision colours. The Ghost's aura is bright green; goblins' auras are faint,
       stronger when hurt. Tick Undead on a goblin's header: its aura is bright green. Switch Spirit Vision off: the

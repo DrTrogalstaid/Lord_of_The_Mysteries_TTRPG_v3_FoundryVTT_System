@@ -31,9 +31,17 @@ class FakeDetectionMode extends FakeDataModel {
   _canDetect() {
     return true;
   }
-  /** Line of sight is always clear here, so a point is seen when it's in range. */
+  /** Like Foundry's: in range, and in line of sight. */
   _testPoint(visionSource, mode, target, test) {
-    return this._testRange(visionSource, mode, target, test);
+    return this._testRange(visionSource, mode, target, test) && this._testLOS(visionSource, mode, target, test);
+  }
+  /** Foundry's plain line of sight: clear, unless the test says walls are in the way. */
+  _testLOS(visionSource, mode, target, test) {
+    return !test.behindWalls;
+  }
+  /** Inside the token's field of view, unless the test says not. */
+  _testAngle(visionSource, mode, target, test) {
+    return !test.outsideView;
   }
   /** Like Foundry's: null is no limit. 20 px per foot (a 100 px grid of 5 ft squares). */
   _testRange(visionSource, mode, target, test) {
@@ -46,7 +54,7 @@ class FakeBasicSight extends FakeDetectionMode {}
 
 /** A token on the canvas: position, size, statuses, actor, and its own senses. */
 class FakeToken {
-  constructor({ x = 0, y = 0, size = 100, actor = null, statuses = [], sightRange = 0, detectionModes = {} } = {}) {
+  constructor({ x = 0, y = 0, size = 100, actor = null, statuses = [], sightRange = 0, detectionModes = {}, visionMode = "basic" } = {}) {
     this.center = { x, y };
     this.w = size;
     this.h = size;
@@ -56,12 +64,19 @@ class FakeToken {
     this.statuses = new Set(statuses);
     this.document = {
       hasStatusEffect: (id) => this.statuses.has(id),
-      sight: { range: sightRange },
+      sight: { range: sightRange, visionMode },
       detectionModes,
     };
     this.renderFlags = { set: (flags) => (this.flagsSet = flags) };
   }
   _refreshVisibility() {}
+  _onUpdate() {}
+  initializeVisionSource() {
+    this.visionInitialized = (this.visionInitialized ?? 0) + 1;
+  }
+  _getVisionSourceData() {
+    return { x: this.center.x, y: this.center.y, visionMode: this.document.sight.visionMode };
+  }
   _renderDetectionFilter() {
     this.drewDetectionFilter = true;
   }
@@ -212,6 +227,15 @@ test("Death Vision: full pale green for Ethereal and undead; the living faint, b
 
 test("an unknown vision has no aura", () => {
   assert.equal(aura.auraGlowColor({ vision: "basic" }), null);
+});
+
+test("aura reach: the farthest spirit sense that's on; no limit wins; sight range when none is on", () => {
+  const on = (range) => ({ enabled: true, range });
+  const off = (range) => ({ enabled: false, range });
+  assert.equal(aura.auraReach([on(10), on(30)], 5), 30);
+  assert.equal(aura.auraReach([on(10), off(60)], 5), 10, "a sense that's off doesn't count");
+  assert.equal(aura.auraReach([on(10), on(null)], 5), null);
+  assert.equal(aura.auraReach([undefined, off(60)], 5), 5);
 });
 
 test("range reaches the creature's edge; no range means no limit", () => {
@@ -613,6 +637,72 @@ test("token aura: in Death Vision a dying creature glows pale green", () => {
 });
 
 /* -------------------------------------------- */
+/*  The Death pathway: Death Sight always on     */
+/* -------------------------------------------- */
+
+const deathSight = (range = 30) => ({ lotmDeathSight: { enabled: true, range } });
+
+test("Death pathway: with Death Sight on, using Spirit Vision gives the Death Vision look", () => {
+  assert.equal(spirit.visionModeFor({ detectionModes: deathSight() }, "lotmSpiritVision"), "lotmDeathVision");
+  assert.equal(spirit.visionModeFor({ detectionModes: {} }, "lotmSpiritVision"), "lotmSpiritVision", "other pathways");
+  assert.equal(spirit.visionModeFor({ detectionModes: { lotmDeathSight: { enabled: false, range: 30 } } }, "lotmSpiritVision"),
+    "lotmSpiritVision", "Death Sight turned off");
+  assert.equal(spirit.visionModeFor({ detectionModes: deathSight() }, "basic"), "basic", "not using Spirit Vision: normal look");
+
+  const corpseCollector = new LordOfTheMysteriesToken({ visionMode: "lotmSpiritVision", detectionModes: deathSight() });
+  assert.equal(corpseCollector._getVisionSourceData().visionMode, "lotmDeathVision", "the token's vision uses it");
+  const seer = new LordOfTheMysteriesToken({ visionMode: "lotmSpiritVision" });
+  assert.equal(seer._getVisionSourceData().visionMode, "lotmSpiritVision");
+
+  // Death Sight switched on or off: the token's vision is rebuilt, so the look changes straight away.
+  corpseCollector.vision = {};
+  corpseCollector._onUpdate({ detectionModes: { lotmDeathSight: { enabled: false } } }, {}, "user");
+  assert.equal(corpseCollector.visionInitialized, 1);
+  corpseCollector._onUpdate({ name: "Renamed" }, {}, "user");
+  assert.equal(corpseCollector.visionInitialized, 1, "other changes leave it alone");
+});
+
+test("Death pathway: Death Sight alone gives spirits their Death Vision aura; Spirit Vision gives everyone theirs", () => {
+  const sense = { lotmDeathSight: { enabled: true, range: 30 } };
+  const viewer = new FakeToken({ detectionModes: sense });
+  const ghostToken = new LordOfTheMysteriesToken({ x: 400, y: 0, actor: { system: {} }, statuses: ["ethereal"] });
+  const look = (visionMode) => {
+    globalThis.canvas = {
+      dimensions: { distancePixels: 20 },
+      effects: { visionSources: [{ active: true, visionMode: { id: visionMode }, object: viewer, x: 0, y: 0 }] },
+    };
+    // Foundry picked Death Sight's glow, because only Death Sight sees the ghost.
+    ghostToken.detectionFilter = CONFIG.Canvas.detectionModes.lotmDeathSight.constructor.getDetectionFilter();
+    ghostToken._refreshVisibility();
+    return ghostToken.detectionFilter;
+  };
+  const alone = look("basic");
+  assert.ok(spirit.isSpiritFilter(alone), "the ghost glows with Death Sight alone");
+  assert.deepEqual(round(alone.uniforms.auraColor), round([...aura.hexToRgb(aura.AURA_COLORS.death), 1]), "full pale green");
+  assert.notEqual(alone, CONFIG.Canvas.detectionModes.lotmDeathSight.constructor.getDetectionFilter(), "its own aura");
+
+  // A living goblin, seen by ordinary sight: no filter from Foundry, so no aura without Spirit Vision.
+  const goblin = new LordOfTheMysteriesToken({ x: 300, y: 0, actor: { system: { resources: { hp: HP(10) } } } });
+  goblin.detectionFilter = null;
+  goblin._refreshVisibility();
+  assert.equal(goblin.detectionFilter, null);
+
+  const withSpiritVision = look("lotmDeathVision");
+  assert.ok(spirit.isSpiritFilter(withSpiritVision), "Spirit Vision on: the aura");
+  assert.deepEqual(round(withSpiritVision.uniforms.auraColor), round([...aura.hexToRgb(aura.AURA_COLORS.death), 1]));
+});
+
+test("Death Vision: auras reach as far as Death Sight or Spirit Sight, whichever is farther", () => {
+  const viewer = new FakeToken({ detectionModes: { lotmDeathSight: { enabled: true, range: 10 }, lotmSpiritSight: { enabled: true, range: 30 } } });
+  const goblin = new LordOfTheMysteriesToken({ x: 500, y: 0, actor: { system: { resources: { hp: HP(10) } } } });
+  globalThis.canvas = {
+    dimensions: { distancePixels: 20 },
+    effects: { visionSources: [{ active: true, visionMode: { id: "lotmDeathVision" }, object: viewer, x: 0, y: 0 }] },
+  };
+  assert.equal(spirit.viewerSpiritVision(goblin), "death", "500 px is past Death Sight's 200 px, within Spirit Sight's 600 px");
+});
+
+/* -------------------------------------------- */
 /*  Reduce Spirit Vision Effects (setting on)    */
 /* -------------------------------------------- */
 
@@ -634,4 +724,66 @@ test("reduced effects: plain vision, no glows, no aura hooks, Ethereal still rev
   assert.equal(CONFIG.Canvas.detectionModes.basicSight._canDetect(looking(), ghost()), false);
   assert.deepEqual(hooks, []);
   reduceEffects = false;
+});
+
+
+/* -------------------------------------------- */
+/*  Through walls (spirit-walls.mjs)             */
+/* -------------------------------------------- */
+
+const walls = await import("../module/canvas/spirit-walls.mjs");
+
+/** A wall across the sight line at x (pixels), from y = -100 to 100. */
+const wallAt = (x, sight = walls.WALL_SIGHT.NORMAL, extra = {}) => ({ a: { x, y: -100 }, b: { x, y: 100 }, sight, ...extra });
+/** Looking from (0, 0) to (500, 0) on a 100 px / 5 ft grid: 5 ft is 100 px. */
+const seen = (wallList) => walls.seesThroughWalls({ origin: { x: 0, y: 0 }, point: { x: 500, y: 0 }, walls: wallList, maxThickness: 100 });
+
+test("through walls: one wall drawn as a line, or two faces less than 5 ft apart, can be seen through", () => {
+  assert.equal(seen([]), true, "nothing in the way");
+  assert.equal(seen([wallAt(250)]), true, "a single line");
+  assert.equal(seen([wallAt(200), wallAt(260)]), true, "a wall 3 ft thick (both faces drawn)");
+  assert.equal(seen([wallAt(200), wallAt(300)]), false, "a wall 5 ft thick: not less than 5 ft");
+  assert.equal(seen([wallAt(100), wallAt(400)]), false, "two separate walls");
+  assert.equal(seen([wallAt(600)]), true, "a wall past the creature doesn't count");
+});
+
+test("through walls: terrain walls always block; open doors, see-through walls and one-way walls facing away don't count", () => {
+  assert.equal(seen([wallAt(250, walls.WALL_SIGHT.LIMITED)]), false, "terrain, however thin");
+  assert.equal(seen([wallAt(250), wallAt(260, walls.WALL_SIGHT.LIMITED)]), false);
+  assert.equal(seen([wallAt(100), wallAt(400, walls.WALL_SIGHT.NONE)]), true, "a wall that doesn't block sight");
+  assert.equal(seen([wallAt(100), wallAt(400, walls.WALL_SIGHT.NORMAL, { isOpenDoor: true })]), true, "an open door");
+  assert.equal(seen([wallAt(100), wallAt(400, walls.WALL_SIGHT.NORMAL, { isFacingAway: true })]), true, "one-way, open from here");
+});
+
+test("through walls: where a line crosses a wall, and which side a point is on", () => {
+  assert.equal(walls.crossingAt({ x: 0, y: 0 }, { x: 500, y: 0 }, { x: 250, y: -10 }, { x: 250, y: 10 }), 0.5);
+  assert.equal(walls.crossingAt({ x: 0, y: 0 }, { x: 500, y: 0 }, { x: 250, y: 5 }, { x: 250, y: 10 }), null, "misses");
+  assert.equal(walls.crossingAt({ x: 0, y: 0 }, { x: 500, y: 0 }, { x: 0, y: 5 }, { x: 500, y: 5 }), null, "parallel");
+  const a = { x: 0, y: -100 };
+  const b = { x: 0, y: 100 };
+  assert.notEqual(walls.sideOf(a, b, { x: -50, y: 0 }), walls.sideOf(a, b, { x: 50, y: 0 }), "opposite sides differ");
+  assert.equal(walls.sideOf(a, b, { x: 0, y: 0 }), walls.WALL_DIRECTION.BOTH);
+});
+
+test("Spirit Sight sees a goblin through one thin wall, not through two or terrain, not outside its view", () => {
+  globalThis.CONST = { ...(globalThis.CONST ?? {}), WALL_DOOR_STATES: { CLOSED: 0, OPEN: 1, LOCKED: 2 } };
+  const placed = (x, sight = 20, extra = {}) => ({ document: { c: [x, -100, x, 100], sight, door: 0, ds: 0, dir: 0, ...extra } });
+  const look = (wallList, test = {}) => {
+    globalThis.canvas = { dimensions: { distancePixels: 20 }, walls: { placeables: wallList } };
+    const visionSource = { x: 0, y: 0, object: new FakeToken() };
+    return CONFIG.Canvas.detectionModes.lotmSpiritSight._testLOS(visionSource, { enabled: true, range: 60 }, person(),
+      { point: { x: 500, y: 0 }, behindWalls: true, ...test });
+  };
+  assert.equal(look([placed(250)]), true, "one wall");
+  assert.equal(look([placed(100), placed(400)]), false, "two walls");
+  assert.equal(look([placed(250, 10)]), false, "terrain");
+  assert.equal(look([placed(100), placed(400, 20, { door: 1, ds: 1 })]), true, "the second one is an open door");
+  assert.equal(look([placed(250)], { outsideView: true }), false, "outside the token's field of view");
+  assert.equal(look([placed(100), placed(400)], { behindWalls: false }), true, "in plain sight: Foundry's own test");
+
+  // One-way: Foundry's wall says which side the viewer is on.
+  const oneWay = { ...placed(250, 20, { dir: 1 }), edge: { orientPoint: () => 1 } };
+  assert.equal(look([placed(100), oneWay]), true, "a one-way wall open from the viewer's side doesn't count");
+  oneWay.edge.orientPoint = () => 2;
+  assert.equal(look([placed(100), oneWay]), false, "from its blocking side it does");
 });

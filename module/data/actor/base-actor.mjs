@@ -136,7 +136,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         // How the creature looks to Spirit Vision and Death Vision (canvas/spirit-aura.mjs). Both are on the NPC
         // sheet header, and Active Effects can change them (e.g. a red aura while Angry).
-        //   isUndead   Death Sight sees it (where there's light to see by), and its Death Vision aura is at full strength.
+        //   isUndead   Death Sight sees it (glowing, even in the dark), and its Death Vision aura is at full strength.
         //   auraColor  Its Spirit Vision aura colour ("#rrggbb"): mood, nature. Empty: the colour shows its Health.
         schema.spirit = new fields.SchemaField({
             isUndead: new fields.BooleanField({ required: true, initial: false }),

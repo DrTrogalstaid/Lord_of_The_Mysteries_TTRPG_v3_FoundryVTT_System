@@ -11,9 +11,10 @@
  *   Detection modes (what can be seen, CONFIG.Canvas.detectionModes)
  *     lotmSpiritSight   anything with a spirit (any token with an actor), Ethereal ones included
  *     lotmDeathSight    Ethereal and undead creatures (system.spirit.isUndead)
- *     Spirit Vision isn't darkvision: both only see where the token could see anyway, in light or within its
- *     ordinary sight range (basic sight). They're sight: Blind stops them, and with the "Invisible Hides Tokens"
- *     setting on they don't see Invisible creatures. Walls block them.
+ *     The creatures they see glow even in the dark: a creature in darkness shows as its aura (the room itself still
+ *     needs light to be seen). They're sight: Blind stops them, and with the "Invisible Hides Tokens"
+ *     setting on they don't see Invisible creatures. They see through one wall less than 5 feet thick, but never
+ *     through a terrain wall (spirit-walls.mjs); what they see through a wall shows as its glowing outline.
  *   The Ethereal status (effects/status-effects.mjs): ghosts, wraiths and other spirit bodies. Foundry's ordinary
  *     senses (basic sight, light perception, see / sense invisibility, tremor) can't see an Ethereal token, unless
  *     the one looking is Ethereal too. "See All" and "Sense All" still see everything.
@@ -30,7 +31,7 @@
  *   Death Vision - a passive effect of the Death pathway, always on:
  *     token.detectionModes.lotmDeathSight.enabled    true
  *     token.detectionModes.lotmDeathSight.range      e.g. 30
- *   With Death Sight on, a token always sees Ethereal and undead creatures (where there's light to see by), and
+ *   With Death Sight on, a token always sees Ethereal and undead creatures (in the dark too, as their aura), and
  *   when it uses Spirit Vision it gets the Death Vision look instead (visionModeFor). lotmDeathVision can also be
  *   set directly, e.g. in Token Config for testing.
  *
@@ -42,6 +43,7 @@
 
 import { SpiritVisionShader, DeathVisionShader, SpiritAuraFilter } from "./spirit-vision-shader.mjs";
 import { auraGlowColor, auraReach, isWithinSpiritRange, VISION_KINDS } from "./spirit-aura.mjs";
+import { SEE_THROUGH_THICKNESS, seesThroughWalls, sideOf } from "./spirit-walls.mjs";
 
 const { VisionMode, DetectionMode } = foundry.canvas.perception;
 const { Token } = foundry.canvas.placeables;
@@ -237,9 +239,9 @@ function createVisionMode(id, label, shader) {
 /**
  * What Spirit Sight and Death Sight share.
  *
- * Spirit Vision isn't darkvision: these senses only see where the token could see anyway, in light or within its
- * ordinary sight range (its basic sight). What they add is seeing what ordinary eyes can't (Ethereal creatures),
- * as far as their own range.
+ * What they add to ordinary sight: seeing what ordinary eyes can't (Ethereal creatures), in the dark too (a creature
+ * glows; Spirit Vision doesn't light up the room), as far as their own range, and through one wall less than 5 feet
+ * thick (never a terrain wall; _testLOS). Foundry's own test does the rest: in range, and in line of sight.
  *
  * Each sense says which creatures it sees (sees) and the colour of its glow (GLOW_COLOR).
  */
@@ -273,24 +275,49 @@ class SpiritSenseDetectionMode extends DetectionMode {
     return super._canDetect(visionSource, target, ...rest);
   }
 
-  _testPoint(visionSource, mode, target, test) {
-    // Line of sight, and within this sense's own range.
-    if (!super._testPoint(visionSource, mode, target, test)) return false;
-    // And somewhere the token could see anyway: in light, or within its ordinary sight range.
-    return canvas.effects.testInsideLight(test.point) || this._isWithinOrdinarySight(visionSource, target, test);
-  }
-
   /**
-   * Is the point within the token's ordinary sight range (its basic sight, e.g. darkvision)?
-   * @returns {boolean}   false when basic sight is off or has no range.
+   * Line of sight: in plain sight (Foundry's own test), or through one wall less than 5 feet thick that isn't a
+   * terrain wall (seesThroughWalls in spirit-walls.mjs), still within the token's field of view.
    */
-  _isWithinOrdinarySight(visionSource, target, test) {
-    const basicSight = visionSource.object?.document?.detectionModes?.basicSight;
-    if (!basicSight?.enabled) return false;
-    if (basicSight.range === null) return true; // no limit
-    if (!(basicSight.range > 0)) return false;
-    return this._testRange(visionSource, basicSight, target, test);
+  _testLOS(visionSource, mode, target, test) {
+    if (super._testLOS(visionSource, mode, target, test)) return true;
+    if (visionSource.blinded?.darkness) return false;                 // inside a darkness area: nothing
+    if (!(this._testAngle?.(visionSource, mode, target, test) ?? true)) return false;
+    const origin = { x: visionSource.x ?? visionSource.data?.x ?? 0, y: visionSource.y ?? visionSource.data?.y ?? 0 };
+    return seesThroughWalls({
+      origin,
+      point: test.point,
+      walls: sightWalls(origin),
+      maxThickness: SEE_THROUGH_THICKNESS * canvas.dimensions.distancePixels,
+    });
   }
+}
+
+
+/**
+ * The scene's walls, as seesThroughWalls (spirit-walls.mjs) needs them, seen from `origin`.
+ * Foundry's own wall decides which way a one-way wall faces (falling back to sideOf).
+ * @param {{x: number, y: number}} origin
+ * @returns {object[]}
+ */
+function sightWalls(origin) {
+  const OPEN = CONST.WALL_DOOR_STATES?.OPEN ?? 1;
+  return (canvas.walls?.placeables ?? []).map((wall) => {
+    const doc = wall.document;
+    const [x0, y0, x1, y1] = doc.c;
+    const a = { x: x0, y: y0 };
+    const b = { x: x1, y: y1 };
+    const facing = doc.dir
+      ? (wall.edge?.orientPoint?.(origin) ?? wall.orientPoint?.(origin) ?? sideOf(a, b, origin))
+      : null;
+    return {
+      a,
+      b,
+      sight: doc.sight,
+      isOpenDoor: doc.door > 0 && doc.ds === OPEN,
+      isFacingAway: !!doc.dir && facing === doc.dir,
+    };
+  });
 }
 
 
