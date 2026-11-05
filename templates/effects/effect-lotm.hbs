@@ -51,6 +51,17 @@
         </div>
       </div>
     </div>
+
+    {{!-- Toggle only: what it costs to keep up (effects/toggle-effects.mjs payUpkeep). --}}
+    <div data-lotm-toggle-fields {{#unless lotm.isToggle}}hidden{{/unless}}>
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Upkeep"}}</label>
+        <div class="form-fields">
+          <input type="number" name="system.upkeep" value="{{lotm.upkeep}}" min="0" step="1" {{#unless lotm.editable}}disabled{{/unless}} />
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.UpkeepHint"}}</p>
+      </div>
+    </div>
   </fieldset>
   {{/if}}
 

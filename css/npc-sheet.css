@@ -68,6 +68,26 @@
   min-width: 0;
 }
 
+/* Spirit Vision row: aura colour and Undead (system.spirit) */
+.lotm.sheet.actor.npc .npc-spirit-row {
+  font-size: 12px;
+}
+
+.lotm.sheet.actor.npc .npc-spirit-aura,
+.lotm.sheet.actor.npc .npc-spirit-undead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.sheet.actor.npc .npc-spirit-aura color-picker {
+  flex: 0 1 160px;
+}
+
+.lotm.sheet.actor.npc .npc-spirit-undead input {
+  margin: 0;
+}
+
 /* ---- Tab pages: the same framed look as the player sheet's pages ---- */
 
 .lotm.sheet.actor.npc .main-tab,

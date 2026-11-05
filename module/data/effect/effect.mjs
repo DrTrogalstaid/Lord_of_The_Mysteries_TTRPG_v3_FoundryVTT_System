@@ -11,6 +11,8 @@
  *     mode               "targets" every targeted token, "self" the user, "area" every token inside a placed shape
  *                        (once), "zone" a shape that stays on the scene: tokens have the effect while inside it.
  *     shape, size        "area" and "zone" only. Size is in the scene's units.
+ *   upkeep               "Toggle" effects: Spirituality spent at the start of each of the owner's turns in combat while
+ *                        it's on (effects/toggle-effects.mjs). 0 = free to keep up. Copies keep it.
  *   hasResisted          Fear: passed the Will test, so no more forced movement.
  *   isPenaltyHalved      Angry: Meditation (Half) halved the penalty.
  *   hasInternalBleeding  Bleeding: internal bleeding, which only extraordinary medicine or surgery stops.
@@ -46,6 +48,8 @@ export default class LordOfTheMysteriesEffect extends foundry.data.ActiveEffectT
       }),
       size: new fields.NumberField({ required: true, nullable: false, min: 0, initial: 1 }),
     });
+
+    schema.upkeep = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
 
     schema.hasResisted = new fields.BooleanField({ required: true, initial: false });
     schema.isPenaltyHalved = new fields.BooleanField({ required: true, initial: false });

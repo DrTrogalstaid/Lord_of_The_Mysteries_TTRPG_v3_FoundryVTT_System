@@ -6,8 +6,9 @@
  * anyway, the chat says so ("Used despite: Bound").
  *
  * Checked wherever an action is used: its attack roll (rollActionAttack, helpers/action-roll.mjs), the Spend N
- * Spirituality button (useActionSpirituality, helpers/spirituality.mjs), and the Reload / Chamber / Unload buttons
- * (useAmmoAction, helpers/firearms.mjs).
+ * Spirituality button (useActionSpirituality, helpers/spirituality.mjs), a Fire button (fireWithoutRoll,
+ * helpers/firearms.mjs), and the gun's Reload / Chamber / Rotate / Unload buttons (GunHandling, helpers/gun-handling.mjs:
+ * it has an Action Type like an action, so it's checked the same way).
  *
  * What each status stops is its `restrict` setting (status-effects.mjs), or its own restriction() (Dying).
  *   Loss of Balance  movement actions             Bound    movement actions, grapples and parries

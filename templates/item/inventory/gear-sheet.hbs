@@ -184,6 +184,18 @@
     <fieldset class="firearm-settings">
       <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.IsFirearm"}}</legend>
 
+      {{!-- How the gun holds its rounds (helpers/gun-feed.mjs). firearm.feed is the one it works like, even before
+            one is saved. --}}
+      <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Feed.Label"}}</label>
+        <div class="form-fields">
+          <select name="system.firearm.feed" {{#unless editable}}disabled{{/unless}}>
+            {{selectOptions feedOptions selected=firearm.feed localize=true}}
+          </select>
+        </div>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.Feed.Hint"}}</p>
+      </div>
+
       <div class="form-group">
         <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Caliber"}}</label>
         <div class="form-fields">
@@ -201,6 +213,7 @@
         <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.CapacityHint"}}</p>
       </div>
 
+      {{#if (eq firearm.feed "magazine")}}
       <div class="form-group">
         <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.HasChamber"}}</label>
         <div class="form-fields">
@@ -218,27 +231,67 @@
           <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.SelfLoadingHint"}}</p>
         </div>
       {{/if}}
+      {{/if}}
+
+      {{!-- Handling: what can be done to it besides firing, and how long each takes (helpers/gun-handling.mjs). Each is
+            a button on the gun's Shoot row; which ones show depends on the feed. --}}
+      <fieldset class="firearm-handling">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Handling.Label"}}</legend>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.Handling.Hint"}}</p>
+        {{#each handling as |row|}}
+        <div class="form-group">
+          <label>{{row.label}}</label>
+          <div class="form-fields">
+            <select name="system.firearm.handling.{{row.use}}.actionType" {{#unless ../editable}}disabled{{/unless}}>
+              {{selectOptions ../actionTypeOptions selected=row.actionType localize=true}}
+            </select>
+          </div>
+        </div>
+        {{/each}}
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Handling.Rounds"}}</label>
+          <div class="form-fields">
+            <input type="number" name="system.firearm.handling.reload.rounds" value="{{reloadRounds}}" min="0" step="1" {{#unless editable}}disabled{{/unless}}>
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.Handling.RoundsHint"}}</p>
+        </div>
+      </fieldset>
 
       {{!-- What's in it right now (firearmStatus in helpers/firearms.mjs). --}}
       <dl class="inventory-readout">
         <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Loaded"}}</dt>
-        <dd class="{{#if firearm.empty}}over{{/if}}">{{firearm.label}} · {{firearm.contents}}</dd>
-        {{#if firearm.hasChamber}}
-          <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Chamber"}}</dt>
-          <dd>{{firearm.chamberName}}</dd>
-        {{/if}}
+        <dd class="{{#if firearm.empty}}over{{/if}}">{{firearm.label}}</dd>
         <dt>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Next"}}</dt>
         <dd>{{firearm.nextName}}</dd>
       </dl>
 
-      {{!-- Handy for guns with no reload actions, and for the GM. Only once a character owns the gun. --}}
+      {{!-- Every round (and empty chamber or barrel) in firing order. ✦ = a special round (its ammo has abilities). --}}
+      {{#if firearm.rounds.length}}
+      <div class="firearm-rounds">
+        <div class="firearm-rounds-title">{{localize "LORD_OF_THE_MYSTERIES.Firearm.FiringOrder"}}</div>
+        <ol>
+          {{#each firearm.rounds as |round|}}
+          <li class="{{#if round.empty}}empty{{/if}}{{#if round.next}} next{{/if}}{{#if round.special}} special{{/if}}">
+            <span class="firearm-round-position">{{#if round.next}}<i class="fa-solid fa-caret-right"></i>{{/if}}{{round.label}}</span>
+            {{#if round.img}}<img src="{{round.img}}" alt="" width="18" height="18">{{/if}}
+            <span class="firearm-round-name">{{round.name}}</span>
+            {{#if round.special}}<i class="fa-solid fa-star firearm-round-special" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Firearm.Special'}}"></i>{{/if}}
+          </li>
+          {{/each}}
+        </ol>
+      </div>
+      {{/if}}
+
+      {{!-- The same buttons as on the Shoot row, handy for the GM. They skip the status warnings. Only once a
+            character owns the gun. --}}
       {{#if actor}}{{#if editable}}
         <div class="firearm-buttons">
-          <button type="button" data-action="gunReload"><i class="fa-solid fa-box-open"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.reload"}}</button>
-          {{#if firearm.hasChamber}}
-            <button type="button" data-action="gunChamber"><i class="fa-solid fa-circle-dot"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.chamber"}}</button>
-          {{/if}}
-          <button type="button" data-action="gunUnload"><i class="fa-solid fa-eject"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Buttons.unload"}}</button>
+          {{#each handling as |button|}}
+            <button type="button" data-action="{{button.sheetAction}}" data-tooltip="{{button.tooltip}}">
+              <i class="fa-solid {{#if (eq button.use 'reload')}}fa-box-open{{else if (eq button.use 'chamber')}}fa-circle-dot{{else if (eq button.use 'rotate')}}fa-rotate{{else}}fa-eject{{/if}}"></i>
+              {{button.label}}
+            </button>
+          {{/each}}
         </div>
       {{/if}}{{/if}}
     </fieldset>

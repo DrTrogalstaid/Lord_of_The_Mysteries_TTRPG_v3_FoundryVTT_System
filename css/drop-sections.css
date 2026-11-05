@@ -429,6 +429,18 @@
   border-color: #1f3350;
 }
 
+/* On / Off: an action with a Toggle effect (Activate Spirit Vision). Grey while off, glowing gold while on. */
+.lotm.sheet.actor .drop-entry-roll-btn.toggle {
+  background: #4a4a52;
+  border-color: #2f2f35;
+}
+
+.lotm.sheet.actor .drop-entry-roll-btn.toggle.on {
+  background: #8a6a12;
+  border-color: #5c4609;
+  box-shadow: 0 0 5px rgba(255, 210, 90, 0.75);
+}
+
 /* "5/6 ●": rounds in the magazine, and the chamber (filled dot = round chambered). */
 .lotm.sheet.actor .drop-entry-gun-status,
 .lotm.sheet.actor .drop-entry-ammo-status {

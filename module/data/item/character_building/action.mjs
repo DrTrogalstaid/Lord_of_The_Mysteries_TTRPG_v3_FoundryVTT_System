@@ -43,15 +43,14 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
     // dialog: the Attack Roll Macro is rolled, plus the character's bonuses in this skill.
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
 
-    // What this action does to a gun (see helpers/firearms.mjs). The keys match AMMO_USES there.
-    //   none     nothing
-    //   fire     the attack button uses up rounds
-    //   reload   moves rounds from an ammo box into the gun
-    //   chamber  moves the next round into the chamber
-    //   unload   puts the rounds back in their boxes
-    schema.ammoUse = new fields.StringField({ required: true, initial: "none", choices: ["none", "fire", "reload", "chamber", "unload"] });
-    // Rounds per use. Fire: 0 counts as 1 (2 for a double-barrel blast). Reload: 0 fills the gun up,
-    // a number loads that many (1 for a revolver loaded one round at a time).
+    // Whether this action fires a gun (see helpers/firearms.mjs, AMMO_USES there):
+    //   none     no
+    //   fire     yes: the attack button uses up rounds. The row also gets the gun's Reload / Chamber / Rotate /
+    //            Unload buttons (helpers/gun-handling.mjs; how long they take is set on the gun).
+    // reload, chamber, rotate and unload are from before those became buttons on the gun (OLD_AMMO_USES): old actions
+    // still have them, so they stay allowed here, but they do nothing now (module/macros/retire-gun-actions.js).
+    schema.ammoUse = new fields.StringField({ required: true, initial: "none", choices: ["none", "fire", "reload", "chamber", "rotate", "unload"] });
+    // Rounds per shot: 0 counts as 1 (2 for a double-barrel blast).
     schema.ammoAmount = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
 
     //DC_Results

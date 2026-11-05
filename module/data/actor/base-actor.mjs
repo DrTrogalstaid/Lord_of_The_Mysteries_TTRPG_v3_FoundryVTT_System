@@ -37,7 +37,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 base: new fields.NumberField({ ...requiredInteger, initial: 2, min: 2 }),
                 beyonder_bonus: new fields.NumberField({ ...requiredInteger, initial: 0, min: 0}),
                 corruption: new fields.NumberField({...requiredInteger, initial: 0, min: 0}),
-                total: new fields.NumberField({...requiredInteger, initial: 0})
+                total: new fields.NumberField({...requiredInteger, initial: 0}),
+                // Added to rolls with this attribute, but not to its total (so Spirituality, Health... don't change).
+                // 0 unless an Active Effect adds to it, e.g. Spirit Vision: +2 to Inspiration checks.
+                // See helpers/check-bonuses.mjs.
+                checkBonus: new fields.NumberField({...requiredInteger, initial: 0})
             });
             return obj;
         }, {}));
@@ -128,6 +132,15 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             mystical: new fields.ArrayField(
                 new fields.StringField({ required: false, blank: true })
             )
+        });
+
+        // How the creature looks to Spirit Vision and Death Vision (canvas/spirit-aura.mjs). Both are on the NPC
+        // sheet header, and Active Effects can change them (e.g. a red aura while Angry).
+        //   isUndead   Death Sight sees it (glowing, even in the dark), and its Death Vision aura is at full strength.
+        //   auraColor  Its Spirit Vision aura colour ("#rrggbb"): mood, nature. Empty: the colour shows its Health.
+        schema.spirit = new fields.SchemaField({
+            isUndead: new fields.BooleanField({ required: true, initial: false }),
+            auraColor: new fields.StringField({ required: true, blank: true, initial: "" }),
         });
 
         return schema;

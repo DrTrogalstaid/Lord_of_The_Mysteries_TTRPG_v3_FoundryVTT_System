@@ -139,17 +139,20 @@
         </select>
       </fieldset>
 
-      <!--Uses Ammo: what this action does to its gun (helpers/firearms.mjs). Options from action-sheet.mjs (ammoUseOptions). -->
+      <!--Uses Ammo: whether this action fires its gun (helpers/firearms.mjs). Options from action-sheet.mjs (ammoUseOptions). -->
       <fieldset class="ammoUse">
         <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.Label"}}</legend>
         <select name="system.ammoUse" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions ammoUseOptions selected=system.ammoUse localize=true}}
         </select>
         <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.Hint"}}</p>
+        {{#if isOldAmmoUse}}
+          <p class="hint"><i class="fa-solid fa-triangle-exclamation"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoUse.OldHint"}}</p>
+        {{/if}}
       </fieldset>
 
-      <!--Rounds per use: only for actions that fire or reload. -->
-      {{#if (or (eq system.ammoUse "fire") (eq system.ammoUse "reload"))}}
+      <!--Rounds per shot: only for actions that fire. -->
+      {{#if (eq system.ammoUse "fire")}}
         <fieldset>
           <legend>{{localize "LORD_OF_THE_MYSTERIES.Firearm.AmmoAmount"}}</legend>
           <input id="ammoAmount" class="blend-input" type="number" name="system.ammoAmount" value="{{system.ammoAmount}}" min="0" step="1" />

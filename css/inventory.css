@@ -448,6 +448,20 @@
   gap: 4px;
 }
 
+/* Handling: one row per button (Reload, Chamber...) with its Action Type, inside the Firearm box. */
+.lotm.inventory-item .firearm-handling {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  border: 1px dashed var(--lotm-inventory-line);
+  border-radius: 4px;
+}
+
+.lotm.inventory-item .firearm-handling > .hint {
+  margin: 0;
+}
+
 .lotm.inventory-item .firearm-buttons button {
   flex: 1;
   white-space: nowrap;
@@ -475,4 +489,113 @@
 
 .lotm.sheet.item.inventory-item .window-content {
   overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* A gun's rounds in firing order (gear sheet), and the reload / rotate / barrel dialogs.          */
+/* helpers/firearms.mjs, helpers/gun-feed.mjs                                                       */
+/* ---------------------------------------------------------------------------------------------- */
+
+.lotm.inventory-item .firearm-rounds {
+  margin: 6px 0;
+}
+
+.lotm.inventory-item .firearm-rounds-title {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.lotm.inventory-item .firearm-rounds ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lotm.inventory-item .firearm-rounds li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.lotm.inventory-item .firearm-rounds li.next {
+  background: rgba(201, 162, 39, 0.18);
+  font-weight: bold;
+}
+
+.lotm.inventory-item .firearm-rounds li.empty {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.lotm.inventory-item .firearm-rounds .firearm-round-position {
+  flex: 0 0 5.5em;
+  color: var(--psx-text-dim, #888);
+}
+
+.lotm.inventory-item .firearm-rounds img {
+  border: none;
+}
+
+.lotm.inventory-item .firearm-rounds .firearm-round-special {
+  color: #c9a227;
+}
+
+.lotm-gun-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.lotm-gun-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A special bullet's card in chat: the spells it set off, each with a Cast button. */
+.lotm.chat-bullet header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+}
+
+.lotm.chat-bullet header img {
+  border: none;
+}
+
+.lotm.chat-bullet .bullet-spells {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lotm.chat-bullet .bullet-spell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.chat-bullet .bullet-spell button {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.lotm.chat-bullet .bullet-spell.failed {
+  opacity: 0.7;
+}
+
+.lotm.chat-bullet .bullet-cost {
+  font-size: 0.9em;
+  opacity: 0.8;
 }

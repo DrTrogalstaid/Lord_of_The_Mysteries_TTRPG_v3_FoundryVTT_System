@@ -27,12 +27,14 @@ export default class ActionRollDialog extends LotmRollDialog {
    * @param {string} formula            The action's Attack Roll Macro (already checked to be a valid formula).
    * @param {object} [options]
    * @param {object} [options.chat]     Chat flags and the damage buttons (see actionChatExtras in action-roll.mjs).
+   * @param {boolean} [options.isSpiritualityPaid]  The Spirituality Cost was already paid: no checkbox.
    */
-  constructor(actor, action, formula, { chat = {}, ...options } = {}) {
+  constructor(actor, action, formula, { chat = {}, isSpiritualityPaid = false, ...options } = {}) {
     super(actor, {
       // The action's Modifiers field starts in the list, labelled with its name, removable for this roll.
       modifiers: [{ label: action.name, value: Number(action.system.modifiers) || 0 }],
-      spirituality: { cost: spiritualityCost(action), reason: action.name },
+      // No Spirituality checkbox when it's already been paid (a special bullet's spell, helpers/firearms.mjs).
+      spirituality: isSpiritualityPaid ? null : { cost: spiritualityCost(action), reason: action.name },
       chat,
       ...options
     });
@@ -48,10 +50,11 @@ export default class ActionRollDialog extends LotmRollDialog {
    * @param {object} [options]
    * @param {object} [options.chat]
    * @param {boolean} [options.fast]  Shift-click: roll right away with the defaults.
+   * @param {boolean} [options.isSpiritualityPaid]  The Spirituality Cost was already paid: no checkbox.
    * @returns {Promise<Roll|null>}
    */
-  static async prompt(actor, action, formula, { chat = {}, fast = false } = {}) {
-    return this.show(new this(actor, action, formula, { chat }), { fast });
+  static async prompt(actor, action, formula, { chat = {}, fast = false, isSpiritualityPaid = false } = {}) {
+    return this.show(new this(actor, action, formula, { chat, isSpiritualityPaid }), { fast });
   }
 
   /** @override */

@@ -17,6 +17,10 @@ import { LordOfTheMysteriesSpellSheet } from './sheets/item/character_building/s
 import { LordOfTheMysteriesGearSheet, LordOfTheMysteriesContainerSheet } from './sheets/item/inventory/inventory-sheets.mjs';
 import LotmActiveEffectConfig from './apps/effect-config.mjs';
 
+// Import canvas classes.
+import { LordOfTheMysteriesToken } from './canvas/token.mjs';
+import { registerSpiritVision } from './canvas/spirit-vision.mjs';
+
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
@@ -29,6 +33,7 @@ import { registerEffectQueries } from './effects/effect-application.mjs';
 import { ZONE_BEHAVIOR_TYPE, registerZones } from './effects/effect-areas.mjs';
 import LotmApplyEffectBehavior from './data/region-behavior/apply-effect.mjs';
 import { syncGrantedEffects } from './effects/granted-effects.mjs';
+import { GunHandling } from './helpers/gun-handling.mjs';
 
 // Import custom Roll class.
 import LOTM_VTTRoll from './dice/lotm-roll.mjs';
@@ -55,6 +60,9 @@ Hooks.once('init', function () {
     // Bring an actor's copies of granted abilities' passive effects up to date (effects/granted-effects.mjs).
     // Used by module/macros/sync-granted-effects.js.
     syncGrantedEffects,
+    // A gun's Reload / Chamber / Rotate / Unload (helpers/gun-handling.mjs), for macros, e.g.
+    //   await game.lotm.GunHandling.get(gun, "reload")?.perform(actor);
+    GunHandling,
   };
 
   // Add custom constants for configuration.
@@ -156,6 +164,12 @@ Hooks.once('init', function () {
 
   // The system's statuses replace Foundry's own list (Token HUD, Effects tab).
   registerStatusEffects({ invisibleHidesToken: game.settings.get('lotm', 'invisibleHidesToken') });
+
+  // Spirit Vision and Death Vision: their vision and detection modes, the Ethereal status's effect on ordinary
+  // senses, and the per-player "Reduce Spirit Vision Effects" setting (canvas/spirit-vision.mjs).
+  // The system's Token draws the spirit auras (canvas/token.mjs).
+  registerSpiritVision();
+  CONFIG.Token.objectClass = LordOfTheMysteriesToken;
 
   // Register sheet application classes
   foundry.documents.collections.Actors.unregisterSheet('core', foundry.appv1.sheets.ActorSheet);

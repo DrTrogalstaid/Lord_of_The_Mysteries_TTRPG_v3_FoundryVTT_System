@@ -18,7 +18,7 @@ dialogs, chat cards, tokens and scenes.
 - [ ] Run `npm test` in the system folder: every test passes
 - [ ] A test world with:
   - Klein: a player character with skills at a few levels (not only Untrained), a Sequence that grants abilities and
-    skills, a gun with Shoot / Reload actions, a spell, an action with a Spirituality Cost, and a coat or bag
+    skills, a gun with a Shoot action, a spell, an action with a Spirituality Cost, and a coat or bag
   - an NPC, with a token on a scene that has a grid, plus three goblin tokens and Klein's token on the same scene
   - a second user (a player who owns Klein but not the goblins), for the permission checks. Log in with them in a
     second browser where a step says "as a player"
@@ -44,6 +44,7 @@ things start in report-only mode (`APPLY = false`): check the report, then set `
 | `check-leftover-effects.js` | Lists effects with statuses the system doesn't know (Foundry's old Prone, Poisoned, ...), and old-type effects. `APPLY` deletes the old Token HUD ones | After importing old actors or removing a module that added statuses |
 | `tag-action-traits.js` | Adds Traits (speech, reaction, grapple, parry, aimed) to actions and spells by name, in the compendiums, world Items and owned Items | After adding actions or spells that should have Traits; edit its list first |
 | `sync-granted-effects.js` | Brings every actor's copies of granted abilities' passive effects up to date (world actors and unlinked tokens) | After editing abilities in a compendium or the sidebar |
+| `retire-gun-actions.js` | Copies old Reload / Pull Bolt / Rotate / Unload actions' Action Type onto their gun's Handling and takes them off the gun's action list (compendium, world, actors, unlinked tokens). Lists the old actions to delete by hand | Once, after the gun handling update, or after importing old guns |
 | `assign-skill-categories.js` | Gives the Skills compendium's skills the rulebook's related-skill categories | After adding skills to the compendium |
 
 ---
@@ -69,6 +70,8 @@ skills from the Skills compendium ready to drag.
 
 - [ ] Tabs: Main, Abilities, Spells, Inventory, Sequences, Effects, Notes
 - [ ] Header: change the name and Organization; both save. With no Sequence the header says "No Sequence"
+- [ ] Header, second row: pick a Spirit Aura colour and tick Undead; both save. Clear the colour: it stays empty
+      (what they do: **Spirit Vision and Death Vision**)
 - [ ] Drop a Sequence: the header shows "Sequence N · Name (Pathway)", and Health / Spirituality maximums and the
       defenses go up the same as a player character's with the same attributes and Sequence
 - [ ] Change an attribute's base on Main: the total, defenses and maximums update. Hover a box for the breakdown.
@@ -156,6 +159,8 @@ Ability:
 Action:
 
 - [ ] Description, Details and Effects tabs switch; Action Type, Uses Ammo and the other fields save
+- [ ] Uses Ammo offers No / Fires rounds; Rounds per shot only shows for Fires rounds. An old Reload or Pull Bolt
+      action shows its old choice marked "(old)" and a warning that it does nothing now
 - [ ] Skill slot: drop a skill, open it, remove it
 - [ ] Special Results (Description tab): saved ones show one row each; "Add Special Result" adds a blank row whose text
       sticks; the trash button removes only that row. On a locked compendium action the buttons do nothing
@@ -187,7 +192,7 @@ Gear and clothing / bags:
 - [ ] No tabs. Click the image: the file picker opens and the new image saves
 - [ ] Value "£3 10s" saves and shows as £3 10s; "nonsense" warns and keeps the old value. A purse's money boxes the same
 - [ ] On a character: carry / container dropdowns, the granted Abilities / Actions lists (drop, duplicate warning,
-      remove, open), and a gun's Reload / Chamber / Unload buttons work
+      remove, open), and a gun's Reload / Chamber / Rotate / Unload buttons work (more under **Firearms**)
 - [ ] A coat or bag on a character lists what's inside and how full it is
 - [ ] Gear has an Effects list above its description; containers don't
 
@@ -283,6 +288,87 @@ Files: `module/helpers/spirituality.mjs`, `module/apps/roll-dialog.mjs`
 - [ ] An action with a cost and a roll: no "Spend N"; the cost goes through the roll dialog
 - [ ] The same from a hotbar macro
 
+## Firearms and special bullets
+
+Files: `module/helpers/gun-feed.mjs` (unit-tested), `module/helpers/firearms.mjs`, `module/helpers/gun-handling.mjs`,
+`module/helpers/action-roll.mjs`, `module/data/item/character_building/gear.mjs`, `module/sheets/base-actor-sheet.mjs`,
+`module/sheets/item/inventory/inventory-sheets.mjs`, `templates/item/inventory/gear-sheet.hbs`,
+`templates/actor/player-character/parts/entry-rolls.hbs`, `module/macros/retire-gun-actions.js`
+
+Setup: run the Retire Gun Actions macro first (report, then `APPLY = true`). Klein holds the Revolver and the Bolt
+Action Rifle from the compendium, plus a double-barrel shotgun (gear, Firearm ticked, Feed: Barrels, capacity 2, with
+a Shoot action) and ammo for each. A special bullet: Pistol ammo with an ability whose Spell List has a spell costing
+3 Spirituality and one costing more than Klein has.
+
+Retiring the old gun actions:
+
+- [ ] The macro's report lists each gun with its old actions and the Action Type each becomes (Reload (Revolver) →
+      Reload: Attack, Pull Bolt → Chamber: Free), and the old actions to delete by hand. Nothing changes yet
+- [ ] With `APPLY = true`: the guns' action lists keep only Shoot; their Handling shows the copied Action Types. Run it
+      again: no guns to update
+- [ ] Klein's Actions tab: no Reload or Pull Bolt rows; each Shoot row has the gun's buttons
+
+Gun buttons on the Shoot row:
+
+- [ ] Revolver's Shoot row: attack, Damage, Reload, Rotate, Unload and the "5/6" count. Rifle: Reload, Chamber, Unload.
+      Shotgun: Reload, Unload
+- [ ] Hover over each: "Reload: Attack action. Loads as many as fit.", "Rotate: Quick action", "Chamber: Free action",
+      "Unload: Attack action"
+- [ ] Change the Revolver's Reload to Full and Rounds per Reload to 2 on its sheet: the tooltip says "Reload: Full
+      action. Loads up to 2."; the Load dialog can't go over 2, and Shift-click loads 2
+- [ ] A full gun's Reload and an empty gun's Unload are faded but still show their tooltip; clicking says why nothing
+      happens ("already full", "already empty")
+- [ ] A gun with two Shoot actions: both rows have the buttons. Starring only one in Favorites: its buttons are there too
+- [ ] A Shoot action Klein owns directly (not on a gun): its buttons work the gun in his hand. Holding no gun or two
+      guns: no gun buttons
+- [ ] The same buttons on an NPC's sheet
+- [ ] Macro: `game.lotm.GunHandling.get(gun, "reload")?.perform(actor)` reloads, with the dialog
+
+The gun sheet:
+
+- [ ] The compendium Revolver (no feed saved yet) shows Feed: Cylinder; the Bolt Action Rifle shows Magazine. A new
+      gun starts as Cylinder (capacity 6); with a capacity of 1 or 2 it shows Barrels. Pick Magazine for rifles and
+      pistols
+- [ ] Magazine shows Has Chamber (and Self-Loading once it's ticked); Cylinder and Barrels don't
+- [ ] Handling: one Action Type dropdown per button the feed has (Reload, Chamber only with a chamber, Rotate only for
+      a cylinder, Unload) and Rounds per Reload. Changes save. The buttons at the bottom match, with the same tooltips
+- [ ] A loaded gun: change its Feed: "Unload Revolver before changing its feed." and the dropdown goes back. Empty:
+      the feed changes. Changing anything else on a loaded older gun gives no warning
+- [ ] The firing order list: every round (and empty chamber or barrel) in the order they fire; the next one has an
+      arrow; special rounds have a star (hover: the tooltip). Loaded and Next match the list
+
+Loading:
+
+- [ ] Reload: the dialog lists only ammo that fits, special ammo with ✦. The amount starts at what fits (or what's in
+      the box) and can't go over the room left. The hint says which round fires first
+- [ ] Revolver: load 1 special bullet, then reload with ordinary ammo: only the 5 that fit load; the boxes drop by 1
+      and 5; the special bullet is under the hammer
+- [ ] Shift-click Reload (gun sheet or Shoot row): fills it from the first ammo that fits, no dialog
+- [ ] Rifle: fill the magazine; the last round loaded is listed first (it fires first). With the chamber empty, "Straight
+      into the chamber" loads just one round there: "... straight into Rifle's chamber"
+- [ ] Shotgun: load a slug, then a special shell: Barrel 1 slug, Barrel 2 special
+- [ ] Unload: every round goes back to its box. Delete the special bullets' box first: they come back as a loose stack
+      that keeps the ability
+
+Firing:
+
+- [ ] Revolver: Shoot fires the chamber under the hammer and the cylinder turns one chamber
+- [ ] Rotate (gun sheet or Shoot row): pick a chamber; it's under the hammer, chat says which. Rotate to an
+      empty chamber and Shoot: "Click. Chamber N of Revolver is empty ...", no roll, and the cylinder turns
+- [ ] An empty gun: "Click. Revolver is empty." and the cylinder doesn't move
+- [ ] Rifle: Shoot fires the chambered round; then "no round in the chamber" until Chamber
+- [ ] Shotgun with different rounds in its barrels: Shoot asks which barrel (cancel: no roll). With one loaded
+      barrel, or the same round in both: no question
+
+Special bullets:
+
+- [ ] Fire the special bullet: Spirituality drops by the cheap spell's cost straight away. A card lists the spells:
+      the one paid for has a "Cast" button; the expensive one says it didn't go off (not enough Spirituality)
+- [ ] Cast: the spell's roll dialog has no Spirituality box, and rolling doesn't spend any more. The button is greyed
+      out after, also after reloading the world. Closing the dialog without rolling leaves it usable
+- [ ] As a player who doesn't own Klein: Cast does nothing
+- [ ] Ordinary rounds post no card
+
 ---
 
 # Statuses
@@ -292,9 +378,9 @@ Files: `module/helpers/spirituality.mjs`, `module/apps/roll-dialog.mjs`
 Files: `module/effects/status-effects.mjs`, `module/effects/status-rule.mjs`, `module/documents/active-effect.mjs`,
 `templates/actor/player-character/parts/effects.hbs`
 
-- [ ] The Token HUD's status icons are the 17 system statuses (Loss of Balance ... Shock); hovering shows the name;
-      turning one on puts its icon on the token and a row on the Effects tab
-- [ ] Effects tab (player and NPC): a grid of the 17 statuses, off ones faded, on ones in colour with a gold ring.
+- [ ] The Token HUD's status icons are the 18 system statuses (Loss of Balance ... Shock, with Ethereal after
+      Invisible); hovering shows the name; turning one on puts its icon on the token and a row on the Effects tab
+- [ ] Effects tab (player and NPC): a grid of the 18 statuses, off ones faded, on ones in colour with a gold ring.
       Clicking toggles, and the Token HUD agrees
 - [ ] Each effect row has its icon, name, Rules (book), Turn off / on, Edit and Delete
 - [ ] Rules opens that status's page in LOTM Rules > Status Effects (Advantage and Disadvantage share a page, as do Dying
@@ -402,8 +488,9 @@ nothing, Use Anyway goes ahead.
 - [ ] Dead: everything warns
 - [ ] Use Anyway on a roll: the card says "Used despite: Bound" above the damage button
 - [ ] Use Anyway on "Spend N": it spends, then a chat line says it was used despite the status. Cancel spends nothing
-- [ ] Reload / Chamber / Unload (e.g. Reload while Dying): Use Anyway reloads, then the "Used despite" line; Cancel
-      leaves the gun alone; a reload that can't happen (no ammo) posts no "Used despite" line
+- [ ] A gun's Reload button while Dying (Reload is an Attack action): the warning names "Reload (Revolver)"; Use
+      Anyway reloads, then the "Used despite" line; Cancel leaves the gun alone; a reload that can't happen (no ammo)
+      posts no "Used despite" line. Chamber (a Free action) and Rotate (Quick) don't warn
 - [ ] Shift-click and hotbar macros show the warning too
 - [ ] Blind with an empty gun: "Click. Revolver is empty." with no warning. Loaded: the warning; Use Anyway rolls and
       uses the round; Cancel keeps it
@@ -416,7 +503,8 @@ nothing, Use Anyway goes ahead.
 
 Files: `packs/effects/`, `system.json`
 
-- [ ] The Effects compendium has 17 entries, one per status, each with its icon and a link to its rules page
+- [ ] The Effects compendium has 17 entries, one per status (Ethereal isn't in it yet), each with its icon and a link
+      to its rules page
 - [ ] As the GM, drag Fear onto a goblin: the token shows Fear and its Effects tab lists it (no source)
 - [ ] Drag Helpless onto a token: Helpless and its linked Bound both appear
 
@@ -533,3 +621,95 @@ Zones made by hand (GM):
 - [ ] With a Source: copies name that actor, and it isn't affected unless "Affects its source too" is ticked
 - [ ] Changing the behavior's effects while tokens are inside swaps their copies
 - [ ] Foundry's own "Apply Active Effect" behavior still works (its copies have no source)
+
+---
+
+# Vision
+
+## Spirit Vision and Death Vision
+
+Files: `module/canvas/` (spirit-vision.mjs, spirit-vision-shader.mjs, spirit-vision-glsl.mjs, spirit-aura.mjs,
+token.mjs), `module/effects/status-effects.mjs` (Ethereal), `module/data/actor/base-actor.mjs` (`system.spirit`),
+`templates/actor/npc/header.hbs`
+
+Setup: a dark scene (Darkness 1) with walls, a light source in one room, and token vision on. Klein (no darkvision:
+Basic Sight range 0) in the lit room, a goblin next to him, and a "Ghost" NPC token with the Ethereal status in the
+same room. In a dark room nearby, within 30 ft and in line of sight: another goblin and a second Ethereal ghost.
+Klein has a Spirit Vision ability, which grants the "Activate Spirit Vision" action (Spirituality Cost 1). On that
+action (in the compendium), add an effect "Spirit Vision", Use: Toggle, Spirituality per round 1, with three
+changes, all Override:
+`token.sight.visionMode` = `lotmSpiritVision`, `token.detectionModes.lotmSpiritSight.enabled` = `true`,
+`token.detectionModes.lotmSpiritSight.range` = `30`; and a fourth, Add: `system.attributes.ins.checkBonus` = `2`.
+Klein has at least 2 Spirituality.
+Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" below means: its button is On.
+
+- [ ] On Klein's Actions tab, Activate Spirit Vision has a grey "Off" button (no "Spend 1" button). Hover: it says
+      it's off, switching on costs 1 Spirituality, and keeping it on costs 1 per round in combat
+- [ ] The effect's LotM tab shows "Spirituality per round (while on)" only while Use is Toggle
+- [ ] Spirit Vision off: the room looks normal; the Ghost can't be seen, even in the light
+- [ ] Click Off: it turns gold, "On". Klein's Spirituality goes down by 1; chat: "Klein switches on Spirit Vision."
+      with "-1 Spirituality". The Effects tab lists Spirit Vision
+- [ ] Spirit Vision on: Klein's Inspiration and maximum Spirituality are the same as before. Click Inspiration on the
+      sheet: the roll window lists "Spirit Vision +2", and the roll adds it. A skill check that uses Inspiration lists
+      it too; switch that check's attribute to another one in the window: the row goes; switch back: it returns.
+      A Strength check doesn't list it. Spirit Vision off: no row
+- [ ] Spirit Vision on: everything Klein can see is repainted in strong colours, with cyan outlines - the whole lit room,
+      even though he has no darkvision. Details (rug pattern, furniture, tokens) can still be made out. The colour
+      edges ripple slowly. The dark room stays dark
+- [ ] Walk Klein out of the light and back, so part of the map is explored but out of sight: those parts show their
+      normal colours under the fog; only what he can see right now is recoloured. The border follows the edge of
+      the light and walls as he moves
+- [ ] No "LotM | Foundry's sprite shader is different" warning in the console (F12) once the effect is on. With that
+      warning the room looks normal: the effect switched itself off rather than break the canvas
+- [ ] Move Klein around the room: the ripples stay where they are on the map; they don't slide along with him
+- [ ] Token art (faces, armour, frames) is recoloured but stays crisp: it doesn't ripple and has only faint outlines.
+      Move a goblin: the calm area moves with it, and the floor it left ripples again
+- [ ] Pan and zoom: the ripples stay attached to the map and keep their size on the map
+- [ ] The nearby goblin has an aura, easy to see over the bright colours: a wide gold glow, almost white at its edge,
+      tinting the token's rim, with a soft dark ring around it. It breathes slowly. Zoom in and out: it stays the same
+      size compared with the token, and stays visible
+- [ ] Damage the goblin to half Health: the aura turns orange-red; near 0: deep red
+- [ ] Klein's own token has an aura too, in his own colour (his Health, or his Spirit Aura if set)
+- [ ] The Ghost is visible, with a pale blue glow
+- [ ] In the dark: the dark room itself stays dark (not recoloured, its floor can't be made out), but the goblin and
+      the ghost in it show as their glowing auras (gold, pale blue). Spirit Vision off: neither can be seen
+- [ ] With the room lit, move the Ghost more than 30 ft from Klein: it disappears (Spirit Sight's range)
+- [ ] Through walls (Spirit Vision on, both rooms lit, all within 30 ft). Next to Klein's room:
+      a room behind one ordinary wall (one line) with a goblin: Klein sees the goblin's glowing aura through it
+      (an outline: the wall still hides the room itself);
+      a room behind a thick wall drawn as two lines 2 ft apart: seen; two lines 6 ft apart: not seen;
+      a room two walls away: not seen;
+      a room behind a terrain wall (Sight: Limited), however thin: not seen.
+      Open a door in the second wall of the "two walls away" room: seen again. Turn Klein so the goblin is outside
+      his vision angle (if he has one): not seen. A goblin in a DARK room behind one wall: seen, glowing
+- [ ] Death Vision through walls: the same, for the Ghost and undead only; living goblins behind a wall aren't shown
+- [ ] On the Ghost's NPC sheet header, pick a red Spirit Aura: its glow turns red. Clear it: pale blue again
+- [ ] Remove Ethereal from the Ghost: it's an ordinary creature again (seen in the light, gold glow)
+- [ ] Give Klein Blind: the effect and the glows stop
+- [ ] Configure Settings > Core > "Photosensitive Mode" on: the colours stay but stop moving, and auras stop breathing
+- [ ] Click On: it goes back to Off, no Spirituality spent; chat: "Klein switches off Spirit Vision." The room looks
+      normal again and the Ghost disappears. Switch it on again, then delete Spirit Vision from the Effects tab: the
+      button shows Off
+- [ ] With 0 Spirituality, click Off: a warning, and it stays off
+- [ ] Combat, with Klein and a goblin, Klein on 3 Spirituality: switch Spirit Vision on (3 -> 2). Next Turn until
+      Klein's turn starts: chat "Klein spends 1 Spirituality on Spirit Vision." (2 -> 1). The goblin's turns cost
+      Klein nothing. Next round, Klein's turn: 1 -> 0. The round after: chat "Klein doesn't have the Spirituality
+      to keep up Spirit Vision, so it ends."; the button shows Off and the room looks normal. No pop-up for the GM
+- [ ] Out of combat, Spirit Vision stays on without costing anything per round
+- [ ] Give Activate Spirit Vision the Speech trait for a moment, and Klein Silence: switching on shows the usual
+      "Use Anyway" warning; switching off never asks. Undo both
+- [ ] Death pathway: switch Spirit Vision off and give Klein a second, always-on effect "Death Vision" with
+      two changes, both Override: `token.detectionModes.lotmDeathSight.enabled` = `true`,
+      `token.detectionModes.lotmDeathSight.range` = `30`. The room looks normal, and the Ghost is visible all the
+      time, with a bright green aura - the dark room's ghost too, glowing in the dark. The goblins look normal,
+      with no aura; the dark room's goblin can't be seen
+- [ ] Switch Spirit Vision back on (the same action and effect): the room drains to pale green with
+      drifting mist instead of the Spirit Vision colours. The Ghost's aura is bright green; goblins' auras are faint,
+      stronger when hurt. Tick Undead on a goblin's header: its aura is bright green. Switch Spirit Vision off: the
+      normal look again; the Ghost keeps its green aura, the goblins lose theirs
+- [ ] Turn the "Death Vision" effect off while Spirit Vision is on: the Spirit Vision colours come back
+- [ ] Token Config > Vision lists "Spirit Vision" and "Death Vision"; Detection Modes lists "Spirit Sight" and
+      "Death Sight"
+- [ ] Configure Settings > "Reduce Spirit Vision Effects" on (the world reloads): the room looks normal and nothing
+      glows, but the Ghost is still revealed. Turn it off again
+- [ ] An unlinked goblin token: damaging it changes its glow, not the goblin in the sidebar

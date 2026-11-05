@@ -29,10 +29,12 @@ import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import AttributeCheckDialog from "../apps/attribute-check-dialog.mjs";
 import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { autoPlacement, placementUpdate } from "../helpers/inventory.mjs";
-import { ammoBoxStatus, firearmStatus, gunFor, useAmmoAction } from "../helpers/firearms.mjs";
+import { ammoBoxStatus, fireWithoutRoll, firearmStatus, gunFor } from "../helpers/firearms.mjs";
+import { GunHandling } from "../helpers/gun-handling.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
 import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
 import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
+import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -200,11 +202,12 @@ function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" 
     attack: null,
     damage: null,
     spiritButton: null,  // "Spend 2": for a spell with a Spirituality Cost, or an action with one but nothing to roll
+    toggle: null,        // On / Off: for an action with a Toggle effect, like Activate Spirit Vision (effects/toggle-effects.mjs)
     hasRolls: false,
     // Guns and ammo (helpers/firearms.mjs). gunId is set on actions that come from a gun's own action list.
     gunId: "",
     gunStatus: null,     // action rows: how loaded their gun is
-    ammoButtons: [],     // action rows: Reload / Chamber / Unload buttons ({ use, label, disabled })
+    ammoButtons: [],     // action rows: Fire / Reload / Chamber / Rotate / Unload buttons ({ use, label, tooltip, gunId, idle })
     firearm: item.type === "gear" && system.isFirearm ? firearmStatus(item) : null,   // inventory row of a gun
     ammoBox: item.type === "gear" && system.isAmmo ? ammoBoxStatus(item) : null,     // inventory row of ammo
     // Spells: the actions this spell grants, shown under it on the Spells tab (filled in by _prepareSections).
@@ -455,6 +458,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       useAmmo: LordOfTheMysteriesActorSheetBase.#onUseAmmo,
       spendSpirituality: LordOfTheMysteriesActorSheetBase.#onSpendSpirituality,
       useSpirituality: LordOfTheMysteriesActorSheetBase.#onUseSpirituality,
+      toggleAction: LordOfTheMysteriesActorSheetBase.#onToggleAction,
 
       editItem: LordOfTheMysteriesActorSheetBase._onEditItem,
       openItem: LordOfTheMysteriesActorSheetBase.#onOpenItem,
@@ -1010,26 +1014,29 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     const damageTooltip = getDamageTooltip(this.actor, action);
     entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
 
-    // Actions that use ammo show their gun's rounds ("5/6"). A fire action spends them through its attack button;
-    // the others (and a fire action with no attack roll) get a button of their own.
-    // A reload action also gets an Unload button, so a gun doesn't need a separate unload action.
-    const use = action.system.ammoUse ?? "none";
+    // An action that fires a gun (the gun's Shoot action) shows the gun's rounds ("5/6") and gets the gun's handling
+    // buttons: Reload, Chamber, Rotate, Unload, whichever its feed has (helpers/gun-handling.mjs). Hovering over one
+    // says its Action Type. The rounds are spent through the attack button; a fire action with no attack roll gets a
+    // Fire button instead. (Old Reload / Pull Bolt actions get nothing: that's on the Shoot row now.)
     entry.ammoButtons = [];
-    if (use !== "none") {
+    if (action.system.ammoUse === "fire") {
       const gun = gunFor(this.actor, entry.gunId, { quiet: true });
       entry.gunStatus = gun ? firearmStatus(gun) : null;
 
-      const button = (buttonUse, disabled = false) => ({
-        use: buttonUse,
-        label: game.i18n.localize(`LORD_OF_THE_MYSTERIES.Firearm.Buttons.${buttonUse}`),
-        disabled,
-      });
-      if (use !== "fire" || !entry.attack) entry.ammoButtons.push(button(use));
-      if (use === "reload") {
-        // Greyed out while there's nothing in the gun to take out.
-        const loaded = entry.gunStatus && (entry.gunStatus.loaded > 0 || entry.gunStatus.chambered);
-        entry.ammoButtons.push(button("unload", !loaded));
+      if (!entry.attack) {
+        entry.ammoButtons.push({
+          use: "fire",
+          label: game.i18n.localize("LORD_OF_THE_MYSTERIES.Firearm.Buttons.fire"),
+          tooltip: entry.actionTypeLabel
+            ? game.i18n.format("LORD_OF_THE_MYSTERIES.Firearm.Handling.Tooltip", {
+              name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Firearm.Buttons.fire"), type: entry.actionTypeLabel,
+            })
+            : "",
+          gunId: entry.gunId,
+          idle: false,
+        });
       }
+      for (const handling of GunHandling.listFor(gun)) entry.ammoButtons.push(handling.toButton());
     }
 
     // A Spirituality Cost is spent when the attack is rolled (the checkbox in the roll dialog, helpers/spirituality.mjs).
@@ -1037,12 +1044,16 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     //   - an action with a cost but nothing to roll
     //   - every spell with a cost, next to its roll button: spells are often cast without an attack roll,
     //     and every spell can roll (with Occultism by default), so they'd never get the button otherwise.
+    // An action with a Toggle effect (Activate Spirit Vision) gets an On / Off button instead: switching it on spends
+    // the cost (effects/toggle-effects.mjs).
+    entry.toggle = toggleButton(this.actor, action);
     const cost = spiritualityCost(action);
-    entry.spiritButton = (cost > 0 && (!entry.attack || entry.isSpell))
+    entry.spiritButton = (!entry.toggle && cost > 0 && (!entry.attack || entry.isSpell))
       ? { label: game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.UseButton", { cost }) }
       : null;
 
-    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus || entry.spiritButton);
+    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus || entry.spiritButton
+      || entry.toggle);
   }
 
   /* -------------------------------------------- */
@@ -1290,13 +1301,21 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * A Reload / Chamber / Unload button on an action row (data-uuid = the action, data-gun-id = its gun,
-   * data-ammo-use = what the button does, e.g. "unload" on a reload action). See useAmmoAction in helpers/firearms.mjs.
+   * A gun button on a Shoot row (data-ammo-use = what it does, data-gun-id = the gun, data-uuid = the action):
+   *   fire                              a fire action with no attack roll (fireWithoutRoll in helpers/firearms.mjs)
+   *   reload, chamber, rotate, unload   the gun's handling (GunHandling in helpers/gun-handling.mjs)
+   * Shift-click Reload: no dialog, fill it with the first ammo that fits.
    */
   static async #onUseAmmo(event, target) {
     if (!this.isEditable) return;
-    const action = await fromUuid(target.dataset.uuid).catch(() => null);
-    if (action) await useAmmoAction(this.actor, action, target.dataset.gunId, target.dataset.ammoUse);
+    const { uuid, gunId, ammoUse } = target.dataset;
+    if (ammoUse === "fire") {
+      const action = await fromUuid(uuid).catch(() => null);
+      if (action) await fireWithoutRoll(this.actor, action, gunId);
+      return;
+    }
+    const gun = gunFor(this.actor, gunId);
+    await GunHandling.get(gun, ammoUse)?.perform(this.actor, { fast: event.shiftKey });
   }
 
 
@@ -1316,6 +1335,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     if (!this.isEditable) return;
     const action = await fromUuid(target.dataset.uuid).catch(() => null);
     if (action) await useActionSpirituality(this.actor, action);
+  }
+
+
+  /**
+   * The On / Off button on an action with a Toggle effect (data-uuid = the action): switch it on or off
+   * (useToggleAction in effects/toggle-effects.mjs). The sheet redraws itself when the effect comes or goes.
+   */
+  static async #onToggleAction(event, target) {
+    if (!this.isEditable) return;
+    const action = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (action) await useToggleAction(this.actor, action);
   }
 
 
