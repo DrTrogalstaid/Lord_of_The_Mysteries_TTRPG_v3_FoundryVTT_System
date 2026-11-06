@@ -36,6 +36,10 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
     // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). This used to be "attack".
     schema.attackRollMacro = new fields.StringField({ required: false, blank: true });
+    // Which defense the attack roll goes against (same as an action's). Blank = no hit check.
+    schema.defenseTarget = new fields.StringField({
+      required: true, blank: true, initial: "", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets),
+    });
     // Flat bonus/penalty added to the attack roll. Shows up in the roll dialog's modifier list.
     schema.modifiers = new fields.NumberField({ required: false, integer: true });
     // Damage formula rolled by the damage buttons. Parts can have their own type: "2d6[fire] + 1d4[cold]".

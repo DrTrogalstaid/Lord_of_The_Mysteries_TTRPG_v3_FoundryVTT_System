@@ -15,6 +15,8 @@ import { meterPercent, openStudyDialog, openSuccessDialog } from "../apps/study-
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView } from "../helpers/inventory.mjs";
 import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
+import { openSpendLuckDialog } from "../helpers/luck.mjs";
+import { ownersAndGMs } from "../effects/status-checks.mjs";
 
 /** One row of the Character tab's Granted Skills box (skills a Sequence raises or trains), with the skill controls. */
 const GRANTED_SKILL_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs";
@@ -695,21 +697,62 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
   }
 
 
+  /**
+   * Long Rest (a night's sleep, roughly a day):
+   *   Health        + Physique when the wounds were treated (the Treated box), + half Physique (rounded down) when not.
+   *                 Then the Treated box is cleared: the next day needs a new Medicine check.
+   *   Spirituality  back to full.
+   *   Luck          back to full (Luck Points come back every 24 hours).
+   *   Sanity        + 1, except during Indeterminate Madness (sleep no longer restores it).
+   * Says what it did in a chat message seen by the character's owners and the GM.
+   * @this {PlayerCharacterSheet}
+   */
   static async _onLongRest(event, target) {
-    const res = this.actor.system.resources;
+    if (!this.isEditable) return;
+    const actor = this.actor;
+    const system = actor.system;
+    const res = system.resources;
 
-    await this.actor.update({
-      // Spirituality Restoration
+    const physique = Math.max(0, Number(system.attributes.phy.total) || 0);
+    const isTreated = !!system.hasBeenTreated;
+    const heal = isTreated ? physique : Math.floor(physique / 2);
+    const hpBefore = Number(res.hp.value) || 0;
+    // Never above the maximum, and never lowers Health that's already over it.
+    const hpAfter = Math.max(hpBefore, Math.min(Number(res.hp.max) || 0, hpBefore + heal));
+
+    const isMad = actor.statuses?.has("indeterminateMadness") ?? false;
+    const rpBefore = Number(res.rp.value) || 0;
+    const rpAfter = isMad ? rpBefore : Math.min(Number(res.rp.max) || 0, rpBefore + 1);
+
+    await actor.update({
+      "system.resources.hp.value": hpAfter,
       "system.resources.spp.value": res.spp.max,
-      // Rationality +1
-      "system.resources.rp.value": Math.min(this.actor.system.resources.rp.value + 1, this.actor.system.resources.rp.max)
+      "system.resources.lp.value": res.lp.max,
+      "system.resources.rp.value": Math.max(rpBefore, rpAfter),
+      "system.hasBeenTreated": false,
+    });
+
+    const L = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.Recovery.${key}`, data ?? {});
+    const lines = [
+      L(isTreated ? "HealthTreated" : "HealthUntreated", { heal: hpAfter - hpBefore, before: hpBefore, after: hpAfter }),
+      L("Spirituality"),
+      L("Luck"),
+      isMad ? L("SanityMad") : L("Sanity", { gain: Math.max(rpBefore, rpAfter) - rpBefore }),
+    ];
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: `<div class="lotm chat-rest"><p class="chat-rest-title"><i class="fa-solid fa-bed"></i> ${L("LongRestTitle", {
+        name: Handlebars.escapeExpression(actor.name),
+      })}</p><ul>${lines.map((line) => `<li>${line}</li>`).join("")}</ul></div>`,
+      whisper: ownersAndGMs(actor),
     });
   }
 
 
-  static _onSpendLuck(event, target) {
-    console.log(`${this.actor.name}: Spend Luck triggered (not yet implemented)`);
-    // TODO: call the Spend Luck macro.
+  /** The Spend button under Luck: spend Luck for something that isn't a roll on a chat card (helpers/luck.mjs). */
+  static async _onSpendLuck(event, target) {
+    if (!this.isEditable) return;
+    await openSpendLuckDialog(this.actor);
   }
 
 

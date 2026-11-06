@@ -27,6 +27,10 @@
  *                        button works once (effects/turn-start.mjs). Only the latest card's are kept.
  *   zone                 On a caster's "Zone: ..." marker effect: the UUID of the zone's Region on the scene. When the
  *                        marker runs out or is removed, the zone goes too (effects/effect-areas.mjs).
+ *   roundsLeft           Semi-Out-of-Control: rounds left, counted down at the start of each of its turns
+ *                        (effects/rules/semi-out-of-control.mjs).
+ *   madness              Semi-Out-of-Control and Indeterminate Madness: the d8 madness tendency / symptom
+ *                        (CONFIG.LORD_OF_THE_MYSTERIES.madnessTendencies). 0 = none.
  *
  * The lists of modes and shapes are in CONFIG.LORD_OF_THE_MYSTERIES (helpers/config.mjs).
  */
@@ -61,6 +65,8 @@ export default class LordOfTheMysteriesEffect extends foundry.data.ActiveEffectT
     schema.impliedBy = new fields.StringField({ required: true, blank: true, initial: "" });
     schema.turnChecks = new fields.ArrayField(new fields.StringField({ required: true, blank: false }));
     schema.zone = new fields.DocumentUUIDField({ type: "Region", required: true, nullable: true, initial: null });
+    schema.roundsLeft = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
+    schema.madness = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, max: 8, initial: 0 });
 
     return schema;
   }

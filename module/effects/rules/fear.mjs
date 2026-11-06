@@ -63,11 +63,26 @@ export default class FearRule extends StatusRule {
    */
   async #resist(effect, { fast = false } = {}) {
     const actor = effect.parent;
-    const result = await rollStatusCheck(actor, { attribute: "wil", dc: RESIST_DC, reason: game.i18n.localize(this.name), fast });
+    const result = await rollStatusCheck(actor, {
+      attribute: "wil", dc: RESIST_DC, reason: game.i18n.localize(this.name), fast, outcome: this.outcomeFor("resist", effect),
+    });
     if (!result) return false;
-    if (result.success) {
+    await this.applyCheckResult("resist", effect, result.success);
+    return true;
+  }
+
+
+  /** Passing marks the effect resisted; Luck turning that into a fail takes it back. @override */
+  async applyCheckResult(check, effect, success, { isLuckChange = false } = {}) {
+    if (check !== "resist") return false;
+    const actor = effect.parent;
+    if (success && !effect.system?.hasResisted) {
       await effect.update({ "system.hasResisted": true });
       await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.Resisted", actor, effect));
+    }
+    else if (!success && isLuckChange && effect.system?.hasResisted) {
+      await effect.update({ "system.hasResisted": false });
+      await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.NotResisted", actor, effect));
     }
     return true;
   }

@@ -15,6 +15,9 @@ import BleedingRule from "./rules/bleeding.mjs";
 import BloodbathRule from "./rules/bloodbath.mjs";
 import DyingRule from "./rules/dying.mjs";
 import FearRule from "./rules/fear.mjs";
+import IndeterminateMadnessRule from "./rules/indeterminate-madness.mjs";
+import OutOfControlRule from "./rules/out-of-control.mjs";
+import SemiOutOfControlRule from "./rules/semi-out-of-control.mjs";
 
 /** Foundry's own icons, until the system has its own art. */
 const ICONS = "icons/svg";
@@ -154,6 +157,41 @@ const STATUSES = {
     img: `${ICONS}/daze.svg`,
     page: "lqrqCDHweAGmyaih",
     turnStartNote: "LORD_OF_THE_MYSTERIES.Status.TurnStart.Shock",
+  },
+  // Madness (helpers/sanity.mjs). No rules pages yet.
+  // Lost 3+ Sanity at once: 1d2 rounds on the ground, a Will check (DC 10) each turn, a madness tendency.
+  semiOutOfControl: {
+    rule: SemiOutOfControlRule,
+    img: `${ICONS}/hazard.svg`,
+    restrict: { actionTypes: ["move"], reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.semiOutOfControl" },
+    note: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.SemiOutOfControl", kinds: ["action"] },
+    endButton: {
+      label: "LORD_OF_THE_MYSTERIES.Status.Buttons.Recovered",
+      icon: "fa-solid fa-person-arrow-up-from-line",
+      chat: "LORD_OF_THE_MYSTERIES.Status.Chat.Recovered",
+    },
+  },
+  // Sanity below half: on and off with Sanity, a d8 symptom every 12 hours, a 0/1 sanity check every day.
+  indeterminateMadness: {
+    rule: IndeterminateMadnessRule,
+    img: `${ICONS}/biohazard.svg`,
+  },
+  // Sanity 0 (or a failed promotion): the GM takes over. Never removed automatically.
+  outOfControl: {
+    rule: OutOfControlRule,
+    img: `${ICONS}/explosion.svg`,
+    restrict: { all: true, reason: "LORD_OF_THE_MYSTERIES.Status.Restrictions.outOfControl" },
+  },
+  // Newly promoted (helpers/promotion.mjs): 72 hours of -2 on checks with the new Sequence's abilities.
+  // Added to action and spell rolls as a removable row (take it out for abilities from older Sequences).
+  spiritualOverflow: {
+    img: `${ICONS}/sun.svg`,
+    roll: { modifier: -2, kinds: ["action"] },
+    endButton: {
+      label: "LORD_OF_THE_MYSTERIES.Status.Buttons.OverflowEnds",
+      icon: "fa-solid fa-hourglass-end",
+      chat: "LORD_OF_THE_MYSTERIES.Status.Chat.OverflowEnded",
+    },
   },
 };
 

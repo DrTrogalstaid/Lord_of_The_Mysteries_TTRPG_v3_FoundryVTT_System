@@ -14,6 +14,8 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/header.hbs',
     'systems/lotm/templates/actor/player-character/parts/sidebar.hbs',
     'systems/lotm/templates/actor/player-character/parts/tab-nav.hbs',
+    // Damage reduction / resistance boxes, in both sidebars.
+    'systems/lotm/templates/actor/parts/damage-defenses.hbs',
 
     // Partials shared by the player and NPC sheets (see SHARED_PARTIALS in sheets/base-actor-sheet.mjs).
     'systems/lotm/templates/actor/player-character/parts/drop-section.hbs',
@@ -28,6 +30,8 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/apps/skill-check-dialog.hbs',
     'systems/lotm/templates/apps/attribute-check-dialog.hbs',
     'systems/lotm/templates/apps/action-roll-dialog.hbs',
+    'systems/lotm/templates/apps/sanity-check-dialog.hbs',
+    'systems/lotm/templates/apps/promotion-dialog.hbs',
     // Shared by every roll dialog (see ROLL_DIALOG_PARTIALS in apps/roll-dialog.mjs).
     'systems/lotm/templates/apps/roll-dialog/modifiers.hbs',
     'systems/lotm/templates/apps/roll-dialog/spirituality.hbs',

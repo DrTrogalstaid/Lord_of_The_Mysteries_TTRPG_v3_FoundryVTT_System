@@ -1,9 +1,20 @@
-{{!-- AttributeCheckDialog (module/apps/attribute-check-dialog.mjs): 1d20 + the attribute's total + modifiers. --}}
+{{!-- AttributeCheckDialog (module/apps/attribute-check-dialog.mjs): 1d20 + the attribute's total + modifiers.
+      Inspiration checks can be ticked as a spiritual intuition check (DC 25, plus spiritual intuition bonuses). --}}
 <div class="skill-check-dialog-content">
     <header class="skill-check-header">
         <span class="skill-name">{{attributeName}}</span>
         <span class="skill-level">{{localize "LORD_OF_THE_MYSTERIES.AttributeCheck.Total"}} ({{numberFormat attributeTotal decimals=0 sign=true}})</span>
     </header>
+
+    {{#if canBeSpiritualIntuition}}
+    <div class="form-group spiritual-intuition-toggle">
+        <label class="checkbox">
+            <input type="checkbox" name="isSpiritualIntuition" {{checked isSpiritualIntuition}} />
+            <i class="fa-solid fa-eye"></i>
+            {{localize "LORD_OF_THE_MYSTERIES.SpiritualIntuition.Checkbox" dc=spiritualIntuitionDC}}
+        </label>
+    </div>
+    {{/if}}
 
     <hr />
     {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}

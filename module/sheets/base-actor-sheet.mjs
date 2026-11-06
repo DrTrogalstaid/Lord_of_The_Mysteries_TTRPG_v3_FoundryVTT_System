@@ -35,6 +35,8 @@ import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } 
 import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
 import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
 import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
+import { normalizeDamageType } from "../helpers/damage-math.mjs";
+import { openSanityCheck } from "../helpers/sanity.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -97,9 +99,10 @@ const DROP_SECTIONS = {
  */
 const ORDER_FLAG = "flags.lotm.order";
 
-/** Newly added Damage Resistance */
-const DEFAULT_DAMAGE_TYPE = "Physical";
-const DEFAULT_DAMAGE_RESISTANCE = 1;
+/** A newly added damage reduction or resistance row (sidebar). */
+const DEFAULT_REDUCTION_TYPE = "physical";
+const DEFAULT_RESISTANCE_TYPE = "fire";
+const DEFAULT_ROW_VALUE = 1;
 
 /** Bounds of a Sequence's digestionAmount */
 const DIGESTION_MIN = 1;
@@ -448,8 +451,11 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
     actions: {
       editImage: LordOfTheMysteriesActorSheetBase._onEditImage,
-      addDamageResistance: LordOfTheMysteriesActorSheetBase._onAddDamageResistance,
-      removeDamageResistance: LordOfTheMysteriesActorSheetBase._onRemoveDamageResistance,
+      addReduction: LordOfTheMysteriesActorSheetBase.#onAddReduction,
+      removeReduction: LordOfTheMysteriesActorSheetBase.#onRemoveReduction,
+      addResistance: LordOfTheMysteriesActorSheetBase.#onAddResistance,
+      removeResistance: LordOfTheMysteriesActorSheetBase.#onRemoveResistance,
+      sanityCheck: LordOfTheMysteriesActorSheetBase.#onSanityCheck,
 
       rollSkill: LordOfTheMysteriesActorSheetBase._onRollSkill,
       rollAttribute: LordOfTheMysteriesActorSheetBase.#onRollAttribute,
@@ -581,7 +587,12 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       }
 
       case "sidebar":
+        // Damage reduction rows ("all" or a damage type) and resistance rows (a damage type), with their types
+        // normalized so older rows ("Physical") still show the right choice.
         context.damageTypeChoices = this._prepareDamageTypes();
+        context.reductionTypeChoices = this._prepareDamageTypes(CONFIG.LORD_OF_THE_MYSTERIES.damageReductionTypes);
+        context.reductionRows = this._prepareDefenseRows("reductions");
+        context.resistanceRows = this._prepareDefenseRows("resistances");
         // Hover text on Physical Defense and Movement when statuses change them.
         context.statusNotes = this._prepareStatusNotes();
         break;
@@ -1215,44 +1226,90 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * Damage types for Damage Resistance dropdown
+   * Choices for a damage type dropdown in the sidebar, by key: { physical: "Physical", ... }.
+   * @param {Record<string, string>} [types]   Keys and language keys. Default: the damage types.
    * @returns {Record<string, string>}
    */
-  _prepareDamageTypes() {
-    const types = foundry.utils.getProperty(game.i18n.translations, "LORD_OF_THE_MYSTERIES.DamageTypes") ?? {};
-
-    return Object.fromEntries(
-      Object.keys(types).map(key => [key, game.i18n.localize(`LORD_OF_THE_MYSTERIES.DamageTypes.${key}`)])
-    );
+  _prepareDamageTypes(types = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes) {
+    return Object.fromEntries(Object.entries(types ?? {}).map(([key, label]) => [key, game.i18n.localize(label)]));
   }
 
 
   /**
-   * Add Damage Resistance
+   * The saved damage reduction or resistance rows, for the sidebar: each with its index (for its inputs' names and
+   * its remove button) and its type as a key. Older rows saved "Physical" (the sheet's old choice); showing them as
+   * "physical" means the dropdown picks the right one, and the next save stores the key.
+   * @param {"reductions"|"resistances"} field
+   * @returns {{index: number, damageType: string, value: number, isImmune?: boolean}[]}
    */
-  static async _onAddDamageResistance(event, target) {
-    if (!this.isEditable) return;
-
-    const current = this.actor.toObject().system.damage_resistance ?? [];
-
-    await this.actor.update({
-      "system.damage_resistance": [...current, { damageType: DEFAULT_DAMAGE_TYPE, value: DEFAULT_DAMAGE_RESISTANCE }]
-    });
+  _prepareDefenseRows(field) {
+    const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
+    return (this.actor.system[field] ?? []).map((row, index) => ({
+      ...row,
+      index,
+      damageType: normalizeDamageType(row.damageType, damageTypes) ?? "",
+    }));
   }
 
 
   /**
-   * Remove Damage Resistance
+   * Add a row to a list in the actor's system data (damage reduction or resistance).
+   * @param {string} field   "reductions" or "resistances"
+   * @param {object} row
    */
-  static async _onRemoveDamageResistance(event, target) {
+  async _addRow(field, row) {
     if (!this.isEditable) return;
+    const current = this.actor.toObject().system[field] ?? [];
+    await this.actor.update({ [`system.${field}`]: [...current, row] });
+  }
 
+
+  /**
+   * Remove a row (data-index = its position) from a list in the actor's system data.
+   * @param {string} field
+   * @param {HTMLElement} target
+   */
+  async _removeRow(field, target) {
+    if (!this.isEditable) return;
     const index = Number(target.dataset.index);
-    const current = this.actor.toObject().system.damage_resistance ?? [];
-
+    const current = this.actor.toObject().system[field] ?? [];
     if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+    await this.actor.update({ [`system.${field}`]: current.filter((_, i) => i !== index) });
+  }
 
-    await this.actor.update({ "system.damage_resistance": current.filter((_, i) => i !== index) });
+
+  /** Add a damage reduction row. */
+  static async #onAddReduction(event, target) {
+    await this._addRow("reductions", { damageType: DEFAULT_REDUCTION_TYPE, value: DEFAULT_ROW_VALUE });
+  }
+
+  /** Remove a damage reduction row. */
+  static async #onRemoveReduction(event, target) {
+    await this._removeRow("reductions", target);
+  }
+
+  /** Add a damage resistance row. */
+  static async #onAddResistance(event, target) {
+    await this._addRow("resistances", { damageType: DEFAULT_RESISTANCE_TYPE, value: DEFAULT_ROW_VALUE, isImmune: false });
+  }
+
+  /** Remove a damage resistance row. */
+  static async #onRemoveResistance(event, target) {
+    await this._removeRow("resistances", target);
+  }
+
+
+  /**
+   * The Check button under Rationality: a sanity check (apps/sanity-check-dialog.mjs). Shift-click rolls a 0/1
+   * check straight away.
+   */
+  static async #onSanityCheck(event, target) {
+    if (!this.isEditable) return;
+    if (event.shiftKey) {
+      const { default: SanityCheckDialog } = await import("../apps/sanity-check-dialog.mjs");
+      return SanityCheckDialog.prompt(this.actor, { fast: true });
+    }
+    return openSanityCheck(this.actor);
   }
 
 

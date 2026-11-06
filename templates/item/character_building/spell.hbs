@@ -97,6 +97,16 @@
         <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
       </fieldset>
 
+      <!--Defense Targeted: which defense of the targeted tokens the attack roll goes against (hit or miss).
+          Choices: CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets (helpers/check-results.mjs). Blank = no hit check. -->
+      <fieldset class="defenseTarget">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Label"}}</legend>
+        <select name="system.defenseTarget" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.defenseTargets selected=system.defenseTarget blank=(localize "LORD_OF_THE_MYSTERIES.DefenseTargets.none") localize=true}}
+        </select>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Hint"}}</p>
+      </fieldset>
+
       <!--Modifiers-->
       <fieldset>
         <legend>Modifiers</legend>

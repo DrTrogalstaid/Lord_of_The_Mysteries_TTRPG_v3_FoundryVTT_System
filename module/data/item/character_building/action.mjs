@@ -32,6 +32,11 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
 
     // Dice rolled for the attack before the skill bonuses are added (blank = 1d20).
     schema.attackRollMacro = new fields.StringField({ required: false});
+    // Which defense the attack roll goes against: the targeted tokens' defenses decide hit or miss
+    // (CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets, helpers/check-results.mjs). Blank = no hit check.
+    schema.defenseTarget = new fields.StringField({
+      required: true, blank: true, initial: "", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets),
+    });
     // Damage formula rolled by the "Roll Damage" button on the attack's chat message (blank = no button).
     schema.damageRollMacro = new fields.StringField({ required: false});
     // Shown in the damage message's title, e.g. "Shoot: Damage (piercing)". Text only, doesn't change the roll.

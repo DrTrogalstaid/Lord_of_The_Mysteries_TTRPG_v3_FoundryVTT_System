@@ -1,0 +1,85 @@
+{{!-- PromotionDialog (module/apps/promotion-dialog.mjs): 1d20 + 20 + modifiers, at or under current Sanity.
+      Every choice has data-promotion-input: the dialog keeps it in this.inputs and redraws. --}}
+<div class="skill-check-dialog-content promotion-dialog-content">
+    <header class="skill-check-header promotion-header">
+        <img src="{{sequenceImg}}" alt="" width="32" height="32" />
+        <span class="skill-name">{{sequenceName}}</span>
+        <span class="skill-level">{{localize "LORD_OF_THE_MYSTERIES.Sanity.Current"}} {{sanity}}</span>
+    </header>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Promotion.Hint" base=base sanity=sanity success=lossSuccess failure=lossFailure}}</p>
+
+    <fieldset class="promotion-potion">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Potion"}}</legend>
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.digestion"}}</label>
+            <input type="number" min="0" max="20" step="1" value="{{inputs.digestion}}" data-promotion-input="digestion" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.auxiliary"}}</label>
+            <input type="number" min="0" step="1" value="{{inputs.auxiliary}}" data-promotion-input="auxiliary" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.undigested"}}</label>
+            <input type="number" min="0" step="1" value="{{inputs.undigested}}" data-promotion-input="undigested" />
+        </div>
+        <div class="form-group">
+            <label class="checkbox"><input type="checkbox" {{checked inputs.isRepeated}} data-promotion-input="isRepeated" />
+                {{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.isRepeated"}}</label>
+        </div>
+        <div class="form-group">
+            <label class="checkbox"><input type="checkbox" {{checked inputs.isRaw}} data-promotion-input="isRaw" />
+                {{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.isRaw"}}</label>
+        </div>
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.imprint"}}</label>
+            <select data-promotion-input="imprint">{{selectOptions imprintOptions selected=inputs.imprint localize=true}}</select>
+        </div>
+    </fieldset>
+
+    <fieldset class="promotion-circumstances">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Circumstances"}}</legend>
+        <div class="form-group">
+            <label class="checkbox"><input type="checkbox" {{checked inputs.hasRitual}} data-promotion-input="hasRitual" />
+                {{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.hasRitual"}}</label>
+        </div>
+        <div class="form-group">
+            <label class="checkbox"><input type="checkbox" {{checked inputs.isHelped}} data-promotion-input="isHelped" />
+                {{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.isHelped"}}</label>
+            {{#if inputs.isHelped}}
+            <input type="number" min="0" step="1" value="{{inputs.helperSequences}}" data-promotion-input="helperSequences"
+                   data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Promotion.Fields.helperSequences'}}" />
+            {{/if}}
+        </div>
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.moon"}}</label>
+            <select data-promotion-input="moon">{{selectOptions moonOptions selected=inputs.moon localize=true}}</select>
+        </div>
+        <div class="form-group">
+            <label class="checkbox"><input type="checkbox" {{checked inputs.isAnimal}} data-promotion-input="isAnimal" />
+                {{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.isAnimal"}}</label>
+        </div>
+        {{#if hasFollowers}}
+        <div class="form-group">
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Promotion.Fields.followers"}}</label>
+            <input type="number" min="0" step="1" value="{{inputs.followers}}" data-promotion-input="followers" />
+        </div>
+        {{/if}}
+    </fieldset>
+
+    {{#if choiceModifiers.length}}
+    <ol class="modifiers promotion-choice-modifiers">
+        {{#each choiceModifiers as |m|}}
+        <li><span class="mod-label">{{m.label}}</span><span class="mod-value">{{numberFormat m.value decimals=0 sign=true}}</span></li>
+        {{/each}}
+    </ol>
+    {{/if}}
+
+    <hr />
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Promotion.ExtraModifiersHint"}}</p>
+    {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/footer.hbs"}}
+    <button type="button" class="promotion-skip" data-action="skipPromotion">
+        <i class="fa-solid fa-forward"></i> {{localize "LORD_OF_THE_MYSTERIES.Promotion.Skip"}}
+    </button>
+</div>

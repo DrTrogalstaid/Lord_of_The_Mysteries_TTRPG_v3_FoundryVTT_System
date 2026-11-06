@@ -751,3 +751,117 @@
   flex: 0 0 12px;
   color: var(--psx-text-dim);
 }
+
+/* -------------------------------------------------------------------- */
+/* Sidebar: Treated / Quick Dodge boxes, damage resistance's Immune box */
+/* -------------------------------------------------------------------- */
+
+/* A pool row (Health and Rationality, Spirituality and Luck) takes the sidebar's full width, so its two boxes
+   share it evenly. Without this the row is only as wide as its boxes, and a square box that holds a checkbox or a
+   button grows wider to stay square, pushing the second box onto its own line. */
+.lotm.sheet.actor .pool-container > .pool-row {
+  width: 100%;
+}
+
+.lotm.sheet.actor .pool-row > .pool-box {
+  min-width: 0;
+}
+
+/* A small labelled checkbox under a pool or defense (Treated under Health, Quick Dodge under Physical). */
+.lotm.sheet.actor .pool-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--psx-text-dim);
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .damage-resistance-row .damage-immune {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--psx-text-dim);
+  cursor: pointer;
+}
+
+/* The checkboxes themselves, drawn in the sheet's own grey. Foundry draws its checkboxes with an icon font sized by
+   --checkbox-size (in ::before / ::after), in the theme's colours, which came out as a big purple circle over the
+   label. So those are switched off and the box and tick are drawn here. */
+.lotm.sheet.actor .pool-flag input[type="checkbox"],
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"] {
+  --checkbox-size: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  border: 1px solid var(--psx-border);
+  border-radius: 3px;
+  background: #0f0f0f;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.lotm.sheet.actor .pool-flag input[type="checkbox"]::before,
+.lotm.sheet.actor .pool-flag input[type="checkbox"]::after,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]::before,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]::after {
+  content: none;
+  display: none;
+}
+
+.lotm.sheet.actor .pool-flag input[type="checkbox"]:checked,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]:checked {
+  background: var(--psx-text-dim);
+  border-color: var(--psx-text-dim);
+}
+
+/* The tick: an L turned 45 degrees. */
+.lotm.sheet.actor .pool-flag input[type="checkbox"]:checked::after,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]:checked::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 4px;
+  height: 7px;
+  box-sizing: border-box;
+  border: solid var(--psx-bg);
+  border-width: 0 2px 2px 0;
+  background: none;
+  transform: rotate(45deg);
+}
+
+.lotm.sheet.actor .pool-flag input[type="checkbox"]:focus-visible,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]:focus-visible {
+  outline: 1px solid var(--psx-text);
+  outline-offset: 1px;
+}
+
+.lotm.sheet.actor .pool-flag input[type="checkbox"]:disabled,
+.lotm.sheet.actor .damage-resistance-row .damage-immune input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* An immunity's number doesn't count: dim it. */
+.lotm.sheet.actor .damage-resistance-row.is-immune .damage-resistance-value {
+  opacity: 0.4;
+}
+
+.lotm.sheet.actor .damage-resistance-only-box {
+  margin-top: 4px;
+}

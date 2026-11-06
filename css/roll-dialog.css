@@ -145,3 +145,244 @@
   font-style: italic;
   opacity: 0.8;
 }
+
+/* ---- Chat: natural 20 / 1, hit or miss, Burning Luck, sanity, promotion, rest ---- */
+
+.lotm.roll-natural {
+  margin: 2px 0;
+  font-weight: bold;
+}
+
+.lotm.roll-natural.big-success i {
+  color: #d9a93a;
+}
+
+.lotm.roll-natural.big-failure {
+  color: #b33a3a;
+}
+
+/* A natural 20's Big Success damage button stands out (the plain Roll Damage button is taken away). */
+.lotm-damage-buttons button.big-success.is-natural {
+  border-color: #d9a93a;
+  box-shadow: 0 0 4px #d9a93a;
+  font-weight: bold;
+}
+
+.lotm.chat-attack-results {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+
+.lotm.chat-attack-results .attack-against {
+  margin: 0 0 2px;
+  font-style: italic;
+}
+
+.lotm.chat-attack-results .attack-targets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lotm.chat-attack-results .attack-targets li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lotm.chat-attack-results .attack-result {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.lotm.chat-attack-results .attack-defense {
+  font-weight: normal;
+  opacity: 0.7;
+}
+
+.lotm.chat-attack-results li.is-hit .attack-result,
+.lotm.chat-luck-burn .is-hit strong {
+  color: #3d7a46;
+}
+
+.lotm.chat-attack-results li.is-miss .attack-result,
+.lotm.chat-luck-burn .is-miss strong {
+  color: #b33a3a;
+}
+
+.lotm-luck-buttons {
+  display: flex;
+  margin-top: 4px;
+}
+
+.lotm-luck-buttons button {
+  flex: 1;
+  margin: 0;
+}
+
+.lotm-luck-buttons button i,
+.lotm.chat-luck-burn .chat-luck-title i,
+.lotm.chat-luck i {
+  color: #3d7a46;
+}
+
+.lotm.chat-luck-burn .chat-luck-title {
+  margin: 0 0 4px;
+}
+
+.lotm.chat-luck-burn .chat-luck-line {
+  font-size: 0.9em;
+}
+
+.lotm.chat-sanity p,
+.lotm.chat-promotion p {
+  margin: 2px 0;
+}
+
+/* A number already rolled (helpers/sanity.mjs rolledValueHTML): hover shows the dice. Not a button. */
+.lotm-rolled[data-tooltip] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.lotm.promotion-stage {
+  margin-top: 4px;
+  padding: 4px;
+  border-left: 3px solid currentColor;
+}
+
+.lotm.promotion-stage.success {
+  border-left-color: #3d7a46;
+}
+
+.lotm.promotion-stage.warning {
+  border-left-color: #d9a93a;
+}
+
+.lotm.promotion-stage.failure {
+  border-left-color: #b33a3a;
+}
+
+.lotm.promotion-stage .promotion-buttons button {
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.lotm.chat-rest .chat-rest-title {
+  margin: 0 0 4px;
+  font-weight: bold;
+}
+
+.lotm.chat-rest ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+/* ---- Dialogs: sanity check, promotion, spiritual intuition ---- */
+
+.lotm.roll-dialog .sanity-losses {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lotm.roll-dialog .sanity-losses input {
+  flex: 0 0 60px;
+  width: 60px;
+  text-align: center;
+}
+
+.lotm.roll-dialog .sanity-loss-invalid.hidden {
+  display: none;
+}
+
+.lotm.roll-dialog .spiritual-intuition-toggle {
+  margin: 4px 0;
+}
+
+.lotm.promotion-dialog .promotion-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lotm.promotion-dialog .promotion-header img {
+  flex: 0 0 auto;
+  border: none;
+}
+
+.lotm.promotion-dialog fieldset {
+  margin: 4px 0;
+  padding: 4px 6px;
+}
+
+.lotm.promotion-dialog .form-group input[type="number"] {
+  flex: 0 0 56px;
+  width: 56px;
+  text-align: center;
+}
+
+.lotm.promotion-dialog .promotion-skip {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* ---- The DC box in roll windows ---- */
+
+.lotm.roll-dialog .roll-dc-edit label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: bold;
+}
+
+.lotm.roll-dialog .roll-dc-edit input {
+  flex: 0 0 56px;
+  width: 56px;
+  text-align: center;
+}
+
+/* ---- Roll Outcome on a check card ---- */
+
+.lotm-outcome-buttons,
+.lotm-sanity-loss-buttons {
+  display: flex;
+  margin-top: 4px;
+}
+
+.lotm-outcome-buttons button,
+.lotm-sanity-loss-buttons button {
+  flex: 1;
+  margin: 0;
+}
+
+/* ---- @Sanity[...] and @Check[...] buttons in any text (helpers/enrichers.mjs) ---- */
+
+a.lotm-enricher-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  margin: 0 1px;
+  border: 1px solid var(--color-border-light-tertiary, #7a7971);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+a.lotm-enricher-link:hover {
+  background: rgba(0, 0, 0, 0.18);
+  text-shadow: none;
+}
+
+a.lotm-sanity-link i {
+  color: #8a4fb8;
+}
+
+a.lotm-check-link i {
+  color: #3d6fa8;
+}

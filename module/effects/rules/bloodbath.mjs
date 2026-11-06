@@ -37,13 +37,28 @@ export default class BloodbathRule extends StatusRule {
   async onTurnCheck(check, effect, { fast = false } = {}) {
     if (check !== "physique") return false;
     const actor = effect.parent;
-    const result = await rollStatusCheck(actor, { attribute: "phy", dc: FAINT_DC, reason: game.i18n.localize(this.name), fast });
+    const result = await rollStatusCheck(actor, {
+      attribute: "phy", dc: FAINT_DC, reason: game.i18n.localize(this.name), fast, outcome: this.outcomeFor(check, effect),
+    });
     if (!result) return false;
+    await this.applyCheckResult(check, effect, result.success);
+    return true;
+  }
 
-    if (!result.success) {
+
+  /** Failing faints the creature (Helpless); Luck turning that into a pass wakes it (Helpless off). @override */
+  async applyCheckResult(check, effect, success, { isLuckChange = false } = {}) {
+    if (check !== "physique") return false;
+    const actor = effect.parent;
+    const isHelpless = actor.statuses?.has("helpless") ?? false;
+    if (!success && !isHelpless) {
       await actor.toggleStatusEffect("helpless", { active: true });
       // Everyone sees it faint.
       await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.Fainted", actor, effect), { isPublic: true });
+    }
+    else if (success && isLuckChange && isHelpless) {
+      await actor.toggleStatusEffect("helpless", { active: false });
+      await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.StaysConscious", actor, effect), { isPublic: true });
     }
     return true;
   }

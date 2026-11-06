@@ -6,9 +6,12 @@
  *                    modifiers and notes in roll dialogs, and the actions it stops (a warning with Use Anyway)
  *     ├─ BleedingRule  (rules/bleeding.mjs)  start of turn: roll 1d2 Health lost; Treated button
  *     ├─ BloodbathRule (rules/bloodbath.mjs) starts Bleeding; start of turn: Physique 15 or faint (Helpless)
- *     ├─ DyingRule     (rules/dying.mjs)     start of turn: Physique 15 or die; Will 15 to act; only free / quick actions
+ *     ├─ DyingRule     (rules/dying.mjs)     start of turn: Physique 10 or die; Will 15 to act; only free / quick actions
  *     ├─ FearRule      (rules/fear.mjs)      start of turn and Effects tab: Will 15 to resist the forced movement
- *     └─ AngryRule     (rules/angry.mjs)     start of turn and Effects tab: Will 20 to calm down; meditation; -4 (or -2)
+ *     ├─ AngryRule     (rules/angry.mjs)     start of turn and Effects tab: Will 20 to calm down; meditation; -4 (or -2)
+ *     ├─ SemiOutOfControlRule   (rules/semi-out-of-control.mjs)   1d2 rounds; Will 10 each turn or a 0/1 sanity check
+ *     ├─ IndeterminateMadnessRule (rules/indeterminate-madness.mjs) d8 symptom; daily 0/1 sanity check
+ *     └─ OutOfControlRule       (rules/out-of-control.mjs)       Sanity 0: the GM takes over
  *
  * One StatusRule is made for every entry in STATUSES (status-effects.mjs). Rules are looked up by status id, so a
  * status works the same however it got onto the actor: toggled from the Token HUD or the Effects tab, added
@@ -20,6 +23,9 @@
  *   toStatusEffect()    Foundry's status list, CONFIG.statusEffects (registerStatusEffects in status-effects.mjs)
  *   onApplied()         when an effect with the status is put on an actor (documents/active-effect.mjs)
  *   turnStart(), onTurnCheck()  the start-of-turn card (effects/turn-start.mjs)
+ *   onTurnStart()       when the creature's turn starts in combat, before the card (documents/combat.mjs): countdowns
+ *   applyCheckResult()  what a status check's result does; Burning Luck calls it again when Luck changes the result
+ *                       (helpers/luck.mjs)
  *   rollModifier(), rollNote(), targetRollModifier(), targetRollNote()
  *                       the roll dialogs (effects/status-rolls.mjs, apps/roll-dialog.mjs)
  *   restriction()       using an action or spell (effects/status-restrictions.mjs)
@@ -322,6 +328,43 @@ export default class StatusRule {
    */
   async onTurnCheck(check, effect, options = {}) {
     return false;
+  }
+
+
+  /**
+   * What one of this status's checks does once its result is known (die, faint, resist, calm down...).
+   * Called right after the roll, and again by Burning Luck when Luck turns a pass into a fail or back
+   * (helpers/luck.mjs), with isLuckChange: then it also undoes what the old result did, where it can.
+   * @param {string} check             The check's id ("physique", "resist", ...).
+   * @param {ActiveEffect} effect
+   * @param {boolean} success
+   * @param {object} [options]
+   * @param {boolean} [options.isLuckChange]  The result was changed by Burning Luck.
+   * @returns {Promise<boolean>}       true when the status handled it. false: Burning Luck tells the GM to adjust by hand.
+   */
+  async applyCheckResult(check, effect, success, { isLuckChange = false } = {}) {
+    return false;
+  }
+
+
+  /**
+   * The creature's turn just started in combat (documents/combat.mjs), before its start-of-turn card is made.
+   * For statuses that count down (Semi-Out-of-Control). Runs on the GM's client. Nothing by default.
+   * @param {Actor} actor
+   * @param {ActiveEffect} effect
+   * @returns {Promise<void>}
+   */
+  async onTurnStart(actor, effect) {}
+
+
+  /**
+   * The check data to save on a status check's roll, so Burning Luck can change its result (rollStatusCheck).
+   * @param {string} check
+   * @param {ActiveEffect} effect
+   * @returns {{statusId: string, check: string, effectUuid: string}}
+   */
+  outcomeFor(check, effect) {
+    return { statusId: this.id, check, effectUuid: effect.uuid };
   }
 
 
