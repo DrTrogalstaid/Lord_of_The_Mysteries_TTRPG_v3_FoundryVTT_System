@@ -1,0 +1,11 @@
+Icons in this folder are from game-icons.net (https://game-icons.net)
+Licensed under CC BY 3.0: https://creativecommons.org/licenses/by/3.0/
+Files are unmodified copies from https://github.com/game-icons/icons
+
+
+Carl Olsen: crossbow
+Caro Asercion: bucket-wheel-excavator
+Delapouite: binoculars, bow-arrow, brain-tentacle, broken-pottery, chest-armor, cooking-pot, devil-mask, discussion, dynamite, elf-ear, giant, jump-across, lock-picking, lock-spy, monkey-wrench, mustache, oak-leaf, paint-brush, palm-tree, piano-keys, public-speaker, revolver, sawed-off-shotgun, scroll-quill, spartan-helmet, steering-wheel, stethoscope, swimfins, telescope, templar-shield, tower-bridge, viking-helmet, wallet, winged-scepter
+Faithtoken: card-pick
+Lorc: ammonite-fossil, beer-stein, boot-kick, boxing-glove, brain, campfire, cannon, charm, compass, conversation, cowled, crossed-swords, crystalize, divided-spiral, dna1, dodging, dragon-head, drama-masks, echo-ripples, gears, grab, hammer-nails, holy-symbol, hourglass, juggler, laurel-crown, lips, lotus, meditation, mountains, psychic-waves, quill-ink, round-bottom-flask, rune-stone, scales, screaming, shining-sword, sing, stone-tablet, third-eye, trade, wheat, whip
+Skoll: breaking-chain, pestle-mortar, winchester-rifle

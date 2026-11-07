@@ -29,7 +29,7 @@ LORD_OF_THE_MYSTERIES.attributeAbbreviations = {
 
 LORD_OF_THE_MYSTERIES.resources = {
     hp: 'LORD_OF_THE_MYSTERIES.Attributes.Health.long',
-    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Rationality.long',
+    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Sanity.long',
     lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.long',
     spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.long',
 
@@ -38,7 +38,7 @@ LORD_OF_THE_MYSTERIES.resources = {
 LORD_OF_THE_MYSTERIES.resourcesAbbreviations = {
     hp: 'LORD_OF_THE_MYSTERIES.Attributes.Health.abbr',
     sp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirit.abbr',
-    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Rationality.abbr',
+    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Sanity.abbr',
     lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.abbr',
     spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.abbr',
 };
@@ -152,6 +152,60 @@ LORD_OF_THE_MYSTERIES.damageTypes = {
     poison: 'LORD_OF_THE_MYSTERIES.DamageTypes.Poison',
 };
 
+/**
+ * The damage reduction rows' types: every damage type, plus "all" (reduction against any damage, e.g. "3 points of
+ * all damage reduction"). See _prepareDamageReduction in data/actor/base-actor.mjs.
+ */
+LORD_OF_THE_MYSTERIES.damageReductionTypes = {
+    all: 'LORD_OF_THE_MYSTERIES.DamageReduction.All',
+    ...LORD_OF_THE_MYSTERIES.damageTypes,
+};
+
+/**
+ * Which defense an action's or spell's attack roll goes against (system.defenseTarget). Blank = no hit check.
+ * What each one is made of: defenseValue in helpers/check-results.mjs.
+ */
+LORD_OF_THE_MYSTERIES.defenseTargets = {
+    physical: 'LORD_OF_THE_MYSTERIES.DefenseTargets.physical',
+    physicalNoEvasion: 'LORD_OF_THE_MYSTERIES.DefenseTargets.physicalNoEvasion',
+    physicalUndodgeable: 'LORD_OF_THE_MYSTERIES.DefenseTargets.physicalUndodgeable',
+    physicalNoArmor: 'LORD_OF_THE_MYSTERIES.DefenseTargets.physicalNoArmor',
+    will: 'LORD_OF_THE_MYSTERIES.DefenseTargets.will',
+    physique: 'LORD_OF_THE_MYSTERIES.DefenseTargets.physique',
+};
+
+/**
+ * Sanity lost when promoted to each Sequence (rulebook, Chapter 5: Promotion): on a passed / failed promotion check.
+ * Doubled without a promotion ritual; a ritual gives 5 points of sanity protection instead (helpers/promotion.mjs).
+ */
+LORD_OF_THE_MYSTERIES.promotionSanityLoss = {
+    9: { success: "0",    failure: "1" },
+    8: { success: "1",    failure: "1d2" },
+    7: { success: "1d2",  failure: "1d4" },
+    6: { success: "1d4",  failure: "1d8" },
+    5: { success: "1d6",  failure: "1d12" },
+    4: { success: "1d8",  failure: "2d8" },
+    3: { success: "1d10", failure: "2d10" },
+    2: { success: "2d6",  failure: "2d12" },
+    1: { success: "2d8",  failure: "3d10" },
+    0: { success: "2d10", failure: "3d12" },
+};
+
+/**
+ * Madness tendencies (rulebook: "Crazy list that doesn't take .ti"), rolled on a d8 for Semi-Out-of-Control and
+ * Indeterminate Madness (effects/rules/). Index 0 is unused so a d8 roll is the key.
+ */
+LORD_OF_THE_MYSTERIES.madnessTendencies = {
+    1: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.1',
+    2: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.2',
+    3: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.3',
+    4: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.4',
+    5: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.5',
+    6: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.6',
+    7: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.7',
+    8: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.8',
+};
+
 LORD_OF_THE_MYSTERIES.commonLanguages = {
     ancientFeysac: "Ancient Feysac",
     loenese: "Loenese",
@@ -226,6 +280,9 @@ LORD_OF_THE_MYSTERIES.actionTraits = {
     parry: 'LORD_OF_THE_MYSTERIES.Traits.parry',
     aimed: 'LORD_OF_THE_MYSTERIES.Traits.aimed',
 };
+
+/** Spiritual intuition checks: an Inspiration check against this DC (rulebook: Special Actions). */
+LORD_OF_THE_MYSTERIES.spiritualIntuitionDC = 25;
 
 /** The Listen skill in the Skills compendium: Deaf adds a note to its checks (effects/status-effects.mjs). */
 LORD_OF_THE_MYSTERIES.listenSkillUuid = 'Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP';

@@ -1,6 +1,7 @@
 import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
 import { AMMO_USES, OLD_AMMO_USES } from "../../../helpers/firearms.mjs";
+import { TABLE_SLOT_ACTIONS, prepareTableSlots, bindTableSlots } from "../../../helpers/table-slot.mjs";
 
 
 export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBase {
@@ -14,6 +15,7 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
     // Results list's add / delete (Description tab).
     actions: {
       ...SKILL_SLOT_ACTIONS,
+      ...TABLE_SLOT_ACTIONS,
       addSpecialResult: LordOfTheMysteriesActionSheet.#onAddSpecialResult,
       deleteSpecialResult: LordOfTheMysteriesActionSheet.#onDeleteSpecialResult,
     },
@@ -43,6 +45,8 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
 
     // The Skill slot: the skill this action rolls with.
     context.actionSkill = await prepareSkillSlot(this.item);
+    // The On Success / On Failure table slots (helpers/table-slot.mjs).
+    context.outcomeTables = await prepareTableSlots(this.item);
 
     // The Traits checkboxes (templates/item/parts/action-traits.hbs).
     context.traitOptions = this._traitOptions();
@@ -72,6 +76,8 @@ export class LordOfTheMysteriesActionSheet extends LordOfTheMysteriesItemSheetBa
 
     // Let the Skill slot accept a dropped skill (only when the sheet can be edited; bindSkillSlot checks).
     bindSkillSlot(this);
+    // And the outcome table slots a dropped Roll Table.
+    bindTableSlots(this);
   }
 
   /* -------------------------------------------- */

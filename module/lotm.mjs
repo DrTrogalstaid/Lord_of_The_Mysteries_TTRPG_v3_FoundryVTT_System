@@ -40,6 +40,12 @@ import LOTM_VTTRoll from './dice/lotm-roll.mjs';
 
 // Import action attack/damage rolls (the "Roll Damage" chat button listener).
 import { registerActionChatListeners } from './helpers/action-roll.mjs';
+// Hit / miss, Big Success and Burning Luck on check cards; sanity checks; promotions.
+import { registerCheckChatListeners } from './helpers/check-chat.mjs';
+import { openSanityCheck } from './helpers/sanity.mjs';
+import { registerPromotionHooks } from './helpers/promotion.mjs';
+import { registerEnrichers } from './helpers/enrichers.mjs';
+import AttributeCheckDialog from './apps/attribute-check-dialog.mjs';
 
 // Import DataModel classes
 import * as models from './data/_module.mjs';
@@ -63,6 +69,15 @@ Hooks.once('init', function () {
     // A gun's Reload / Chamber / Rotate / Unload (helpers/gun-handling.mjs), for macros, e.g.
     //   await game.lotm.GunHandling.get(gun, "reload")?.perform(actor);
     GunHandling,
+    // A sanity (sanity) check for an actor, or for every selected token when the actor is null
+    // (helpers/sanity.mjs), e.g.
+    //   game.lotm.sanityCheck(null, { loss: "1/1d3", reason: "Saw the Wraith" })
+    // sanityCheck is the same function, under the rulebook's name.
+    sanityCheck: openSanityCheck,
+    sanityCheck: openSanityCheck,
+    // A spiritual intuition check (Inspiration, DC 25, with Spirit Vision's bonus), e.g.
+    //   game.lotm.spiritualIntuition(canvas.tokens.controlled[0].actor)
+    spiritualIntuition: (actor, options = {}) => AttributeCheckDialog.prompt(actor, "ins", { ...options, isSpiritualIntuition: true }),
   };
 
   // Add custom constants for configuration.
@@ -89,6 +104,12 @@ Hooks.once('init', function () {
 
   // Make the "Roll damage" button on action attack messages work.
   registerActionChatListeners();
+  // Hit / miss lists, Big Success on a natural 20, and the Burn Luck button on check cards (helpers/check-chat.mjs).
+  registerCheckChatListeners();
+  // The promotion dialog when a Sequence is added to an actor, and the promotion cards' buttons (helpers/promotion.mjs).
+  registerPromotionHooks();
+  // @Sanity[1/1d2] and @Check[wil|15] buttons in any text (helpers/enrichers.mjs).
+  registerEnrichers();
 
   // Combat: start-of-turn cards for statuses (documents/combat.mjs), and their roll buttons (effects/turn-start.mjs).
   CONFIG.Combat.documentClass = LordOfTheMysteriesCombat;

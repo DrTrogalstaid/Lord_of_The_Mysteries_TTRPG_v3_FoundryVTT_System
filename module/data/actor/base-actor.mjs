@@ -7,6 +7,8 @@ import { activeStatusRules } from "../../effects/status-effects.mjs";
 import { combineStatusRules, movementAgility, physicalDefense } from "../../effects/status-math.mjs";
 import { syncHealthStatuses } from "../../effects/health-statuses.mjs";
 import { syncGrantedEffects } from "../../effects/granted-effects.mjs";
+import { syncSanityStatuses } from "../../helpers/sanity.mjs";
+import { normalizeDamageType } from "../../helpers/damage-math.mjs";
 
 const {
     HTMLField, SchemaField, NumberField, StringField, FilePathField, ArrayField, DocumentUUIDField
@@ -58,13 +60,39 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             will: new fields.NumberField({ required: true, integer: true})
         });
 
-        schema.damage_resistance = new fields.ArrayField(
+        // Damage reduction rows typed in on the sheet (rulebook: Damage reduction). Taken off each hit once, never
+        // below 1 damage. Worn armor adds its own (see _prepareDamageReduction). Saved as `damage_resistance` before;
+        // migrateData below moves those rows here.
+        schema.reductions = new fields.ArrayField(
             new fields.SchemaField({
-                // A key of CONFIG.LORD_OF_THE_MYSTERIES.damageTypes ("physical", "fire", ...).
+                // A key of CONFIG.LORD_OF_THE_MYSTERIES.damageReductionTypes: "all", or a damage type ("physical", "fire", ...).
                 damageType: new fields.StringField({ required: true, initial: "physical" }),
                 value : new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 })
             })
         );
+
+        // Damage resistance rows (rulebook: Damage resistance, Immunity). Resistance takes its type's damage down,
+        // all the way to 0 if it's big enough; isImmune means that type does no damage at all.
+        schema.resistances = new fields.ArrayField(
+            new fields.SchemaField({
+                damageType: new fields.StringField({ required: true, initial: "fire" }),
+                value: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 }),
+                isImmune: new fields.BooleanField({ required: true, initial: false })
+            })
+        );
+
+        // Quick Dodge (fast / high-speed dodge): true = this creature can dodge bullets, so attacks that are too fast
+        // to dodge (defenseTarget "physicalNoEvasion", e.g. firearms) still face its full Physical Defense
+        // (helpers/check-results.mjs). An ability's passive effect can turn it on: system.isQuickDodgable Override true.
+        schema.isQuickDodgable = new fields.BooleanField({ required: true, initial: false });
+
+        // Health recovery: the wounds were treated with a successful Medicine check. Long Rest heals Physique when
+        // true, half Physique when false, then sets it back to false (sheets/player-character-sheet.mjs).
+        schema.hasBeenTreated = new fields.BooleanField({ required: true, initial: false });
+
+        // Added to spiritual intuition checks only (Inspiration, DC 25; apps/attribute-check-dialog.mjs).
+        // 0 unless an Active Effect adds to it, e.g. Spirit Vision: +2.
+        schema.spiritualIntuitionBonus = new fields.NumberField({ ...requiredInteger, initial: 0 });
         
         schema.skills = new fields.SchemaField(Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders).reduce((obj, compendiumCategory) => {
             obj[compendiumCategory] = new fields.ArrayField(
@@ -147,8 +175,22 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     }
 
 
-    /** 
-     * Prepare the derived data on the actor sheet 
+    /**
+     * Runs every time an actor's saved data is loaded, before the fields above check it.
+     * Damage reduction rows used to be saved as `damage_resistance` (the name was a translation mix-up: they were
+     * always reduction). Copy them to `reductions` until the actor saves its own `reductions`.
+     * @override
+     */
+    static migrateData(source) {
+        if (Array.isArray(source.damage_resistance) && !("reductions" in source)) {
+            source.reductions = source.damage_resistance;
+        }
+        return super.migrateData(source);
+    }
+
+
+    /**
+     * Prepare the derived data on the actor sheet
      * @override 
     */
     prepareDerivedData() {
@@ -263,14 +305,32 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
 
     /**
+     * Before the actor is changed: remember its Sanity, so losing control only happens when Sanity drops to 0
+     * (not when a new actor that never had its Sanity filled in is edited).
+     * @override
+     */
+    async _preUpdate(changes, options, user) {
+        const allowed = await super._preUpdate(changes, options, user);
+        if (allowed === false) return false;
+        if (foundry.utils.hasProperty(changes, "system.resources.rp.value")) {
+            options.lotmSanityBefore = Number(this.resources?.rp?.value) || 0;
+        }
+    }
+
+
+    /**
      * After the actor is changed: when its Health changed, turn Bloodbath, Dying and Dead on or off to match
-     * (effects/health-statuses.mjs). Only on the client that made the change, so it happens once.
+     * (effects/health-statuses.mjs); when its Sanity changed, Indeterminate Madness and Out of Control
+     * (helpers/sanity.mjs). Only on the client that made the change, so it happens once.
      * @override
      */
     _onUpdate(changed, options, userId) {
         super._onUpdate(changed, options, userId);
         if (userId !== game.user.id) return;
         if (changed.system?.resources?.hp?.value !== undefined) syncHealthStatuses(this.parent);
+        if (changed.system?.resources?.rp?.value !== undefined) {
+            syncSanityStatuses(this.parent, { before: options.lotmSanityBefore });
+        }
         // An NPC's hidden grants changed: hidden abilities' passive effects stop applying (effects/granted-effects.mjs).
         if (changed.system?.hiddenGrants !== undefined) syncGrantedEffects(this.parent);
     }
@@ -293,7 +353,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     _prepareResources() {
         // Health
         this.resources.hp.max = (this.attributes.phy.base + 10);
-        // Rationality
+        // Sanity
         this.resources.rp.max = (this.attributes.wil.total + 10);
         // Spirituality
         this.resources.spp.max = (this.attributes.wil.base + this.attributes.ins.base);
@@ -336,44 +396,52 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
 
     /**
-     * Damage reduction: the rows typed in on the sheet (damage_resistance) plus the worn armor's.
-     * The saved rows are never changed; the totals are display / roll data only:
-     *   damageReduction       { physical: 7, fire: 5, ... }  what damage should be reduced by, per type. Used when
-     *                         damage is applied from chat (applyDamageFromMessage in helpers/action-roll.mjs).
+     * Damage reduction, resistance and immunity (rulebook: Defense and Dodge Types). The saved rows are never
+     * changed; the totals are display / roll data only, used when damage is applied from chat
+     * (applyDamageFromMessage and reduceDamage in helpers/action-roll.mjs):
+     *   damageReduction       { physical: 7, fire: 5, all: 0, ... }  reduction per type. An "all" row counts for every
+     *                         type (and for untyped damage, under "all"). Rows typed in on the sheet plus the worn armor's.
      *   armorReductionList    [{ damageType, label, value, source }]  the armor's rows, for a read-only list on the sheet.
+     *   damageResistance      { fire: 5, ... }  resistance per type (the resistance rows that aren't immunities).
+     *   damageImmunities      ["poison", ...]   types that do no damage.
      */
     _prepareDamageReduction() {
         const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
-        // Rows should hold a key ("physical"). The sheet's dropdown saves "Physical" (its language key), and older
-        // rows may hold the full label key ("LORD_OF_THE_MYSTERIES.DamageTypes.Physical"), so those are matched too.
-        // Every total uses the lower-case key, the same as armor and damage rolls (helpers/action-roll.mjs), so
-        // applying damage can look each type up directly.
-        const keyOf = (type) => {
-            if (!type) return null;
-            if (type in damageTypes) return type;
-            const lower = String(type).toLowerCase();
-            return Object.keys(damageTypes).find((key) =>
-                key === lower
-                || damageTypes[key] === type
-                || damageTypes[key].split(".").pop().toLowerCase() === lower
-            ) ?? type;
-        };
+        // Rows should hold a key ("physical"); older rows may hold the sheet's old choice ("Physical") or the full
+        // language key, so they're normalized (helpers/damage-math.mjs). Every total uses the lower-case key, the same
+        // as armor and damage rolls (helpers/action-roll.mjs), so applying damage can look each type up directly.
+        const keyOf = (type) => normalizeDamageType(type, damageTypes);
 
-        const totals = {};
-        for (const row of this.damage_resistance ?? []) {
+        const reduction = { all: 0 };
+        for (const row of this.reductions ?? []) {
             const key = keyOf(row.damageType);
             if (!key) continue;
-            totals[key] = (totals[key] ?? 0) + (row.value ?? 0);
+            reduction[key] = (reduction[key] ?? 0) + (row.value ?? 0);
         }
 
         // Worn armor stacks with what's on the sheet (skin armor, abilities); only one suit counts (see inventory.mjs).
         const armor = this.carrying?.armor;
         this.armorReductionList = Object.entries(armor?.reduction ?? {}).map(([key, value]) => {
-            totals[key] = (totals[key] ?? 0) + value;
+            reduction[key] = (reduction[key] ?? 0) + value;
             return { damageType: key, label: damageTypes[key] ?? key, value, source: armor.name };
         });
 
-        this.damageReduction = totals;   // display only, not in the schema
+        // "All" counts for every damage type too.
+        if (reduction.all) {
+            for (const key of Object.keys(damageTypes)) reduction[key] = (reduction[key] ?? 0) + reduction.all;
+        }
+        this.damageReduction = reduction;   // display only, not in the schema
+
+        const resistance = {};
+        const immunities = new Set();
+        for (const row of this.resistances ?? []) {
+            const key = keyOf(row.damageType);
+            if (!key) continue;
+            if (row.isImmune) immunities.add(key);
+            else resistance[key] = (resistance[key] ?? 0) + (row.value ?? 0);
+        }
+        this.damageResistance = resistance;          // display only, not in the schema
+        this.damageImmunities = [...immunities];     // display only, not in the schema
     }
 
 

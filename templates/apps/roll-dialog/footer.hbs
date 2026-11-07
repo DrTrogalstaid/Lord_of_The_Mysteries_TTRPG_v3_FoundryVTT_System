@@ -19,7 +19,14 @@
 </ul>
 {{/if}}
 
-{{#if dc}}
+{{!-- The DC: a box the player can type in (blank = no DC), or plain text for a status check's DC. --}}
+{{#if dcEditable}}
+<div class="roll-dc roll-dc-edit">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.RollDialog.DCLabel"}}
+        <input type="number" name="dc" value="{{dc}}" min="0" step="1" placeholder="—" />
+    </label>
+</div>
+{{else if dc}}
 <p class="roll-dc">{{localize "LORD_OF_THE_MYSTERIES.RollDialog.DC" dc=dc}}</p>
 {{/if}}
 

@@ -1,12 +1,15 @@
 /**
- * Check bonuses: bonuses to rolls with an attribute that don't change the attribute itself.
+ * Check bonuses: bonuses to rolls that don't change an attribute itself.
  *
  * Each attribute has a checkBonus (system.attributes.<key>.checkBonus, base-actor.mjs), 0 unless an Active Effect
  * adds to it. It's added to attribute checks and skill checks that use that attribute, but not to the attribute's
  * total, so nothing worked out from the total changes (Spirituality, Health, defenses...).
  *
- *   Spirit Vision: "+2 to spiritual intuition checks" -> a change  system.attributes.ins.checkBonus  Add  2
- *   (A change to system.attributes.ins.beyonder_bonus would raise Inspiration itself, and Spirituality with it.)
+ * Spiritual intuition has its own bonus (system.spiritualIntuitionBonus), added only to spiritual intuition checks
+ * (the Inspiration check dialog's "Spiritual Intuition" box, apps/attribute-check-dialog.mjs):
+ *   Spirit Vision: "+2 to spiritual intuition checks" -> a change  system.spiritualIntuitionBonus  Add  2
+ *   (Not system.attributes.ins.checkBonus: that would add +2 to every Inspiration check, Occultism and spells too.
+ *   Older Spirit Vision effects did that; module/macros/move-spirit-vision-bonus.js moves them over.)
  *
  * In the roll window (apps/roll-dialog.mjs) each effect's bonus is its own row, named after the effect
  * ("Spirit Vision +2"), removable for that roll like the status modifiers. Rolls straight from an action's
@@ -18,15 +21,17 @@ const isAddChange = (change) => change?.type === "add" || change?.mode === 2;
 
 
 /**
- * The rows a roll with this attribute gets: one per effect that adds to its check bonus. If something else changed
- * the bonus too (an Override, an edit by hand), one more row makes up the rest.
+ * The rows a roll gets from one bonus field: one per effect that adds to it. If something else changed the field
+ * too (an Override, an edit by hand), one more row makes up the rest.
  * @param {Actor} actor
- * @param {string} attributeKey   "ins", "str"...
+ * @param {string} key        The field under system, e.g. "attributes.ins.checkBonus", "spiritualIntuitionBonus".
+ * @param {string} restLabel  The name of the "rest" row.
+ * @param {string} rowKey     Start of each row's key, e.g. "checkBonus:ins" -> "checkBonus:ins:<effect id>".
  * @returns {{key: string, label: string, value: number, img: string|null}[]}
  */
-export function checkBonusRows(actor, attributeKey) {
-  const total = Number(actor?.system?.attributes?.[attributeKey]?.checkBonus) || 0;
-  const path = `system.attributes.${attributeKey}.checkBonus`;
+export function bonusRows(actor, key, restLabel, rowKey = key) {
+  const total = Number(key.split(".").reduce((value, part) => value?.[part], actor?.system)) || 0;
+  const path = `system.${key}`;
   const rows = [];
 
   for (const effect of actor?.allApplicableEffects?.() ?? []) {
@@ -35,18 +40,34 @@ export function checkBonusRows(actor, attributeKey) {
     const value = changes
       .filter((change) => change?.key === path && isAddChange(change))
       .reduce((sum, change) => sum + (Number(change.value) || 0), 0);
-    if (value) rows.push({ key: `checkBonus:${attributeKey}:${effect.id}`, label: effect.name, value, img: effect.img ?? null });
+    if (value) rows.push({ key: `${rowKey}:${effect.id}`, label: effect.name, value, img: effect.img ?? null });
   }
 
   const rest = total - rows.reduce((sum, row) => sum + row.value, 0);
-  if (rest) {
-    const attribute = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes?.[attributeKey] ?? attributeKey);
-    rows.push({
-      key: `checkBonus:${attributeKey}:rest`,
-      label: game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.CheckBonus", { attribute }),
-      value: rest,
-      img: null,
-    });
-  }
+  if (rest) rows.push({ key: `${rowKey}:rest`, label: restLabel, value: rest, img: null });
   return rows;
+}
+
+
+/**
+ * The rows a roll with this attribute gets (its check bonus).
+ * @param {Actor} actor
+ * @param {string} attributeKey   "ins", "str"...
+ * @returns {{key: string, label: string, value: number, img: string|null}[]}
+ */
+export function checkBonusRows(actor, attributeKey) {
+  const attribute = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes?.[attributeKey] ?? attributeKey);
+  return bonusRows(actor, `attributes.${attributeKey}.checkBonus`,
+    game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.CheckBonus", { attribute }), `checkBonus:${attributeKey}`);
+}
+
+
+/**
+ * The rows a spiritual intuition check gets (system.spiritualIntuitionBonus: Spirit Vision +2, ...).
+ * @param {Actor} actor
+ * @returns {{key: string, label: string, value: number, img: string|null}[]}
+ */
+export function spiritualIntuitionRows(actor) {
+  return bonusRows(actor, "spiritualIntuitionBonus",
+    game.i18n.localize("LORD_OF_THE_MYSTERIES.SpiritualIntuition.Bonus"));
 }

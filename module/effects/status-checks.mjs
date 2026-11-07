@@ -7,6 +7,8 @@
  * status list under plain Node, where Foundry's roll and window classes don't exist.
  */
 
+import { checkSucceeds, naturalD20 } from "../helpers/check-results.mjs";
+
 /**
  * Everyone who should see a status's chat messages: the actor's owners and the GMs.
  * For an NPC that's only the GMs.
@@ -45,13 +47,17 @@ export function statusChat(actor, text, { isPublic = false } = {}) {
  * @param {number} check.dc
  * @param {string} [check.reason]    Shown in front of the check's title, e.g. "Bloodbath".
  * @param {boolean} [check.fast]     Shift-click: roll right away, without the dialog.
+ * @param {object} [check.outcome]   What the check decides: { statusId, check, effectUuid }. Saved on the roll's
+ *                                   message, so Burning Luck can change the result afterwards (helpers/luck.mjs calls
+ *                                   the status's applyCheckResult).
  * @returns {Promise<{roll: Roll, success: boolean}|null>}  null when the dialog was closed without rolling.
+ *   success: meets or beats the DC; a natural 20 always passes, a natural 1 always fails (helpers/check-results.mjs).
  */
-export async function rollStatusCheck(actor, { attribute, dc, reason = "", fast = false }) {
+export async function rollStatusCheck(actor, { attribute, dc, reason = "", fast = false, outcome = null }) {
   const { default: AttributeCheckDialog } = await import("../apps/attribute-check-dialog.mjs");
-  const roll = await AttributeCheckDialog.prompt(actor, attribute, { dc, reason, fast });
+  const roll = await AttributeCheckDialog.prompt(actor, attribute, { dc, reason, fast, outcome });
   if (!roll) return null;
-  return { roll, success: roll.total >= dc };
+  return { roll, success: checkSucceeds({ total: roll.total, natural: naturalD20(roll), dc }) };
 }
 
 

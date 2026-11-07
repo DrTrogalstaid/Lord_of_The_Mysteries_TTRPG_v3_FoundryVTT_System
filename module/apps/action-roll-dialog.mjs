@@ -36,6 +36,8 @@ export default class ActionRollDialog extends LotmRollDialog {
       // No Spirituality checkbox when it's already been paid (a special bullet's spell, helpers/firearms.mjs).
       spirituality: isSpiritualityPaid ? null : { cost: spiritualityCost(action), reason: action.name },
       chat,
+      // The action's own DC, if it has one.
+      dc: action.system.dc ?? null,
       ...options
     });
     this.action = action;

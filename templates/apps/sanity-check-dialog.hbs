@@ -1,0 +1,35 @@
+{{!-- SanityCheckDialog (module/apps/sanity-check-dialog.mjs): d20 + modifiers at or under current Sanity. --}}
+<div class="skill-check-dialog-content">
+    <header class="skill-check-header">
+        <span class="skill-name">{{localize "LORD_OF_THE_MYSTERIES.Sanity.Current"}}</span>
+        <span class="skill-level">{{sanity}} / {{sanityMax}}</span>
+    </header>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Sanity.Hint" sanity=sanity}}</p>
+
+    <div class="form-group">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sanity.Reason"}}</label>
+        <input type="text" name="reason" value="{{reason}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Sanity.ReasonPlaceholder'}}" />
+    </div>
+    <div class="form-group sanity-losses">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sanity.Loss"}}</label>
+        <input type="text" name="lossSuccess" value="{{lossSuccess}}" placeholder="0"
+               data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Sanity.LossSuccess'}}" />
+        <span class="sanity-loss-sep">/</span>
+        <input type="text" name="lossFailure" value="{{lossFailure}}" placeholder="1d3"
+               data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Sanity.LossFailure'}}" />
+    </div>
+    <p class="hint sanity-loss-invalid skill-check-formula-warning{{#if lossesAreValid}} hidden{{/if}}">
+        <i class="fa-solid fa-triangle-exclamation"></i> {{localize "LORD_OF_THE_MYSTERIES.Sanity.InvalidLoss"}}
+    </p>
+    <div class="form-group">
+        <label class="checkbox" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Sanity.SolidifiedHint'}}">
+            <input type="checkbox" name="isSolidified" {{checked isSolidified}} />
+            {{localize "LORD_OF_THE_MYSTERIES.Sanity.Solidified"}}
+        </label>
+    </div>
+
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/modifiers.hbs"}}
+    <hr />
+    {{> "systems/lotm/templates/apps/roll-dialog/footer.hbs"}}
+</div>

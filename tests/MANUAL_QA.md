@@ -46,6 +46,7 @@ things start in report-only mode (`APPLY = false`): check the report, then set `
 | `sync-granted-effects.js` | Brings every actor's copies of granted abilities' passive effects up to date (world actors and unlinked tokens) | After editing abilities in a compendium or the sidebar |
 | `retire-gun-actions.js` | Copies old Reload / Pull Bolt / Rotate / Unload actions' Action Type onto their gun's Handling and takes them off the gun's action list (compendium, world, actors, unlinked tokens). Lists the old actions to delete by hand | Once, after the gun handling update, or after importing old guns |
 | `assign-skill-categories.js` | Gives the Skills compendium's skills the rulebook's related-skill categories | After adding skills to the compendium |
+| `move-spirit-vision-bonus.js` | Moves Spirit Vision effects' +2 from every Inspiration check (`system.attributes.ins.checkBonus`) to spiritual intuition checks only (`system.spiritualIntuitionBonus`), in the compendiums, world Items, actors and unlinked tokens | Once, after the hit / sanity / luck update |
 
 ---
 
@@ -671,18 +672,9 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Damage the goblin to half Health: the aura turns orange-red; near 0: deep red
 - [ ] Klein's own token has an aura too, in his own colour (his Health, or his Spirit Aura if set)
 - [ ] The Ghost is visible, with a pale blue glow
-- [ ] In the dark: the dark room itself stays dark (not recoloured, its floor can't be made out), but the goblin and
-      the ghost in it show as their glowing auras (gold, pale blue). Spirit Vision off: neither can be seen
+- [ ] Spirit Vision isn't darkvision: the goblin and the ghost in the dark room can't be seen. Give Klein a light that
+      reaches them, or Basic Sight range 30 (darkvision): both show up, the ghost with its pale blue glow
 - [ ] With the room lit, move the Ghost more than 30 ft from Klein: it disappears (Spirit Sight's range)
-- [ ] Through walls (Spirit Vision on, both rooms lit, all within 30 ft). Next to Klein's room:
-      a room behind one ordinary wall (one line) with a goblin: Klein sees the goblin's glowing aura through it
-      (an outline: the wall still hides the room itself);
-      a room behind a thick wall drawn as two lines 2 ft apart: seen; two lines 6 ft apart: not seen;
-      a room two walls away: not seen;
-      a room behind a terrain wall (Sight: Limited), however thin: not seen.
-      Open a door in the second wall of the "two walls away" room: seen again. Turn Klein so the goblin is outside
-      his vision angle (if he has one): not seen. A goblin in a DARK room behind one wall: seen, glowing
-- [ ] Death Vision through walls: the same, for the Ghost and undead only; living goblins behind a wall aren't shown
 - [ ] On the Ghost's NPC sheet header, pick a red Spirit Aura: its glow turns red. Clear it: pale blue again
 - [ ] Remove Ethereal from the Ghost: it's an ordinary creature again (seen in the light, gold glow)
 - [ ] Give Klein Blind: the effect and the glows stop
@@ -701,8 +693,8 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Death pathway: switch Spirit Vision off and give Klein a second, always-on effect "Death Vision" with
       two changes, both Override: `token.detectionModes.lotmDeathSight.enabled` = `true`,
       `token.detectionModes.lotmDeathSight.range` = `30`. The room looks normal, and the Ghost is visible all the
-      time, with a bright green aura - the dark room's ghost too, glowing in the dark. The goblins look normal,
-      with no aura; the dark room's goblin can't be seen
+      time (in the light), with a bright green aura. The goblins look normal, with no aura. The dark room's ghost
+      still can't be seen
 - [ ] Switch Spirit Vision back on (the same action and effect): the room drains to pale green with
       drifting mist instead of the Spirit Vision colours. The Ghost's aura is bright green; goblins' auras are faint,
       stronger when hurt. Tick Undead on a goblin's header: its aura is bright green. Switch Spirit Vision off: the
@@ -713,3 +705,101 @@ Test as a player who owns Klein (the GM sees everything). "Spirit Vision on" bel
 - [ ] Configure Settings > "Reduce Spirit Vision Effects" on (the world reloads): the room looks normal and nothing
       glows, but the Ghost is still revealed. Turn it off again
 - [ ] An unlinked goblin token: damaging it changes its glow, not the goblin in the sidebar
+
+---
+
+# Hits, damage, sanity, promotion, luck, rest
+
+## Hit or miss and Big Success
+
+Files: `module/helpers/check-results.mjs`, `module/helpers/check-chat.mjs`, `module/apps/roll-dialog.mjs`,
+`module/data/item/character_building/action.mjs`, `spell.mjs`, `templates/item/character_building/action.hbs`, `spell.hbs`
+
+Setup: Shoot's Defense Targeted set to "Physical, too fast to dodge (firearms)"; a melee action set to Physical Defense.
+
+- [ ] Action and spell sheets have a Defense Targeted dropdown; blank (None) means no hit check
+- [ ] Target two goblins and roll the melee attack: under the roll, "vs. Physical Defense" and each goblin with Hit or
+      Miss. The GM sees each goblin's defense in brackets; the player doesn't
+- [ ] A total equal to a goblin's defense is a Hit
+- [ ] Shoot against a goblin: its defense is 10 + armor. Tick the goblin's Quick Dodge box: full Physical Defense again
+- [ ] No targets: "No targets" under the roll
+- [ ] A natural 20 says Big Success, hits every target, and the damage buttons are just Big Success. A natural 1 says
+      Big Failure and misses. Any other roll has no Big Success button
+- [ ] Big Success on 1d8+5 never deals less than 7 (the card says "raised to half the maximum")
+- [ ] A status check (Dying's Physique) with a natural 20 passes, with a natural 1 fails, whatever the total
+
+## Damage reduction and resistance
+
+Files: `module/helpers/damage-math.mjs`, `module/helpers/action-roll.mjs`, `module/data/actor/base-actor.mjs`,
+`templates/actor/parts/damage-defenses.hbs`
+
+- [ ] An actor saved before this update still shows its old rows under Damage Reduction, with the right types
+- [ ] Add reduction "All 2" and "Physical 3"; add resistance "Fire 5" and "Poison" ticked Immune (both sidebars)
+- [ ] A 4-damage physical hit: takes 1 (reduction never below 1). 3 fire: takes 0 (resistance). Any poison: 0
+- [ ] "2d6[fire] + 1d4[cold]" is reduced once, not once per type (the chat table shows where it came off)
+- [ ] Worn armor's reduction still shows read-only and counts
+
+## Sanity checks and madness
+
+Files: `module/helpers/sanity.mjs`, `module/apps/sanity-check-dialog.mjs`, `module/effects/rules/semi-out-of-control.mjs`,
+`indeterminate-madness.mjs`, `out-of-control.mjs`
+
+Setup: Klein with Will 6 (Sanity 16 / 16).
+
+- [ ] The Check button under Sanity opens the sanity check (both sheets). Shift-click rolls 0/1 straight away
+- [ ] Loss 1/1d3: rolling at or under 16 passes and loses 1; over 16 fails and loses 1d3. A natural 20 loses 3
+- [ ] Angry or Fear on Klein don't add anything to the sanity check
+- [ ] Losing 3+ at once: Semi-Out-of-Control, named with its madness tendency. Move actions warn (Use Anyway)
+- [ ] In combat, its start-of-turn card has Roll Will (DC 10); failing opens a 0/1 sanity check. It ends after its
+      1d2 rounds ("Recovered" message), or with the Recovered button
+- [ ] Sanity 7: Indeterminate Madness with a symptom; back to 8: it comes off. Roll Symptom and Daily Sanity Check
+      buttons on the Effects tab work
+- [ ] Sanity 0: Out of Control (everyone sees it). Raising Sanity doesn't remove it
+- [ ] A new NPC whose Sanity was never filled in (0) doesn't get Out of Control when edited
+- [ ] Macro: `game.lotm.sanityCheck(null, { loss: "1/1d3", reason: "Test" })` opens a check for each selected token
+
+## Promotion
+
+Files: `module/helpers/promotion.mjs`, `module/apps/promotion-dialog.mjs`, `templates/apps/promotion-dialog.hbs`
+
+- [ ] Drop a Sequence on Klein: the promotion dialog opens. Skip closes it; the Sequence stays
+- [ ] Digestion is filled in from Klein's most advanced Sequence; the modifiers list follows the choices
+- [ ] Roll: the card shows the check against Sanity, the loss (doubled without a ritual), and the stage. Promoted:
+      Spiritual Overflow appears (-2 row on action and spell rolls, removable; ends with its button)
+- [ ] Force a semi stage (untick the ritual, add +30): Will (DC 15) button works once; failing posts the extra sanity
+      check and the next card. 5+ lost: Will (DC 20); failing rolls 1d2 for out of control or death
+- [ ] As a player: the dialog opens for the player who dropped the Sequence; the GM's client doesn't open one
+- [ ] No Burn Luck button on promotion cards or their Will checks
+
+## Burning Luck
+
+Files: `module/helpers/luck.mjs`, `module/helpers/check-chat.mjs`
+
+- [ ] Every check card Klein rolls has Burn Luck for Klein's owner and the GM. An NPC's attack that targeted Klein
+      shows it to Klein's owner too
+- [ ] Burn 2 to add: a new message with the new total and the DC result / each target's Hit or Miss ("was ..." when it
+      changed). Klein's Luck drops by 2. A second burn counts the first
+- [ ] As Klein's owner on the NPC's attack: Klein's Luck, defaulting to Subtract
+- [ ] A natural 20 or 1 stays a Big Success / Big Failure
+- [ ] Dying's failed Physique check (Dead) turned into a pass with Luck: Dead comes off. Bloodbath's faint: Helpless
+      comes off. Fear's resist: marked resisted
+- [ ] A sanity check turned from fail to pass: the pass loss is rolled and the difference given back
+- [ ] The Spend button under Luck spends Luck with a reason
+
+## Rest and recovery
+
+Files: `module/sheets/player-character-sheet.mjs`, `module/effects/rules/dying.mjs`
+
+- [ ] Treated ticked, Long Rest: Health + Physique; unticked: + half Physique. Treated is cleared afterwards
+- [ ] Long Rest refills Spirituality and Luck and gives +1 Sanity (none during Indeterminate Madness); a chat
+      message says what happened
+- [ ] Dying's start-of-turn Physique check is DC 10
+
+## Spiritual intuition
+
+Files: `module/apps/attribute-check-dialog.mjs`, `module/helpers/check-bonuses.mjs`, `module/macros/move-spirit-vision-bonus.js`
+
+- [ ] Run the Move Spirit Vision Bonus macro (report, then APPLY)
+- [ ] With Spirit Vision on: an Occultism check and a spell attack have no Spirit Vision row
+- [ ] Inspiration check with Spiritual Intuition ticked: DC 25, title Spiritual Intuition, Spirit Vision +2 row
+- [ ] Macro: `game.lotm.spiritualIntuition(actor)` opens it ticked

@@ -74,9 +74,24 @@ export default class AngryRule extends StatusRule {
    */
   async #calmDown(effect, { fast = false } = {}) {
     const actor = effect.parent;
-    const result = await rollStatusCheck(actor, { attribute: "wil", dc: CALM_DC, reason: game.i18n.localize(this.name), fast });
+    const result = await rollStatusCheck(actor, {
+      attribute: "wil", dc: CALM_DC, reason: game.i18n.localize(this.name), fast, outcome: this.outcomeFor("calm", effect),
+    });
     if (!result) return false;
-    if (result.success) await this.endStatus(effect, { chat: "LORD_OF_THE_MYSTERIES.Status.Results.CalmedDown" });
+    await this.applyCheckResult("calm", effect, result.success);
+    return true;
+  }
+
+
+  /**
+   * Passing ends the status. (Luck turning a pass into a fail can't bring it back, since the effect is gone:
+   * the GM puts it back on by hand, so this says it wasn't handled.)
+   * @override
+   */
+  async applyCheckResult(check, effect, success, { isLuckChange = false } = {}) {
+    if (check !== "calm") return false;
+    if (!success) return !isLuckChange;
+    await this.endStatus(effect, { chat: "LORD_OF_THE_MYSTERIES.Status.Results.CalmedDown" });
     return true;
   }
 }

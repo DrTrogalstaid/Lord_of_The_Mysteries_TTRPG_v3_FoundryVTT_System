@@ -32,6 +32,18 @@ export default class LordOfTheMysteriesAction extends LordOfTheMysteriesItemBase
 
     // Dice rolled for the attack before the skill bonuses are added (blank = 1d20).
     schema.attackRollMacro = new fields.StringField({ required: false});
+    // Which defense the attack roll goes against: the targeted tokens' defenses decide hit or miss
+    // (CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets, helpers/check-results.mjs). Blank = no hit check.
+    schema.defenseTarget = new fields.StringField({
+      required: true, blank: true, initial: "", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets),
+    });
+    // A fixed DC for the roll (Listen: 30), or null for none. The chat card says Success or Failure, and the roll
+    // window lets the player change it for one roll (a better sacrifice: 15 instead of 20).
+    schema.dc = new fields.NumberField({ required: true, nullable: true, integer: true, min: 0, initial: null });
+    // Roll Tables drawn after a roll with a DC: one for a success, one for a failure (Listen's 1d8 and 1d4 lists).
+    // The attack card gets a Roll Outcome button (helpers/outcome-tables.mjs). null = no table for that result.
+    schema.successTable = new fields.DocumentUUIDField({ type: "RollTable", required: true, nullable: true, initial: null });
+    schema.failureTable = new fields.DocumentUUIDField({ type: "RollTable", required: true, nullable: true, initial: null });
     // Damage formula rolled by the "Roll Damage" button on the attack's chat message (blank = no button).
     schema.damageRollMacro = new fields.StringField({ required: false});
     // Shown in the damage message's title, e.g. "Shoot: Damage (piercing)". Text only, doesn't change the roll.

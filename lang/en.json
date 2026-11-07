@@ -13,7 +13,7 @@
     
     "Resources": {
       "Health": { "long": "Health Points", "abbr": "hp" },
-      "Rationality": { "long": "Rationality Points", "abbr": "rp" },
+      "Sanity": { "long": "Sanity Points", "abbr": "rp" },
       "Luck": { "long": "Luck Points", "abbr": "lp" },
       "Spirituality": { "long": "Spirituality Points", "abbr": "spp" }
     },
@@ -199,7 +199,11 @@
         "blind": "Blind",
         "deaf": "Deaf",
         "shock": "Shock",
-        "ethereal": "Ethereal"
+        "ethereal": "Ethereal",
+        "semiOutOfControl": "Semi-Out-of-Control",
+        "indeterminateMadness": "Indeterminate Madness",
+        "outOfControl": "Out of Control",
+        "spiritualOverflow": "Spiritual Overflow"
       },
       "TheSource": "its source",
       "Buttons": {
@@ -212,11 +216,18 @@
         "Resist": "Resist (Will {dc})",
         "CalmDown": "Calm Down (Will {dc})",
         "MeditateFull": "Meditation (Full)",
-        "MeditateHalf": "Meditation (Half)"
+        "MeditateHalf": "Meditation (Half)",
+        "Recovered": "Recovered",
+        "OverflowEnds": "72 Hours Passed",
+        "ResistMadness": "Resist Madness (Will {dc})",
+        "RollSymptom": "Roll Symptom (d8)",
+        "DailySanity": "Daily Sanity Check (0/1)"
       },
       "Chat": {
         "StoodUp": "{name} stands up (1 movement action).",
-        "Treated": "{name}'s bleeding is treated."
+        "Treated": "{name}'s bleeding is treated.",
+        "Recovered": "{name} is no longer Semi-Out-of-Control. (Any mythical changes to the body fade after 5 minutes of rest; longer hair and nails stay.)",
+        "OverflowEnded": "{name}'s spiritual overflow settles: the new abilities work normally."
       },
       "TurnStart": {
         "Title": "Start of {name}'s turn",
@@ -233,7 +244,10 @@
         "Fear": "Every movement action can only go away from {source}. Will check (DC {dc}) to resist.",
         "FearResisted": "Checks against {source} are -4.",
         "Angry": "{name} must attack or chase {source} first. Will check (DC {dc}) to calm down.",
-        "Shock": "{name} loses 1 attack, casting or move action, or 2 quick actions, this turn."
+        "Shock": "{name} loses 1 attack, casting or move action, or 2 quick actions, this turn.",
+        "SemiOutOfControl": "{name} writhes on the ground (no move actions). Will check (DC {dc}), or a 0/1 sanity check. Madness tendency: {tendency}. {rounds}",
+        "SemiRoundsLeft": "{rounds} more round(s) after this one.",
+        "SemiLastRound": "This is its last round."
       },
       "Results": {
         "Fainted": "{name} faints and is Helpless.",
@@ -243,7 +257,14 @@
         "Resisted": "{name} resists the fear: no more forced movement. Checks against {source} are still -4.",
         "CalmedDown": "{name} calms down.",
         "MeditatedFull": "{name} meditates and calms down.",
-        "MeditatedHalf": "{name} meditates: the anger's penalty is halved."
+        "MeditatedHalf": "{name} meditates: the anger's penalty is halved.",
+        "Survived": "{name} clings to life.",
+        "StaysConscious": "{name} stays conscious.",
+        "NotResisted": "{name} doesn't resist the fear after all: forced movement again.",
+        "ResistedMadness": "{name} resists the urge ({tendency}).",
+        "GaveInToMadness": "{name} gives in to the madness ({tendency}).",
+        "MadnessSymptom": "{name}'s madness takes hold: {symptom}. Act it out until the next symptom roll.",
+        "LostControl": "{name} loses control."
       },
       "Rolls": {
         "Against": "{status} vs. {source}",
@@ -261,13 +282,16 @@
         "dead": "Dead: can't act.",
         "silence": "Silence: can't use language-related actions and abilities.",
         "blind": "Blind: an action aimed at something needs an Inspiration check (DC 15) first, or it can't be taken.",
-        "dying": "Dying: only free and quick actions, unless a Will check (DC {dc}) turns them into 1 attack, casting or move action."
+        "dying": "Dying: only free and quick actions, unless a Will check (DC {dc}) turns them into 1 attack, casting or move action.",
+        "semiOutOfControl": "Semi-Out-of-Control: writhing on the ground, no movement actions.",
+        "outOfControl": "Out of Control: the character is lost; the GM takes over."
       },
       "Notes": {
         "TargetBound": "{name} is Bound: Vital Strike isn't at a disadvantage.",
         "TargetInvisible": "{name} is Invisible: a Spot or Listen check against its Stealth finds it first, otherwise it can't be attacked (areas of effect still work).",
         "Blind": "Blind: Inspiration check (DC 15) first, or the action can't be taken. Usually no critical strikes.",
-        "Deaf": "Deaf: hearing checks fail (halved instead for extraordinary hearing, unless the deafness is extraordinary too)."
+        "Deaf": "Deaf: hearing checks fail (halved instead for extraordinary hearing, unless the deafness is extraordinary too).",
+        "SemiOutOfControl": "Semi-Out-of-Control: using a Beyonder ability means a 1/1d2 sanity check."
       }
     },
 
@@ -309,8 +333,11 @@
         "CheckBonus": "{attribute} check bonus",
       "DC": "DC {dc}",
       "DCResult": "DC {dc}: {result}",
+      "DCLabel": "DC",
       "Success": "Success",
       "Failure": "Failure",
+      "BigSuccess": "Big Success (natural 20)",
+      "BigFailure": "Big Failure (natural 1)",
         "Modes": {
             "public": "Public Roll",
             "gm": "Private GM Roll",
@@ -703,7 +730,7 @@
       "AddGear": "Create blank gear",
       "Resources": {
         "Health": "Health",
-        "Rationality": "Rationality",
+        "Sanity": "Sanity",
         "Spirituality": "Spirituality",
         "Luck": "Luck"
       },
@@ -1000,17 +1027,17 @@
       "Gone": "That action or character no longer exists.",
       "InvalidAttack": "{name} has no valid attack formula.",
       "BigSuccess": "Big Success",
-      "BigSuccessHint": "Roll damage as a Big Success: never less than the average damage",
+      "BigSuccessHint": "Roll damage as a Big Success (natural 20): never less than half the maximum damage, rounded up",
       "BigSuccessFlavor": "{action}: Big Success Damage{type}",
-      "BigSuccessRaised": "Big Success: rolled {rolled}, raised to the average ({average})",
-      "BigSuccessKept": "Big Success: rolled {rolled} (average {average})",
+      "BigSuccessRaised": "Big Success: rolled {rolled}, raised to half the maximum ({minimum})",
+      "BigSuccessKept": "Big Success: rolled {rolled} (at least {minimum})",
       "ApplyDamage": "Damage ({amount})",
       "ApplyHeal": "Heal ({amount})",
-      "ApplyHint": "Apply to the selected token(s). Damage is lowered by each token's damage reduction; Shift-click to ignore it.",
+      "ApplyHint": "Apply to the selected token(s) as one hit. Damage is lowered by each token's resistance and damage reduction (reduction never below 1); Shift-click to ignore them.",
       "SelectToken": "Select one or more tokens first.",
       "NotOwner": "You can't change {name}'s Health. Ask the GM to apply it.",
-      "Damaged": "{name} takes {amount} damage: {before} → {after}",
-      "DamagedReduced": "{name} takes {amount} damage ({incoming} - {reduced} reduction: {details}): {before} → {after}",
+      "Damaged": "{name} takes {amount} damage.",
+      "DamagedReduced": "{name} takes {amount} damage ({incoming} - {reduced} resisted / reduced: {details}).",
       "DamageTaken": {
         "Title": "{name} takes {amount} damage",
         "Type": "Type",
@@ -1018,11 +1045,13 @@
         "Reduced": "Reduced",
         "Taken": "Taken",
         "Total": "Total",
-        "Ignored": "Damage reduction was ignored."
+        "Ignored": "Damage resistance and reduction were ignored."
       },
-      "Healed": "{name} heals {amount}: {before} → {after}",
+      "Healed": "{name} heals {amount}.",
       "Untyped": "untyped",
-      "DamageTypesHint": "Give parts their own type in brackets, like 2d6[fire] + 1d4[cold]. Parts without one use the Damage Type below."
+      "DamageTypesHint": "Give parts their own type in brackets, like 2d6[fire] + 1d4[cold]. Parts without one use the Damage Type below.",
+      "DC": "DC",
+      "DCHint": "A fixed DC for the roll (blank = none). The chat card says Success or Failure; the roll window can change it for one roll."
     },
 
     "ActionGroups": {
@@ -1156,6 +1185,239 @@
         "rotate": "Turned {gun}'s cylinder: chamber {n} ({round}) fires next.",
         "unload": "Unloaded {n} rounds from {gun}."
       }
+    },
+
+    "DamageReduction": {
+      "Label": "Damage Reduction",
+      "Hint": "Taken off each hit once, never below 1 damage. All: against every damage type.",
+      "All": "All"
+    },
+
+    "DamageResistance": {
+      "Label": "Resistance / Immunity",
+      "Hint": "Takes that type's damage down, all the way to 0. Immune: that type does no damage.",
+      "Immune": "Immune",
+      "ImmuneHint": "This damage type does no damage at all."
+    },
+
+    "QuickDodge": {
+      "Label": "Quick Dodge",
+      "Hint": "Can dodge bullets: attacks that are too fast to dodge (firearms) still face full Physical Defense. Lightning and light still can't be dodged."
+    },
+
+    "DefenseTargets": {
+      "Label": "Defense Targeted",
+      "Hint": "Which defense of the targeted tokens the attack roll goes against. The chat card says Hit or Miss for each target.",
+      "none": "None (no hit check)",
+      "gunDefault": "Blank: firearm, too fast to dodge (10 + Armor, unless Quick Dodge)",
+      "physical": "Physical Defense",
+      "physicalNoEvasion": "Physical, too fast to dodge (firearms): 10 + Armor, unless Quick Dodge",
+      "physicalUndodgeable": "Physical, can't be dodged (lightning, light): 10 + Armor",
+      "physicalNoArmor": "Physical, ignores armor (grapple)",
+      "will": "Will Defense",
+      "physique": "Physique Defense"
+    },
+
+    "Attack": {
+      "Against": "vs. {defense}",
+      "NoTargets": "No targets: target tokens before rolling to check hits.",
+      "NoDefenseTarget": "No Hit / Miss: {name} has no Defense Targeted. Set one on its sheet.",
+      "Hit": "Hit",
+      "Miss": "Miss",
+      "Unknown": "?",
+      "DefenseHint": "The target's defense (only the GM sees this)"
+    },
+
+    "SpiritualIntuition": {
+      "Title": "Spiritual Intuition",
+      "Flavor": "Spiritual Intuition ({attribute})",
+      "Checkbox": "Spiritual intuition check (DC {dc})",
+      "Bonus": "Spiritual intuition bonus"
+    },
+
+    "Madness": {
+      "Tendencies": {
+        "1": "Violent tendencies",
+        "2": "Avoidance",
+        "3": "Loss of memory",
+        "4": "Swoon",
+        "5": "Hysteria",
+        "6": "Paranoia",
+        "7": "Pseudo-disability",
+        "8": "Interpersonal dependence"
+      }
+    },
+
+    "Sanity": {
+      "Title": "Sanity Check: {name}",
+      "Button": "Check",
+      "ButtonHint": "Roll a sanity check. Shift-click: a 0/1 check straight away.",
+      "Current": "Sanity",
+      "Hint": "Roll at or under your Sanity ({sanity}) to pass. Modifiers are added to the d20: a positive one makes failing likelier. A natural 20 is a Big Failure.",
+      "Reason": "Cause",
+      "ReasonPlaceholder": "e.g. Saw the Wraith",
+      "Loss": "Sanity loss (pass / fail)",
+      "LossSuccess": "Lost on a pass",
+      "LossFailure": "Lost on a fail",
+      "InvalidLoss": "A loss isn't a valid formula (use a number or dice, like 1d3).",
+      "Solidified": "Mental solidification (-1 loss)",
+      "SolidifiedHint": "Seen this kind of shock 3+ times: 1 less Sanity lost (never below 0). Not for promotions.",
+      "SolidifiedNote": "Mental solidification: 1 less lost.",
+      "Penalty": "Sanity check penalty",
+      "Flavor": "Sanity Check ({success}/{failure})",
+      "Result": "Sanity check: {result}",
+      "Against": "Sanity check",
+      "BigFailure": "Big Failure (natural 20): the most the loss can be",
+      "Loses": "Loses {loss} Sanity.",
+      "SemiStarted": "Semi-Out-of-Control for {rounds} round(s). Madness tendency: {tendency}.",
+      "SemiEnded": "No longer Semi-Out-of-Control.",
+      "LuckChanged": "New loss: {loss} Sanity (was {old}).",
+      "RollLoss": "Roll Loss",
+      "RollLossHint": "Roll the Sanity lost for this result and take it off. Burn Luck first if you're going to: it rolls for the result at that moment.",
+      "LossFlavor": "{title}: Sanity Lost ({result})",
+      "BigFailureLoss": "Big Failure (natural 20): the most the fail loss can be.",
+      "AlreadyRolled": "The loss for this check was already rolled.",
+      "LossNotRolled": "The loss hasn't been rolled yet: Roll Loss will use this result."
+    },
+
+    "Luck": {
+      "Burn": "Burn Luck",
+      "BurnTitle": "Burn Luck",
+      "BurnHint": "Spend Luck to add to or subtract from this roll. Natural 20s and 1s don't change.",
+      "Whose": "Whose Luck",
+      "LuckLeft": "Luck {value}",
+      "BurnerLine": "{name}'s Luck: {value}",
+      "DialogHint": "{title}: {total}",
+      "Amount": "Amount",
+      "Direction": "Direction",
+      "Add": "Add (+)",
+      "Subtract": "Subtract (−)",
+      "NaturalHint": "A natural 20 or natural 1 stays a Big Success or Big Failure.",
+      "NoBurners": "No one here has Luck left to burn on this roll.",
+      "InvalidAmount": "Enter at least 1 Luck.",
+      "NotEnough": "{name} has only {value} Luck (needs {cost}).",
+      "NoneLeft": "{name} has no Luck left.",
+      "Burned": "{name} burns {amount} Luck: {change} to {roller}'s {title}.",
+      "Total": "New total: {after}",
+      "Was": "(was {result})",
+      "StillBigSuccess": "Still a Big Success (natural 20).",
+      "StillBigFailure": "Still a Big Failure (natural 1).",
+      "AdjustByHand": "The result changed, but what the old result did can't be undone automatically. GM: adjust it by hand.",
+      "SpendTitle": "Spend Luck",
+      "Spend": "Spend",
+      "Current": "Luck: {value} / {max}",
+      "Reason": "For",
+      "ReasonPlaceholder": "e.g. Initiative (GM's call)",
+      "Spent": "{name} spends {amount} Luck{reason}.",
+      "SpentReason": " on {reason}"
+    },
+
+    "Promotion": {
+      "Title": "Promotion: {name}",
+      "SequenceName": "Sequence {number}: {name}",
+      "Flavor": "Promotion to {sequence}",
+      "Hint": "1d20 + {base} + modifiers, at or under Sanity ({sanity}) to pass. No Big Success or Big Failure. Sanity lost: {success} on a pass, {failure} on a fail. Negative modifiers help.",
+      "Potion": "The potion",
+      "Circumstances": "Circumstances",
+      "Fields": {
+        "digestion": "Digestion of your current potion (-1 each)",
+        "auxiliary": "Auxiliary ingredients (-1 each)",
+        "undigested": "Undigested lower potions (+1 each)",
+        "isRepeated": "Same Sequence as your current one (+40 instead of +20)",
+        "isRaw": "Main ingredient / characteristic taken raw (+5)",
+        "imprint": "The characteristic's spiritual imprint",
+        "hasRitual": "Promotion ritual held (5 sanity protection; without it, the loss is doubled)",
+        "isHelped": "Helped by a Beyonder of your Sequence or higher (-2)",
+        "helperSequences": "Sequences the helper is above you (-1 each)",
+        "moon": "Celestial phenomenon",
+        "isAnimal": "Taken by a non-intelligent animal (+4)",
+        "followers": "Followers (1 protection per 1,000; per 5,000 without a ritual)"
+      },
+      "Imprint": {
+        "none": "Not a characteristic / no match",
+        "similar": "Similar to you (-2)",
+        "opposite": "Opposite to you (+4)"
+      },
+      "Moon": {
+        "none": "None",
+        "full": "Full moon (-2)",
+        "blood": "Blood moon (-4)"
+      },
+      "Modifiers": {
+        "Base": "Promotion",
+        "Digestion": "Digestion",
+        "Auxiliary": "Auxiliary ingredients",
+        "Raw": "Taken raw",
+        "Imprint": "Spiritual imprint",
+        "Undigested": "Undigested potions",
+        "Helper": "Helper",
+        "Moon": "Moon",
+        "Animal": "Animal"
+      },
+      "ExtraModifiersHint": "Other modifiers (positive = worse):",
+      "Skip": "Skip (no check, e.g. character creation)",
+      "Loss": "Sanity loss {roll} {ritual}: loses {loss}.",
+      "WithRitual": "(ritual: -{protection} protection)",
+      "WithoutRitual": "(no ritual: doubled to {doubled}, -{protection} protection)",
+      "Reason": "Promotion to {sequence}",
+      "Stages": {
+        "promoted": "{name} is promoted to {sequence}. Spiritual overflow for 72 hours: -2 on checks with the new abilities.",
+        "semi": "{name} is semi-out-of-control, writhing in pain. Will check (DC 15): pass and the promotion succeeds; fail and lose more Sanity (1/1d2).",
+        "lost": "{name} is losing control. Will check (DC 20): pass and become a Beyonder who failed to be promoted; fail and it's out of control or death (1d2).",
+        "failedPromotion": "{name} holds on, but the promotion fails: a Beyonder in a special state (Expansion 5). The GM decides what that means.",
+        "outOfControl": "{name} loses control.",
+        "died": "{name} dies.",
+        "pendingLoss": "{name} drank the potion of {sequence}. Roll the Sanity it costs.",
+        "pendingExtraLoss": "Roll the Sanity lost to this check."
+      },
+      "Buttons": {
+        "semiWill": "Will (DC 15)",
+        "lostWill": "Will (DC 20)",
+        "rollLoss": "Roll Loss"
+      },
+      "ExtraCheck": "Sanity check {roll}: {result}. Loses 1 on a pass, 1d2 on a fail.",
+      "ExtraLoss": "Loses {loss} Sanity; {total} lost in this promotion.",
+      "Fate": "Roll {roll}: 1 out of control, 2 death."
+    },
+
+    "Recovery": {
+      "Treated": "Treated",
+      "TreatedHint": "The wounds were treated with a Medicine check: Long Rest heals Physique instead of half. Cleared by Long Rest.",
+      "LongRestTitle": "{name} takes a long rest.",
+      "HealthTreated": "Health +{heal} (treated).",
+      "HealthUntreated": "Health +{heal} (untreated, half Physique).",
+      "Spirituality": "Spirituality restored.",
+      "Luck": "Luck restored.",
+      "Sanity": "Sanity +{gain}.",
+      "SanityMad": "No Sanity back: Indeterminate Madness keeps sleep from restoring it."
+    },
+
+    "OutcomeTables": {
+      "Label": "Outcome Tables",
+      "Success": "On Success",
+      "Failure": "On Failure",
+      "Empty": "Drop a Roll Table here",
+      "Hint": "Roll Tables drawn after the roll, by its result against the DC (needs a DC). The chat card gets a Roll Outcome button.",
+      "NotATable": "{name} isn't a Roll Table."
+    },
+
+    "Outcome": {
+      "Button": "Roll Outcome",
+      "ButtonHint": "Draw from the success or failure table, by the result now (burn Luck first if you're going to).",
+      "AlreadyRolled": "The outcome of this roll was already drawn.",
+      "NoTable": "No table for a {result}.",
+      "TableGone": "That Roll Table no longer exists.",
+      "Flavor": "{title}: {result} ({table})"
+    },
+
+    "Enrichers": {
+      "Sanity": "Sanity {loss}",
+      "SanityHint": "Sanity check for the selected token(s), or this character. Shift-click: roll straight away.",
+      "Check": "{name} check",
+      "CheckDC": "{name} (DC {dc})",
+      "CheckHint": "Roll for the selected token(s), or this character. Shift-click: roll straight away.",
+      "NoActor": "Select a token you own, or set your character in User Configuration.",
+      "UnknownSkill": "No skill named \"{name}\" in the Skills compendium or the sidebar."
     }
   },
 

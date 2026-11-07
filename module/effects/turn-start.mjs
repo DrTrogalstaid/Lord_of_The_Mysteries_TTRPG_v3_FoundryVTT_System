@@ -4,10 +4,11 @@
  *
  *   Bleeding   Roll 1d2: Health lost (none for a Beyonder with physical improvement)
  *   Bloodbath  Roll Physique (DC 15): fail = faints, Helpless (ordinary people only)
- *   Dying      Roll Physique (DC 15): fail = dies; Roll Will (DC 15) to take an attack, casting or move action
+ *   Dying      Roll Physique (DC 10): fail = dies; Roll Will (DC 15) to take an attack, casting or move action
  *   Fear       Roll Will (DC 15) to resist the forced movement
  *   Angry      Roll Will (DC 20) to calm down
  *   Shock      a reminder of the lost action
+ *   Semi-Out-of-Control  Roll Will (DC 10): fail = a 0/1 sanity check; rounds left and the madness tendency
  * What each status shows, and what its buttons do, is in its StatusRule (turnStart, onTurnCheck; effects/rules/).
  *
  * The card is posted by the GM's client (LordOfTheMysteriesCombat, documents/combat.mjs) and whispered to the

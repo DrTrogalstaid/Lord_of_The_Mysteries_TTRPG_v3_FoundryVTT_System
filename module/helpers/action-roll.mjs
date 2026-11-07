@@ -8,6 +8,7 @@ import { fireGun, gunFor, prepareShot } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
+import { bigSuccessDamage, reduceHit, splitBigSuccess } from "./damage-math.mjs";
 
 /**
  * Action rolls
@@ -465,38 +466,16 @@ export function getDamageTooltip(actor, action) {
 }
 
 /**
- * The average of a roll formula: halfway between its lowest and highest result, rounded down
- * (2d6+3 -> 10, 1d8 -> 4). @values are filled in from the actor first, so "1d8+@damageBonus" works too.
- * @param {string} formula
- * @param {object} rollData
- * @returns {Promise<number>}
- */
-export async function averageRoll(formula, rollData) {
-  const [low, high] = await Promise.all([
-    new Roll(formula, rollData).evaluate({ minimize: true }),
-    new Roll(formula, rollData).evaluate({ maximize: true }),
-  ]);
-  return Math.floor((low.total + high.total) / 2);
-}
-
-/**
- * The average of a damage formula, per damage type (see damageByType): halfway between each type's lowest and
- * highest result, rounded down. "2d6[fire] + 1d4[cold]" -> 7 fire, 2 cold.
+ * A damage formula's highest result, per damage type (see damageByType). "2d6[fire] + 1d4[cold]" -> 12 fire, 4 cold.
+ * @values are filled in from the actor first, so "1d8+@damageBonus" works too.
  * @param {string} formula
  * @param {object} rollData
  * @param {string} defaultType  The action's Damage Type, for parts that don't name one.
  * @returns {Promise<{type: string, label: string, amount: number}[]>}
  */
-export async function averageByType(formula, rollData, defaultType = "") {
-  const [low, high] = await Promise.all([
-    new LOTM_VTTRoll(formula, rollData).evaluate({ minimize: true }),
-    new LOTM_VTTRoll(formula, rollData).evaluate({ maximize: true }),
-  ]);
-  const highByType = new Map(damageByType(high, defaultType).map((part) => [part.type, part.amount]));
-  return damageByType(low, defaultType).map((part) => ({
-    ...part,
-    amount: Math.floor((part.amount + (highByType.get(part.type) ?? part.amount)) / 2),
-  }));
+export async function maximumByType(formula, rollData, defaultType = "") {
+  const high = await new LOTM_VTTRoll(formula, rollData).evaluate({ maximize: true });
+  return damageByType(high, defaultType);
 }
 
 /**
@@ -506,8 +485,9 @@ export async function averageByType(formula, rollData, defaultType = "") {
  * (applyDamageFromMessage below). The amount, and how much of it is each damage type, is saved on the message
  * (flags.lotm.damage). Damage types: see damageByType; a roll with more than one gets a line like "5 Fire · 3 Cold".
  *
- * Big Success: the damage is never less than the formula's average. If the roll comes out lower,
- * the average is used instead, and the message says so.
+ * Big Success (a natural 20 on the attack): the damage is never less than half the formula's highest result, rounded
+ * up (rulebook, Chapter 2: 1d8+5 does at least 7). If the roll comes out lower, that minimum is used instead, and the
+ * message says so.
  *
  * @param {Actor} actor
  * @param {Item} action
@@ -537,16 +517,16 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
   let amount = roll.total;
   let note = "";
   if (bigSuccess) {
-    // Below the average: every type is raised to its own average, so damage reduction still sees each type.
-    const averages = await averageByType(formula, rollData, defaultType);
-    const average = averages.reduce((total, part) => total + part.amount, 0);
-    const raised = roll.total < average;
-    if (raised) {
-      parts = averages;
-      amount = average;
+    // Below the minimum: each type is raised (splitBigSuccess), so damage reduction and resistance still see each type.
+    const maximums = await maximumByType(formula, rollData, defaultType);
+    const maximum = maximums.reduce((total, part) => total + part.amount, 0);
+    const result = bigSuccessDamage(roll.total, maximum);
+    if (result.isRaised) {
+      parts = splitBigSuccess(maximums, result.minimum);
+      amount = result.minimum;
     }
-    const key = raised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
-    note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, average })}</div>`;
+    const key = result.isRaised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
+    note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, minimum: result.minimum })}</div>`;
   }
 
   // The types' names for the title ("Shoot: Damage (Fire, Cold)").
@@ -614,33 +594,47 @@ function applyButtonsHTML(amount) {
 }
 
 /**
- * Take an actor's damage reduction off incoming damage, one damage type at a time:
- * 5 physical and 6 fire against Physical 3 and Fire 2 reduction is 2 physical and 4 fire, so 6 damage.
- * A type's damage never goes below 0. Untyped damage, and types the actor has no reduction against, aren't reduced.
- * @param {Record<string, number>} types       Incoming damage per type, e.g. { physical: 5, fire: 6 } ("" = untyped).
- * @param {Record<string, number>} reduction   The actor's system.damageReduction, e.g. { physical: 3, fire: 2 }.
+ * One hit's damage after the target's damage resistance, immunity and reduction (the math is reduceHit in
+ * helpers/damage-math.mjs): resistance per type (can reach 0), then reduction once for the whole hit (never below 1).
+ * 5 physical and 6 fire against Physical 3 and Fire 2 reduction is reduced by 3 once: 8 damage.
+ * @param {Record<string, number>} types   Incoming damage per type, e.g. { physical: 5, fire: 6 } ("" = untyped).
+ * @param {object} [defenses]              The target's { reduction, resistance, immunities } (see defensesOf).
  * @returns {{incoming: number, reduced: number, total: number,
  *            parts: {type: string, label: string, amount: number, reduction: number, taken: number}[]}}
- *   incoming  damage before reduction; reduced  how much was taken off; total  damage after reduction.
+ *   incoming  damage before anything; reduced  how much was taken off in all; total  damage taken.
  */
-export function reduceDamage(types, reduction = {}) {
-  const parts = Object.entries(types ?? {}).map(([type, value]) => {
-    const amount = Number(value) || 0;
-    const against = type ? Math.max(0, Number(reduction?.[type]) || 0) : 0;
-    const taken = amount > 0 ? Math.max(0, amount - against) : amount;
-    return { type, label: damageTypeName(type), amount, reduction: amount - taken, taken };
-  });
-  const incoming = parts.reduce((sum, part) => sum + part.amount, 0);
-  const total = Math.max(0, parts.reduce((sum, part) => sum + part.taken, 0));
-  return { incoming, reduced: incoming - total, total, parts };
+export function reduceDamage(types, defenses = {}) {
+  const result = reduceHit(types, defenses);
+  return {
+    incoming: result.incoming,
+    reduced: result.incoming - result.total,
+    total: result.total,
+    parts: result.parts.map((part) => ({ ...part, label: damageTypeName(part.type) })),
+  };
+}
+
+/**
+ * An actor's defenses against damage, for reduceDamage: its damage reduction, resistance and immunities
+ * (worked out in _prepareDamageReduction, data/actor/base-actor.mjs).
+ * @param {Actor} actor
+ * @returns {{reduction: object, resistance: object, immunities: string[]}}
+ */
+function defensesOf(actor) {
+  const system = actor?.system ?? {};
+  return {
+    reduction: system.damageReduction ?? {},
+    resistance: system.damageResistance ?? {},
+    immunities: system.damageImmunities ?? [],
+  };
 }
 
 /**
  * The Damage / Heal buttons on a damage message: change every selected token's Health by the message's amount.
  *
- * Damage: each token's damage reduction (its actor's system.damageReduction: the rows on its sheet plus its worn
- * armor, see base-actor.mjs) is taken off each damage type first (reduceDamage). Shift-click applies the damage
- * without any reduction (for attacks that ignore it). Healing is never reduced.
+ * Damage: each roll is one hit. Each token's damage resistance, immunity and reduction (its actor's, see
+ * _prepareDamageReduction in base-actor.mjs: the rows on its sheet plus its worn armor) are taken off first
+ * (reduceDamage). Shift-click applies the damage without any of them (for attacks that ignore them).
+ * Healing is never reduced.
  * Damage can take Health below 0 (Dying at 0 or less, death further down: effects/health-statuses.mjs turns those
  * statuses on). Healing stops at the maximum.
  * Each token needs to be one the user owns (the GM owns them all), otherwise it's skipped with a warning.
@@ -683,7 +677,7 @@ export async function applyDamageFromMessage(message, kind, { ignoreReduction = 
       continue;
     }
 
-    const result = reduceDamage(types, ignoreReduction ? {} : actor.system.damageReduction);
+    const result = reduceDamage(types, ignoreReduction ? {} : defensesOf(actor));
     const after = before - result.total;
     await actor.update({ "system.resources.hp.value": after });
     // Tell the table what happened (without the Health that's left).

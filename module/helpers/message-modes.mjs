@@ -47,6 +47,20 @@ export function messageModeButtons(active) {
 }
 
 /**
+ * The mode a message was posted in, for a follow-up roll that should be seen by the same people (a Sanity
+ * check's loss): blind, whispered to the roller only ("self"), whispered to the GM, or public.
+ * @param {ChatMessage} message
+ * @returns {string}  One of MESSAGE_MODES.
+ */
+export function messageModeOf(message) {
+  if (message?.blind) return "blind";
+  const whisper = message?.whisper ?? [];
+  if (!whisper.length) return "public";
+  const author = message.author?.id ?? message.author;
+  return (whisper.length === 1 && whisper[0] === author) ? "self" : "gm";
+}
+
+/**
  * Post a roll to chat, seen by whoever `mode` allows.
  * A public roll keeps the sidebar's own public choice (public or in-character), so it's posted as the
  * character the same way the sidebar would post it.

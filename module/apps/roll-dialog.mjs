@@ -4,6 +4,7 @@ import { defaultMessageMode, messageModeButtons, postRoll } from "../helpers/mes
 import { currentSpirituality, spendSpirituality, spiritualityNote } from "../helpers/spirituality.mjs";
 import { statusRollExtras, targetedActors } from "../effects/status-rolls.mjs";
 import { checkBonusRows } from "../helpers/check-bonuses.mjs";
+import { checkSucceeds, defenseValue, effectiveDefenseTarget, isAttackHit, isMissingDefenseTarget, naturalD20 } from "../helpers/check-results.mjs";
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -31,7 +32,16 @@ export const ROLL_DIALOG_PARTIALS = [
  *   - four toggle buttons for who sees the roll: Public, Private GM, Blind GM, Self (helpers/message-modes.mjs).
  *     They start on the chat sidebar's choice and only change this one roll.
  *   - an optional "Spend N Spirituality" checkbox (helpers/spirituality.mjs)
- *   - an optional DC: the dialog shows it, and the chat card says whether the roll passed (total >= DC)
+ *   - an optional DC: the dialog shows it, and the chat card says whether the roll passed (meets or beats the DC;
+ *     a natural 20 always passes, a natural 1 always fails: helpers/check-results.mjs)
+ *   - a natural 20 / natural 1 says Big Success / Big Failure on the chat card
+ *   - an action or spell with a Defense Targeted: its targeted tokens' defenses are checked, hit or miss
+ *     (saved on the message as flags.lotm.attack, shown by helpers/check-chat.mjs)
+ *   - every roll saves what Burning Luck needs on the message (flags.lotm.check, helpers/luck.mjs)
+ *   - the DC can be typed in or changed in the window, for this roll only (not for status checks, whose DC is the
+ *     rule's, or sanity and promotion checks, which are rolled against Sanity)
+ *   - an action or spell with outcome tables saves them on the message, for the Roll Outcome button
+ *     (helpers/outcome-tables.mjs)
  *   - statuses (effects/status-rolls.mjs): the roller's and their targets' modifiers start in the list (Angry -4,
  *     Fear -4, Advantage +2, a Helpless target +2), and their notes show in the dialog and on the chat card
  *   - rolling, and posting to chat as the character
@@ -45,6 +55,8 @@ export const ROLL_DIALOG_PARTIALS = [
  *   _flavor()             the chat message's title, e.g. "Pistol Check (Agility)"
  *   rollKind              "skill", "attribute" or "action", for the status modifiers (default "attribute")
  *   rollSkillUuid         the skill rolled, for skill checks (Deaf notes Listen checks)
+ *   usesStatusExtras      false for rolls the statuses' modifiers don't belong in (sanity and promotion checks)
+ *   _resultFor(roll)      what the chat card says about the result, and the flags saved on the message
  * Like the sheets, Foundry merges DEFAULT_OPTIONS down the chain, so a dialog only lists what's new for it.
  */
 export default class LotmRollDialog extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -79,14 +91,17 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
    * @param {{flags?: object, footer?: string}} [options.chat]      Extra chat message flags, and HTML added after the
    *                                                                flavor (an action's Roll Damage buttons).
    * @param {number|null} [options.dc]                              A DC to beat (Physique 15, ...), or null for none.
+   * @param {object|null} [options.outcome]  What a status check decides ({ statusId, check, effectUuid }), saved on
+   *                                         the message so Burning Luck can change the result (helpers/luck.mjs).
    */
-  constructor(actor, { modifiers = [], spirituality = null, chat = {}, dc = null, ...options } = {}) {
+  constructor(actor, { modifiers = [], spirituality = null, chat = {}, dc = null, outcome = null, ...options } = {}) {
     super(options);
     this.actor = actor;
     this.modifiers = modifiers.filter((m) => m.value).map((m) => ({ id: foundry.utils.randomID(), ...m }));
     this.messageMode = defaultMessageMode();
     this.chat = chat;
     this.dc = (dc === null || dc === undefined || Number.isNaN(Number(dc))) ? null : Number(dc);
+    this.outcome = outcome;
     // Notes from statuses (Deaf, Blind, an Invisible target, ...): filled in by addStatusExtras when it opens.
     this.statusNotes = [];
     this.statusExtrasAdded = false;
@@ -134,6 +149,22 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     return null;
   }
 
+  /**
+   * Whether the roller's and targets' statuses add their modifiers and notes. Sanity and promotion checks say no:
+   * they're rolled under a number, so Angry's -4 would help instead of hurt.
+   */
+  get usesStatusExtras() {
+    return true;
+  }
+
+  /**
+   * Whether the window has a DC box the player can type in. Not for status checks (the rule sets the DC);
+   * the sanity and promotion dialogs say no too.
+   */
+  get isDcEditable() {
+    return !this.outcome;
+  }
+
   /** The attribute this roll uses, for its check bonus (helpers/check-bonuses.mjs). null when it isn't known. */
   get checkAttributeKey() {
     return this.attributeKey ?? null;
@@ -160,6 +191,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
   addStatusExtras() {
     if (this.statusExtrasAdded) return;
     this.statusExtrasAdded = true;
+    if (!this.usesStatusExtras) return;
     const { modifiers, notes } = statusRollExtras({
       actor: this.actor,
       kind: this.rollKind,
@@ -225,6 +257,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
       spendSpirit: this.spendSpirit,
       totalLabel: this._totalLabel(),
       dc: this.dc,
+      dcEditable: this.isDcEditable,
       statusNotes: this.statusNotes,
     };
   }
@@ -236,6 +269,13 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     // Remember the Spirituality checkbox, so anything that redraws the dialog keeps it.
     this.element.querySelector("input[name=spendSpirituality]")?.addEventListener("change", (ev) => {
       this.spendSpirit = ev.target.checked;
+    });
+
+    // The DC box: blank = no DC. Saved as it's typed, so pressing Enter to roll uses it.
+    this.element.querySelector("input[name=dc]")?.addEventListener("input", (ev) => {
+      const text = ev.target.value.trim();
+      const value = Number(text);
+      this.dc = (text === "" || !Number.isFinite(value)) ? null : Math.max(0, Math.floor(value));
     });
 
     // Enter in the modifier's number box adds it instead of rolling.
@@ -268,10 +308,11 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
       }
     }
 
+    const result = await this._resultFor(roll);
     await postRoll(roll, {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: this._flavor() + this.#dcNote(roll) + this.#statusNotesHTML() + spiritualityNote(spent) + (this.chat.footer ?? ""),
-      flags: this.chat.flags ?? {},
+      flavor: this._flavor() + result.html + this.#statusNotesHTML() + spiritualityNote(spent) + (this.chat.footer ?? ""),
+      flags: foundry.utils.mergeObject(foundry.utils.deepClone(this.chat.flags ?? {}), result.flags ?? {}, { inplace: false }),
     }, this.messageMode);
 
     this.resolve?.(roll);
@@ -279,16 +320,111 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
   }
 
   /**
-   * For a roll with a DC: " DC 15: Success" (or Failure) for the chat card. Empty without a DC.
+   * What the chat card says about the result, and what's saved on the message:
+   *   - the DC's result, when there's a DC (meet or beat it; natural 20 passes, natural 1 fails)
+   *   - "Big Success" / "Big Failure" on a natural 20 / 1
+   *   - flags.lotm.check: who rolled, the total, the natural d20, the DC and its result (for Burning Luck)
+   *   - flags.lotm.attack: an action's or spell's hit check against the targeted tokens (see #attackFor)
+   * The sanity and promotion dialogs replace this with their own.
+   * @param {Roll} roll   The evaluated roll.
+   * @returns {Promise<{html: string, flags: object}>}
+   */
+  async _resultFor(roll) {
+    const natural = naturalD20(roll);
+    const check = {
+      actorUuid: this.actor.uuid,
+      title: LotmRollDialog.plainText(this._flavor()),
+      total: roll.total,
+      natural,
+      kind: this.rollKind,
+      dc: this.dc,
+    };
+    if (this.outcome) check.outcome = this.outcome;
+
+    let html = "";
+    if (this.dc !== null) {
+      check.success = checkSucceeds({ total: roll.total, natural, dc: this.dc });
+      html += LotmRollDialog.dcResultHTML(this.dc, check.success);
+    }
+    html += LotmRollDialog.naturalHTML(natural);
+
+    // Outcome tables: drawn by the Roll Outcome button, by the result against the DC (helpers/outcome-tables.mjs).
+    const successTable = this.action?.system?.successTable ?? null;
+    const failureTable = this.action?.system?.failureTable ?? null;
+    if (this.dc !== null && (successTable || failureTable)) check.tables = { success: successTable, failure: failureTable };
+
+    const lotm = { check };
+    const attack = this.#attackFor(roll, natural);
+    if (attack) lotm.attack = attack;
+    // Tokens targeted, but nothing to check them against: tell the GM why there's no Hit / Miss.
+    else if (isMissingDefenseTarget(this.action?.system, game.user?.targets?.size ?? 0)) {
+      html += `<p class="lotm-gm-only hint">${game.i18n.format("LORD_OF_THE_MYSTERIES.Attack.NoDefenseTarget", {
+        name: Handlebars.escapeExpression(this.action.name),
+      })}</p>`;
+    }
+    return { html, flags: { lotm } };
+  }
+
+  /**
+   * An action's or spell's hit check: its Defense Targeted (system.defenseTarget) against each token the user has
+   * targeted. A gun shot left blank uses "too fast to dodge" (effectiveDefenseTarget). null when the roll isn't for
+   * an action with a defense to check.
+   * The defenses aren't written into the card: helpers/check-chat.mjs shows Hit / Miss to everyone and the numbers
+   * only to the GM.
    * @param {Roll} roll
+   * @param {number|null} natural
+   * @returns {{defenseTarget: string, targets: {tokenUuid: string, actorUuid: string, name: string, defense: number|null, hit: boolean|null}[]}|null}
+   */
+  #attackFor(roll, natural) {
+    const defenseTarget = effectiveDefenseTarget(this.action?.system);
+    if (!defenseTarget) return null;
+    const targets = [...(game.user?.targets ?? [])].filter((token) => token.actor).map((token) => {
+      const defense = defenseValue(token.actor.system, defenseTarget);
+      return {
+        tokenUuid: token.document.uuid,
+        actorUuid: token.actor.uuid,
+        name: token.name,
+        defense,
+        hit: defense === null ? null : isAttackHit({ total: roll.total, natural, defense }),
+      };
+    });
+    return { defenseTarget, targets };
+  }
+
+  /**
+   * " DC 15: Success" (or Failure) for a chat card.
+   * @param {number} dc
+   * @param {boolean} success
    * @returns {string}
    */
-  #dcNote(roll) {
-    if (this.dc === null) return "";
-    const success = roll.total >= this.dc;
+  static dcResultHTML(dc, success) {
     const result = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
     return ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
-      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DCResult", { dc: this.dc, result })}</span>`;
+      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DCResult", { dc, result })}</span>`;
+  }
+
+  /**
+   * "Big Success" on a natural 20, "Big Failure" on a natural 1, nothing otherwise.
+   * @param {number|null} natural
+   * @returns {string}
+   */
+  static naturalHTML(natural) {
+    if (natural !== 20 && natural !== 1) return "";
+    const isSuccess = natural === 20;
+    const label = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${isSuccess ? "BigSuccess" : "BigFailure"}`);
+    return `<div class="lotm roll-natural ${isSuccess ? "big-success" : "big-failure"}">`
+      + `<i class="fa-solid ${isSuccess ? "fa-star" : "fa-skull"}"></i> ${label}</div>`;
+  }
+
+  /**
+   * HTML as plain text ("Shoot: Pistol Check (Agility)"), for saving a roll's title in its flags.
+   * @param {string} html
+   * @returns {string}
+   */
+  static plainText(html) {
+    const div = document.createElement("div");
+    div.innerHTML = html ?? "";
+    return div.textContent.trim();
   }
 
   /** The status notes for the chat card, or "" when there are none. */

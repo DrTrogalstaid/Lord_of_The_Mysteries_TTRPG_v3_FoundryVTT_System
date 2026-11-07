@@ -97,6 +97,50 @@
         <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
       </fieldset>
 
+      <!--Defense Targeted: which defense of the targeted tokens the attack roll goes against (hit or miss).
+          Choices: CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets (helpers/check-results.mjs). Blank = no hit check. -->
+      <fieldset class="defenseTarget">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Label"}}</legend>
+        <select name="system.defenseTarget" {{#unless editable}}disabled{{/unless}}>
+          {{selectOptions config.defenseTargets selected=system.defenseTarget blank=(localize "LORD_OF_THE_MYSTERIES.DefenseTargets.none") localize=true}}
+        </select>
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Hint"}}</p>
+      </fieldset>
+
+      <!--DC: a fixed DC for the roll (blank = none). The roll window can change it for one roll. -->
+      <fieldset class="actionDc">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.Action.DC"}}</legend>
+        <input class="blend-input" type="number" name="system.dc" value="{{system.dc}}" min="0" step="1" placeholder="—" />
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DCHint"}}</p>
+      </fieldset>
+
+      <!--Outcome tables: Roll Tables drawn after the roll, by its result against the DC. Drop a Roll Table on a slot
+          (helpers/table-slot.mjs); the chat card's Roll Outcome button draws it (helpers/outcome-tables.mjs). -->
+      <fieldset class="outcome-tables">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Label"}}</legend>
+        {{#each outcomeTables as |slot|}}
+        <div class="action-skill-entry outcome-table-slot" data-table-slot="{{slot.field}}">
+          <span class="outcome-table-label">{{slot.label}}</span>
+          {{#if slot.uuid}}
+            <img src="{{slot.img}}" alt="" width="24" height="24">
+            {{#if slot.broken}}
+              <span class="action-skill-name">{{slot.name}}</span>
+            {{else}}
+              <a class="action-skill-name" data-action="openTable" data-uuid="{{slot.uuid}}">{{slot.name}}</a>
+            {{/if}}
+            {{#if @root.editable}}
+              <a class="item-control" data-action="removeTable" data-field="{{slot.field}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
+                <i class="fas fa-trash"></i>
+              </a>
+            {{/if}}
+          {{else}}
+            <span class="hint">{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Empty"}}</span>
+          {{/if}}
+        </div>
+        {{/each}}
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Hint"}}</p>
+      </fieldset>
+
       <!--Modifiers-->
       <fieldset>
         <legend>Modifiers</legend>
