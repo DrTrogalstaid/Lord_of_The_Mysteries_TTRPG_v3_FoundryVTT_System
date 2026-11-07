@@ -31,9 +31,9 @@ test("@Check: anything else is a skill name", () => {
   assert.deepEqual(parseCheckLink("Medicine", ATTRIBUTES), { attribute: null, skill: "Medicine", dc: null });
 });
 
-test("@Rationality and @Sanity are the same button; @Check is its own", () => {
+test("@Sanity and @Sanity are the same button; @Check is its own", () => {
   const matches = (pattern, text) => [...text.matchAll(pattern)].map((m) => [m[1], m[2] ?? null]);
-  const text = "Lose @Rationality[0/1d2]{Whispers} or @sanity[1/1d3], then @Check[wil|15]{Decipher}.";
+  const text = "Lose @Sanity[0/1d2]{Whispers} or @sanity[1/1d3], then @Check[wil|15]{Decipher}.";
   assert.deepEqual(matches(SANITY_PATTERN, text), [["0/1d2", "Whispers"], ["1/1d3", null]]);
   assert.deepEqual(matches(CHECK_PATTERN, text), [["wil|15", "Decipher"]]);
 });

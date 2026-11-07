@@ -1,11 +1,11 @@
 /**
- * Buttons inside text: @Rationality[...] (or @Sanity[...], the same) and @Check[...].
+ * Buttons inside text: @Sanity[...] (or @Sanity[...], the same) and @Check[...].
  *
  * Write them in any text Foundry turns into HTML: ability, action and spell descriptions, Roll Table results,
  * journal pages, chat messages. They show as small buttons; clicking one opens the roll for a character.
  *
- *   @Rationality[1/1d2]            a rationality (sanity) check: lose 1 on a pass, 1d2 on a fail
- *   @Sanity[1/1d2]                 the same: the rulebook calls it Sanity, the sheets Rationality
+ *   @Sanity[1/1d2]            a sanity (sanity) check: lose 1 on a pass, 1d2 on a fail
+ *   @Sanity[1/1d2]                 the same: the rulebook calls it Sanity, the sheets Sanity
  *   @Sanity[0/1d2]{Whispers}       the same, with its own label ("Whispers (0/1d2)"), also used as the check's cause
  *   @Sanity[1d8/2d8|+4]            a penalty on the d20 ("Sanity check +4 disadvantageous"); "penalty=4" works too
  *   @Sanity[1d3]                   one loss for both
@@ -88,8 +88,8 @@ export function parseCheckLink(inner, attributeNames = {}) {
 const L = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Enrichers.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Enrichers.${key}`));
 
 
-/** @Rationality[...]{label} or @Sanity[...]{label}: match[1] is what's in the brackets, match[2] the label. */
-export const SANITY_PATTERN = /@(?:Rationality|Sanity)\[([^\]]+)\](?:\{([^}]+)\})?/gi;
+/** @Sanity[...]{label} or @Sanity[...]{label}: match[1] is what's in the brackets, match[2] the label. */
+export const SANITY_PATTERN = /@(?:Sanity|Sanity)\[([^\]]+)\](?:\{([^}]+)\})?/gi;
 
 /** @Check[...]{label} */
 export const CHECK_PATTERN = /@Check\[([^\]]+)\](?:\{([^}]+)\})?/gi;
@@ -149,7 +149,7 @@ function button(kind, icon, text, data, options) {
 }
 
 
-/** @Rationality[1/1d2]{label} (or @Sanity) */
+/** @Sanity[1/1d2]{label} (or @Sanity) */
 function enrichSanity(match, options) {
   const { success, failure, penalty } = parseSanityLink(match[1]);
   const label = match[2]?.trim() ?? "";

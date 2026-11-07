@@ -47,7 +47,7 @@ export function messageModeButtons(active) {
 }
 
 /**
- * The mode a message was posted in, for a follow-up roll that should be seen by the same people (a Rationality
+ * The mode a message was posted in, for a follow-up roll that should be seen by the same people (a Sanity
  * check's loss): blind, whispered to the roller only ("self"), whispered to the GM, or public.
  * @param {ChatMessage} message
  * @returns {string}  One of MESSAGE_MODES.

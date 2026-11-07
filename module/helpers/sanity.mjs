@@ -1,10 +1,10 @@
 /**
- * Sanity (the sheets call it Rationality, system.resources.rp): losing it, and the madness that comes with it
+ * Sanity (the sheets call it Sanity, system.resources.rp): losing it, and the madness that comes with it
  * (rulebook, Chapter 5: Going out of control).
  *
  *   Sanity check      Roll d20 (plus any penalty) at or under your current Sanity to pass. A natural 20 is a Big
  *                     Failure: the most the failure loss can be. Loss written "1/1d3": 1 on a pass, 1d3 on a fail.
- *                     The dialog: apps/sanity-check-dialog.mjs (the Check button under Rationality on the sheets).
+ *                     The dialog: apps/sanity-check-dialog.mjs (the Check button under Sanity on the sheets).
  *   3+ lost at once   Semi-Out-of-Control (effects/rules/semi-out-of-control.mjs) for 1d2 rounds, with a madness
  *                     tendency (d8).
  *   Below half max    Indeterminate Madness (effects/rules/indeterminate-madness.mjs), on and off with Sanity.
@@ -58,7 +58,7 @@ export function lossAfterSolidification(loss, isSolidified = false) {
 
 /**
  * A number that has already been rolled, for a chat card: the total in bold, with the dice in a tooltip
- * ("1d3: 2"). Used for Rationality losses and promotion rolls instead of Foundry's inline roll, which looks like a
+ * ("1d3: 2"). Used for Sanity losses and promotion rolls instead of Foundry's inline roll, which looks like a
  * button but only shows the dice when clicked: players clicked it expecting it to roll the loss, which had
  * already been rolled and taken off.
  * @param {{total: number, formula?: string, result?: string, dice?: object[]}} roll   An evaluated Roll.
@@ -85,7 +85,7 @@ export function parseSanityLoss(text) {
 
 
 /**
- * What a Rationality check's Roll Loss button rolls: the check's result now, counting the Luck burned on it since,
+ * What a Sanity check's Roll Loss button rolls: the check's result now, counting the Luck burned on it since,
  * and that result's loss. A natural 20 stays a Big Failure (Luck can't change it): the fail loss at its highest.
  * @param {{total: number, natural?: number|null, sanity: number, lossFormulas?: {success: string, failure: string}}} check
  *   The check's flags.lotm.check (apps/sanity-check-dialog.mjs).
@@ -213,7 +213,7 @@ export async function restoreSanity(actor, amount) {
 
 
 /**
- * HTML for what a sanity loss did, for a chat card: "Loses 3 Rationality: 12 → 9.", and Semi-Out-of-Control.
+ * HTML for what a sanity loss did, for a chat card: "Loses 3 Sanity: 12 → 9.", and Semi-Out-of-Control.
  * The loss has already been rolled and taken off; this only reports it.
  * @param {object} result        What applySanityLoss returned.
  * @param {Roll} [lossRoll]      The loss roll: its dice go in the number's tooltip.
@@ -280,7 +280,7 @@ export async function changeSanityResult(state, success) {
 
 
 /**
- * The message a Rationality check's loss was rolled in (by its Roll Loss button), or null when it hasn't been.
+ * The message a Sanity check's loss was rolled in (by its Roll Loss button), or null when it hasn't been.
  * @param {ChatMessage} message   The check's message.
  * @returns {ChatMessage|null}
  */
@@ -290,7 +290,7 @@ export function sanityLossMessage(message) {
 
 
 /**
- * Whether the current user gets a Roll Loss button on this message: a Rationality check from the roll window whose
+ * Whether the current user gets a Roll Loss button on this message: a Sanity check from the roll window whose
  * loss is rolled by the button (not one from before the button, whose loss was rolled with it), seen by the user,
  * for a character they own (the GM owns them all). The button is greyed out once the loss has been rolled.
  * @param {ChatMessage} message

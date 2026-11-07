@@ -69,11 +69,11 @@ Hooks.once('init', function () {
     // A gun's Reload / Chamber / Rotate / Unload (helpers/gun-handling.mjs), for macros, e.g.
     //   await game.lotm.GunHandling.get(gun, "reload")?.perform(actor);
     GunHandling,
-    // A rationality (sanity) check for an actor, or for every selected token when the actor is null
+    // A sanity (sanity) check for an actor, or for every selected token when the actor is null
     // (helpers/sanity.mjs), e.g.
-    //   game.lotm.rationalityCheck(null, { loss: "1/1d3", reason: "Saw the Wraith" })
+    //   game.lotm.sanityCheck(null, { loss: "1/1d3", reason: "Saw the Wraith" })
     // sanityCheck is the same function, under the rulebook's name.
-    rationalityCheck: openSanityCheck,
+    sanityCheck: openSanityCheck,
     sanityCheck: openSanityCheck,
     // A spiritual intuition check (Inspiration, DC 25, with Spirit Vision's bonus), e.g.
     //   game.lotm.spiritualIntuition(canvas.tokens.controlled[0].actor)

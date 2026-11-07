@@ -1300,7 +1300,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * The Check button under Rationality: a sanity check (apps/sanity-check-dialog.mjs). Shift-click rolls a 0/1
+   * The Check button under Sanity: a sanity check (apps/sanity-check-dialog.mjs). Shift-click rolls a 0/1
    * check straight away.
    */
   static async #onSanityCheck(event, target) {

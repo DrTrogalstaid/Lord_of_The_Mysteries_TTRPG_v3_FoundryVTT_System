@@ -17,7 +17,7 @@ import { naturalD20, sanityCheckSucceeds } from "../helpers/check-results.mjs";
  * new Sanity. Luck burned after the loss was rolled still works (helpers/luck.mjs): a flipped result rolls the other
  * loss and gives back or takes the difference.
  *
- * Opened by the Check button under Rationality on the player and NPC sheets, Semi-Out-of-Control's failed Will check,
+ * Opened by the Check button under Sanity on the player and NPC sheets, Semi-Out-of-Control's failed Will check,
  * and macros: game.lotm.sanityCheck(actor, { loss: "1/1d3", reason: "Saw the Wraith" }).
  */
 export default class SanityCheckDialog extends LotmRollDialog {

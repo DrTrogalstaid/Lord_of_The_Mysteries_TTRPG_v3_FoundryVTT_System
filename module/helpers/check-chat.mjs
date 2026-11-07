@@ -7,7 +7,7 @@
  *     On any other natural roll the Big Success button is taken away. Messages from before this have both.
  *   - the Burn Luck button, for whoever can burn Luck on that roll (helpers/luck.mjs)
  *   - the Roll Outcome button, for a roll with outcome tables (helpers/outcome-tables.mjs)
- *   - the Roll Loss button, on a Rationality check: rolls the loss and takes it off (rollSanityLoss, helpers/sanity.mjs)
+ *   - the Roll Loss button, on a Sanity check: rolls the loss and takes it off (rollSanityLoss, helpers/sanity.mjs)
  *   - on an outcome's message, its @Sanity / @Check buttons are tied to the character who made the check
  *     (helpers/enrichers.mjs)
  *   - parts of a message only the GM should see (class "lotm-gm-only", e.g. defenses on a Luck burn) are removed
@@ -25,7 +25,7 @@ const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
 
 export function registerCheckChatListeners() {
-  // A Rationality check's loss was rolled (by anyone): redraw the check so its Roll Loss button greys out everywhere.
+  // A Sanity check's loss was rolled (by anyone): redraw the check so its Roll Loss button greys out everywhere.
   Hooks.on("createChatMessage", (message) => {
     const source = game.messages.get(message.getFlag("lotm", "sanityLoss")?.sourceId ?? "");
     if (source) ui.chat?.updateMessage?.(source);
@@ -81,7 +81,7 @@ export function registerCheckChatListeners() {
       content.append(holder);
     }
 
-    // Roll Loss on a Rationality check (once per check, like Roll Outcome).
+    // Roll Loss on a Sanity check (once per check, like Roll Outcome).
     if (canRollSanityLoss(message)) {
       const holder = document.createElement("div");
       holder.classList.add("lotm-sanity-loss-buttons");

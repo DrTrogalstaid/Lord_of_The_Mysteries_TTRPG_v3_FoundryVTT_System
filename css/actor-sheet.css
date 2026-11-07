@@ -756,7 +756,7 @@
 /* Sidebar: Treated / Quick Dodge boxes, damage resistance's Immune box */
 /* -------------------------------------------------------------------- */
 
-/* A pool row (Health and Rationality, Spirituality and Luck) takes the sidebar's full width, so its two boxes
+/* A pool row (Health and Sanity, Spirituality and Luck) takes the sidebar's full width, so its two boxes
    share it evenly. Without this the row is only as wide as its boxes, and a square box that holds a checkbox or a
    button grows wider to stay square, pushing the second box onto its own line. */
 .lotm.sheet.actor .pool-container > .pool-row {

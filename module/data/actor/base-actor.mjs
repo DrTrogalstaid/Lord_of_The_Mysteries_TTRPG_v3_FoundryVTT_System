@@ -353,7 +353,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     _prepareResources() {
         // Health
         this.resources.hp.max = (this.attributes.phy.base + 10);
-        // Rationality
+        // Sanity
         this.resources.rp.max = (this.attributes.wil.total + 10);
         // Spirituality
         this.resources.spp.max = (this.attributes.wil.base + this.attributes.ins.base);

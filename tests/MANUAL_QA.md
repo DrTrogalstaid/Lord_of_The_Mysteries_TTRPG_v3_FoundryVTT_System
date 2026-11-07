@@ -746,7 +746,7 @@ Files: `module/helpers/sanity.mjs`, `module/apps/sanity-check-dialog.mjs`, `modu
 
 Setup: Klein with Will 6 (Sanity 16 / 16).
 
-- [ ] The Check button under Rationality opens the sanity check (both sheets). Shift-click rolls 0/1 straight away
+- [ ] The Check button under Sanity opens the sanity check (both sheets). Shift-click rolls 0/1 straight away
 - [ ] Loss 1/1d3: rolling at or under 16 passes and loses 1; over 16 fails and loses 1d3. A natural 20 loses 3
 - [ ] Angry or Fear on Klein don't add anything to the sanity check
 - [ ] Losing 3+ at once: Semi-Out-of-Control, named with its madness tendency. Move actions warn (Use Anyway)
