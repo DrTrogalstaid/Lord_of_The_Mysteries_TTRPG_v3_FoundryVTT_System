@@ -40,6 +40,13 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     schema.defenseTarget = new fields.StringField({
       required: true, blank: true, initial: "", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets),
     });
+    // A fixed DC for the roll (Listen: 30), or null for none. The chat card says Success or Failure, and the roll
+    // window lets the player change it for one roll (a better sacrifice: 15 instead of 20).
+    schema.dc = new fields.NumberField({ required: true, nullable: true, integer: true, min: 0, initial: null });
+    // Roll Tables drawn after a roll with a DC: one for a success, one for a failure (Listen's 1d8 and 1d4 lists).
+    // The attack card gets a Roll Outcome button (helpers/outcome-tables.mjs). null = no table for that result.
+    schema.successTable = new fields.DocumentUUIDField({ type: "RollTable", required: true, nullable: true, initial: null });
+    schema.failureTable = new fields.DocumentUUIDField({ type: "RollTable", required: true, nullable: true, initial: null });
     // Flat bonus/penalty added to the attack roll. Shows up in the roll dialog's modifier list.
     schema.modifiers = new fields.NumberField({ required: false, integer: true });
     // Damage formula rolled by the damage buttons. Parts can have their own type: "2d6[fire] + 1d4[cold]".

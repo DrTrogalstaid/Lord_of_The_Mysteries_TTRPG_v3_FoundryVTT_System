@@ -67,6 +67,8 @@ export default class SkillCheckDialog extends LotmRollDialog {
             // No Spirituality checkbox when it's already been paid (a special bullet's spell, helpers/firearms.mjs).
             spirituality: action && !skillEntry.isSpiritualityPaid ? { cost: spiritualityCost(action), reason: action.name } : null,
             chat: skillEntry.chat ?? {},
+            // The action's own DC (Listen: 30), if it has one. A DC passed in options wins (a @Check link's).
+            dc: action?.system?.dc ?? null,
             ...options
         });
         this.skillEntry = skillEntry;
@@ -84,16 +86,17 @@ export default class SkillCheckDialog extends LotmRollDialog {
      * @param {object} skillEntry         See the constructor.
      * @param {object} [options]
      * @param {boolean} [options.fast]    Shift-click: roll right away with the defaults.
+     * @param {number|null} [options.dc]  A DC to roll against (a @Check[Listening|15] link). Default: the action's own.
      * @returns {Promise<Roll|null>}
      */
-    static async prompt(actor, skillEntry, { fast = false } = {}) {
+    static async prompt(actor, skillEntry, { fast = false, dc = null } = {}) {
         if (skillEntry.level === "untrained" && !game.settings.get("lotm", "allowUntrainedSkillChecks")) {
             ui.notifications.warn(
                 game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.UntrainedBlocked", { skill: skillEntry.name })
             );
             return null;
         }
-        return this.show(new this(actor, skillEntry), { fast });
+        return this.show(new this(actor, skillEntry, dc === null ? {} : { dc }), { fast });
     }
 
     /** An action's attack roll, or a skill check. @override */

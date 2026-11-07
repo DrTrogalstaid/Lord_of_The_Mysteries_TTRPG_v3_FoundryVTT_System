@@ -415,6 +415,30 @@
   margin: 2px 0 0;
   opacity: 0.65;
 }
+
+/* ---- Outcome table slots on the action and spell sheets (helpers/table-slot.mjs) ---- */
+
+.lotm .outcome-table-slot {
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+}
+
+.lotm .outcome-table-slot.drag-over {
+  border-color: currentColor;
+}
+
+.lotm .outcome-table-slot .outcome-table-label {
+  flex: 0 0 6.5rem;
+  font-weight: bold;
+}
+
+.lotm .outcome-table-slot .hint {
+  flex: 1;
+  margin: 0;
+  opacity: 0.65;
+}
 /* ---- Guns and ammo on the Actions and Inventory tabs (helpers/firearms.mjs) ---- */
 
 /* Reload / Chamber / Unload: grey-green, so it doesn't look like an attack or damage roll. */

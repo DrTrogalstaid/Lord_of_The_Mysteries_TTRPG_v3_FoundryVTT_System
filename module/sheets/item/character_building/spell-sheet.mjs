@@ -1,6 +1,8 @@
 import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 // The Skill slot, the same one the action sheet uses.
 import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
+// The On Success / On Failure table slots, the same as the action sheet's.
+import { TABLE_SLOT_ACTIONS, prepareTableSlots, bindTableSlots } from "../../../helpers/table-slot.mjs";
 
 
 export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBase {
@@ -13,6 +15,7 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
     dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
     actions: {
       ...SKILL_SLOT_ACTIONS,
+      ...TABLE_SLOT_ACTIONS,
       addSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onAddSequenceUpgrade,
       deleteSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onDeleteSequenceUpgrade,
     },
@@ -43,6 +46,7 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
 
     // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
     context.actionSkill = await prepareSkillSlot(this.item);
+    context.outcomeTables = await prepareTableSlots(this.item);
 
     // The Traits checkboxes (templates/item/parts/action-traits.hbs).
     context.traitOptions = this._traitOptions();
@@ -63,6 +67,7 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
 
     // Let the Skill slot accept a dropped skill (only when the sheet can be edited; bindSkillSlot checks).
     bindSkillSlot(this);
+    bindTableSlots(this);
   }
 
   /* -------------------------------------------- */
