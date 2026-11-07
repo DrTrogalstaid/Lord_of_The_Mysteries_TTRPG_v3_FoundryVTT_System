@@ -139,6 +139,18 @@
         "ASSISTANT": "OWNER"
       },
       "flags": {}
+    },
+        {
+      "name": "roll_tables",
+      "label": "Roll Tables",
+      "path": "packs/roll_tables",
+      "type": "RollTable",
+      "system": "lotm",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
     }
   ],
   "packFolders": [],
