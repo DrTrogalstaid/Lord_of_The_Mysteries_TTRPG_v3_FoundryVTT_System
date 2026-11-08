@@ -27,6 +27,7 @@ import { autoPlacement } from "./inventory.mjs";
 import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
 import { spendSpirituality, spiritualityCost } from "./spirituality.mjs";
 import { BarrelFeed, CylinderFeed, GunFeed, MagazineFeed, isSpecialRound, roundFromAmmo, sameKind } from "./gun-feed.mjs";
+import { recordActionUse } from "../effects/action-expiry.mjs";
 
 const L = "LORD_OF_THE_MYSTERIES.Firearm";
 
@@ -651,6 +652,7 @@ export async function fireWithoutRoll(actor, action, gunId) {
 
   const fired = await fireGun(actor, gun, { amount, positions: shot.positions, chat: true });
   if (fired) await postUsedDespite(actor, action, note);
+  if (fired) await recordActionUse(actor, action);   // effects that end after it's used (effects/action-expiry.mjs)
   return fired;
 }
 

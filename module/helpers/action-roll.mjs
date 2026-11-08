@@ -9,6 +9,7 @@ import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
 import { bigSuccessDamage, reduceHit, splitBigSuccess } from "./damage-math.mjs";
+import { recordActionUse } from "../effects/action-expiry.mjs";
 
 /**
  * Action rolls
@@ -248,6 +249,8 @@ function actionChatExtras(actor, action, { note = "" } = {}) {
  *
  * If one of the character's statuses stops the action (Bound and a movement action, Silence and a speech action...),
  * a warning comes first, with Use Anyway (effects/status-restrictions.mjs). Used anyway: the chat card says so.
+ *
+ * Once it's rolled, the use is counted for effects that end after the action is used (effects/action-expiry.mjs).
  * @param {Actor} actor   The character rolling.
  * @param {Item} action   The action item.
  * @param {object} [options]
@@ -280,6 +283,8 @@ export async function rollActionAttack(actor, action, { gunId, fast = false, isB
   const roll = await rollAttackDice(actor, action, { fast, note, isSpiritualityPaid: isBulletSpell });
   // null = the dialog was closed, so nothing was fired.
   if (roll && isShot) await fireGun(actor, gun, { amount, positions: shot.positions });
+  // Rolled = used: effects that end after this action is used count it (effects/action-expiry.mjs).
+  if (roll) await recordActionUse(actor, action);
   return roll;
 }
 
@@ -509,10 +514,76 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
 
   const rollData = actor.getRollData();
   const roll = await new LOTM_VTTRoll(formula, rollData).evaluate();
+  await postDamageRoll(roll, {
+    actor,
+    title: action.name,
+    defaultType: defaultDamageType(action),
+    bigSuccess,
+    formula,
+    rollData,
+    flags: { actionUuid: action.uuid },
+  });
+  return roll;
+}
 
+/**
+ * Roll a damage formula that isn't an action's (the @Damage[...] buttons in text, helpers/enrichers.mjs) and post the
+ * same damage card an action's damage gets: the types it did, and the Damage / Heal buttons.
+ * @param {string} formula             e.g. "2d6[fire] + 3", "1d8+@attributes.str.total"
+ * @param {object} [options]
+ * @param {Actor|null} [options.actor] Whose @values the formula uses, and who the card is posted as. None: posted as
+ *                                     the user, and the formula can't use @values.
+ * @param {string} [options.title]     The card's title ("Falling Rocks: Damage"). Blank: just "Damage".
+ * @param {string} [options.defaultType] The type for parts that don't name one ("fire", or as typed). "" = untyped.
+ * @returns {Promise<Roll|null>}  null when the formula isn't a valid roll.
+ */
+export async function rollDamageFormula(formula, { actor = null, title = "", defaultType = "" } = {}) {
+  const text = String(formula ?? "").trim();
+  if (!text || !Roll.validate(text)) {
+    ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidFormula", { formula: text }));
+    return null;
+  }
+  if (!actor && text.includes("@")) {
+    ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.FormulaNeedsActor", { formula: text }));
+    return null;
+  }
+
+  const rollData = actor?.getRollData?.() ?? {};
+  let roll;
+  try {
+    roll = await new LOTM_VTTRoll(text, rollData).evaluate();
+  } catch (error) {
+    console.warn(`lotm | Couldn't roll the damage formula "${text}"`, error);
+    ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Action.InvalidFormula", { formula: text }));
+    return null;
+  }
+  const type = damageTypeKey(defaultType) ?? String(defaultType ?? "").trim();
+  await postDamageRoll(roll, { actor, title, defaultType: type, formula: text, rollData });
+  return roll;
+}
+
+/**
+ * Post a damage roll's card: its title, a line per damage type when there are several ("5 Fire · 3 Cold"), and the
+ * Damage / Heal buttons (applyDamageFromMessage below). The amount, and how much of it is each damage type, is saved
+ * on the message (flags.lotm.damage). Used by an action's damage (rollActionDamage) and by @Damage[...] in text
+ * (rollDamageFormula).
+ *
+ * Big Success: the damage is never less than half the formula's highest result, rounded up (see rollActionDamage).
+ *
+ * @param {Roll} roll                    The evaluated damage roll.
+ * @param {object} options
+ * @param {Actor|null} [options.actor]   Posted as this character (none: as the user).
+ * @param {string} [options.title]       The action's or the text's name. Blank: the title is just "Damage".
+ * @param {string} [options.defaultType] The type for parts of the formula that don't name one. "" = untyped.
+ * @param {boolean} [options.bigSuccess]
+ * @param {string} options.formula       The formula that was rolled (for the Big Success minimum).
+ * @param {object} [options.rollData]    The @values it was rolled with.
+ * @param {object} [options.flags]       More flags.lotm on the message (an action's: its actionUuid).
+ * @returns {Promise<ChatMessage>}
+ */
+async function postDamageRoll(roll, { actor = null, title = "", defaultType = "", bigSuccess = false, formula, rollData = {}, flags = {} }) {
   // The amount the Damage / Heal buttons apply.
   // How much of it is each damage type (see damageByType).
-  const defaultType = defaultDamageType(action);
   let parts = damageByType(roll, defaultType);
   let amount = roll.total;
   let note = "";
@@ -531,13 +602,11 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
 
   // The types' names for the title ("Shoot: Damage (Fire, Cold)").
   const typeNames = parts.map((part) => part.label).filter(Boolean);
-  const flavor = game.i18n.format(
-    bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor",
-    {
-      action: Handlebars.escapeExpression(action.name),
-      type: typeNames.length ? ` (${Handlebars.escapeExpression(typeNames.join(", "))})` : "",
-    }
-  );
+  const typeText = typeNames.length ? ` (${Handlebars.escapeExpression(typeNames.join(", "))})` : "";
+  const flavorKey = !title
+    ? "LORD_OF_THE_MYSTERIES.Action.PlainDamageFlavor"
+    : (bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor");
+  const flavor = game.i18n.format(flavorKey, { action: Handlebars.escapeExpression(title), type: typeText });
   // More than one type: "5 Fire · 3 Cold" under the title.
   const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
   const breakdown = parts.length > 1
@@ -546,10 +615,10 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
       ).join(" · ")}</div>`
     : "";
 
-  await postRoll(roll, {
-    speaker: ChatMessage.getSpeaker({ actor }),
+  return postRoll(roll, {
+    speaker: ChatMessage.getSpeaker(actor ? { actor } : {}),
     flavor: flavor + breakdown + note + applyButtonsHTML(amount),
-    flags: { lotm: { actionUuid: action.uuid, actorUuid: actor.uuid, damage: {
+    flags: { lotm: { ...flags, ...(actor ? { actorUuid: actor.uuid } : {}), damage: {
       amount,
       bigSuccess,
       // { fire: 5, cold: 3 } ("" = untyped). Adds up to `amount`. Damage reduction is taken off each one
@@ -557,7 +626,6 @@ export async function rollActionDamage(actor, action, { bigSuccess = false } = {
       types: Object.fromEntries(parts.map((part) => [part.type, part.amount])),
     } } },
   });
-  return roll;
 }
 
 /* -------------------------------------------- */

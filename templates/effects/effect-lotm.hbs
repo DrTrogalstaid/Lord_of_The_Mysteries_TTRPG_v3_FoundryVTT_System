@@ -89,6 +89,68 @@
   </fieldset>
   {{/if}}
 
+  {{!-- What the effect gives while it's active (effects/effect-grants.mjs). Drop actions / skills on the lists. --}}
+  <fieldset class="lotm-effect-grants">
+    <legend>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Label"}}</legend>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Hint"}}</p>
+
+    <div class="lotm-grant-list" data-lotm-grant-zone="actions">
+      <h4>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Actions"}}</h4>
+      <ol>
+        {{#each lotm.grantedActions as |row|}}
+        <li class="lotm-grant-row{{#if row.broken}} broken{{/if}}">
+          <img src="{{row.img}}" alt="" width="24" height="24" />
+          {{#if row.broken}}
+          <span class="lotm-grant-name">{{row.name}}</span>
+          {{else}}
+          <a class="lotm-grant-name" data-action="openGrant" data-uuid="{{row.uuid}}">{{row.name}}</a>
+          {{/if}}
+          {{#if @root.lotm.editable}}
+          <a class="lotm-grant-control" data-action="removeGrantedAction" data-index="{{row.index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Remove'}}">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+          {{/if}}
+        </li>
+        {{else}}
+        <li class="lotm-grant-hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.DropAction"}}</li>
+        {{/each}}
+      </ol>
+    </div>
+
+    <div class="lotm-grant-list" data-lotm-grant-zone="skills">
+      <h4>{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Skills"}}</h4>
+      <ol>
+        {{#each lotm.skillIncreases as |row|}}
+        <li class="lotm-grant-row{{#if row.broken}} broken{{/if}}">
+          <img src="{{row.img}}" alt="" width="24" height="24" />
+          {{#if row.broken}}
+          <span class="lotm-grant-name">{{row.name}}</span>
+          {{else}}
+          <a class="lotm-grant-name" data-action="openGrant" data-uuid="{{row.uuid}}">{{row.name}}</a>
+          {{/if}}
+          <input type="hidden" name="system.skillIncreases.{{row.index}}.skillUuid" value="{{row.uuid}}" />
+          <label class="lotm-grant-value" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.LevelsHint'}}">
+            +<input type="number" name="system.skillIncreases.{{row.index}}.value" value="{{row.value}}" min="0" step="1"
+                    {{#unless @root.lotm.editable}}disabled{{/unless}} />
+          </label>
+          <select name="system.skillIncreases.{{row.index}}.maxLevel" {{#unless @root.lotm.editable}}disabled{{/unless}}>
+            {{selectOptions @root.lotm.maxLevelOptions selected=row.maxLevel}}
+          </select>
+          {{#if @root.lotm.editable}}
+          <a class="lotm-grant-control" data-action="removeSkillIncrease" data-index="{{row.index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Remove'}}">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+          {{/if}}
+        </li>
+        {{else}}
+        <li class="lotm-grant-hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.Grants.DropSkill"}}</li>
+        {{/each}}
+      </ol>
+    </div>
+  </fieldset>
+
   {{#if lotm.grantedFrom}}
   <p class="hint lotm-granted-from">{{localize "LORD_OF_THE_MYSTERIES.Effects.Config.GrantedFrom" name=lotm.grantedFrom}}</p>
   {{/if}}

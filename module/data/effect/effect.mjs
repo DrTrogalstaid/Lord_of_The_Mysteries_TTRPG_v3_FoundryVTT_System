@@ -31,6 +31,13 @@
  *                        (effects/rules/semi-out-of-control.mjs).
  *   madness              Semi-Out-of-Control and Indeterminate Madness: the d8 madness tendency / symptom
  *                        (CONFIG.LORD_OF_THE_MYSTERIES.madnessTendencies). 0 = none.
+ *   actionList           Actions the actor has while the effect is active (UUIDs of action Items). Same name as the
+ *                        list on gear and abilities, so the sheets list them the same way (effects/effect-grants.mjs).
+ *   skillIncreases       Skill levels while the effect is active: { skillUuid, value, maxLevel }. Raises the skill
+ *                        `value` levels, but never above maxLevel (blank = no limit). See effects/effect-grants.mjs.
+ *   expiryEvents         More ways for the effect to end, on top of Foundry's Duration (whichever comes first):
+ *                        { type: "actionUsed", actionUuid, uses, used } = ends once that action has been used `uses`
+ *                        times. See effects/action-expiry.mjs.
  *
  * The lists of modes and shapes are in CONFIG.LORD_OF_THE_MYSTERIES (helpers/config.mjs).
  */
@@ -67,6 +74,28 @@ export default class LordOfTheMysteriesEffect extends foundry.data.ActiveEffectT
     schema.zone = new fields.DocumentUUIDField({ type: "Region", required: true, nullable: true, initial: null });
     schema.roundsLeft = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 });
     schema.madness = new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, max: 8, initial: 0 });
+
+    // What the effect gives while it's active (effects/effect-grants.mjs). Set on the effect sheet's LotM tab.
+    schema.actionList = new fields.ArrayField(
+      new fields.DocumentUUIDField({ type: "Item", required: false })
+    );
+    schema.skillIncreases = new fields.ArrayField(new fields.SchemaField({
+      skillUuid: new fields.DocumentUUIDField({ type: "Item", required: true }),
+      value: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 1 }),
+      // A key of CONFIG.LORD_OF_THE_MYSTERIES.skillLevels, or blank for no limit.
+      maxLevel: new fields.StringField({
+        required: true, blank: true, initial: "", choices: () => Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels),
+      }),
+    }));
+
+    // More ways to end, on top of Foundry's Duration (effects/action-expiry.mjs). Set on the Duration tab.
+    schema.expiryEvents = new fields.ArrayField(new fields.SchemaField({
+      type: new fields.StringField({ required: true, blank: false, initial: "actionUsed", choices: ["actionUsed"] }),
+      // Blank: any action the effect grants, or any action if it grants none.
+      actionUuid: new fields.StringField({ required: true, blank: true, initial: "" }),
+      uses: new fields.NumberField({ required: true, nullable: false, integer: true, min: 1, initial: 1 }),
+      used: new fields.NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+    }));
 
     return schema;
   }

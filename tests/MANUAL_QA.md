@@ -803,3 +803,100 @@ Files: `module/apps/attribute-check-dialog.mjs`, `module/helpers/check-bonuses.m
 - [ ] With Spirit Vision on: an Occultism check and a spell attack have no Spirit Vision row
 - [ ] Inspiration check with Spiritual Intuition ticked: DC 25, title Spiritual Intuition, Spirit Vision +2 row
 - [ ] Macro: `game.lotm.spiritualIntuition(actor)` opens it ticked
+
+## Effects that grant actions
+
+Files: `module/effects/effect-grants.mjs`, `module/data/effect/effect.mjs`, `module/apps/effect-config.mjs`,
+`templates/effects/effect-lotm.hbs`, `module/sheets/base-actor-sheet.mjs`
+
+- [ ] Effect sheet, LotM tab: Grants box with Actions and Skill Increases lists. Dropping a spell or a gear Item on
+      Actions warns "isn't an action"; dropping the same action twice adds it once
+- [ ] Type a new name on the Details tab, then drop an action without saving: the name is kept (saved with the drop)
+- [ ] Trash can removes the action; a deleted action shows as missing and can still be removed
+- [ ] Put the effect on Klein: the action is on the Actions tab in its action-type section, "Granted by" the effect,
+      with its roll / damage buttons and the Favorites star
+- [ ] Turn the effect off on the Effects tab: the action goes away. On again: it's back. Delete it: gone
+- [ ] Klein already owns the action: one row, "Granted by" lists the effect
+- [ ] A timed effect (1 round) in combat: the action goes when the effect runs out
+- [ ] A passive effect with an action on gear: held -> listed; stowed -> gone (suppressed)
+- [ ] A Toggle effect (Spirit Vision) with an action: the action is there only while it's switched on
+- [ ] A spell's Targets effect with an action, applied to a goblin: the goblin's NPC sheet lists the action, and the
+      GM can hide it with the eye-slash button
+- [ ] Effects tab row says "Grants: <action>, <skill> +1 (at most Advanced)"
+
+## Effects that raise skills
+
+Files: `module/effects/effect-grants.mjs`, `module/data/actor/base-actor.mjs`, `module/helpers/skill-levels.mjs`,
+`module/sheets/player-character-sheet.mjs`, `module/sheets/npc-sheet.mjs`, `templates/actor/player-character/character.hbs`,
+`templates/actor/player-character/parts/granted-skill-entry.hbs`
+
+- [ ] Effect with Pistol +1, no limit, on Klein (Pistol Trained): the skill row shows the link badge Proficient,
+      modifier +4, hover "Effects: <effect> (+1)". The dropdown still says Trained
+- [ ] Set the row's limit to "at most Trained": no badge, modifier back to Trained's
+- [ ] Two effects on Pistol, +1 at most Proficient and +1 no limit, from Trained: Advanced, whichever was added first
+- [ ] A Shoot action with Pistol: the dice button's bonus and the roll dialog use the raised level
+- [ ] `@Check[Pistol]` in a journal rolls at the raised level
+- [ ] Raise Sword to Advanced with an effect: Melee (Fighting category) goes up one too, and drops back when the effect
+      is turned off
+- [ ] Raise Dodge with an effect: Physical Defense goes up
+- [ ] Study Pistol while it's raised: the meter and the Study dialog go by Trained, not Proficient. Fill the meter:
+      the dropdown becomes Proficient, and with the effect still on the badge says Advanced
+- [ ] A skill at Mastery from an effect doesn't count toward Education growth
+- [ ] NPC: an effect raising a skill the NPC doesn't list adds a row for it, "Raised by: <effect>"; turning the effect
+      off removes the row
+
+## @Effect buttons and Roll Table results
+
+Files: `module/helpers/enrichers.mjs`, `module/helpers/check-chat.mjs`, `module/effects/effect-application.mjs`,
+`css/roll-dialog.css`
+
+- [ ] A text table result `@Effect[<uuid from the Effects compendium>]` shows "Apply <name>"; `{Cursed}` changes the text
+- [ ] `@Effect[bound]` and `@Effect[Loss of Balance]` apply those statuses; a misspelled one shows crossed out
+      "Unknown effect"
+- [ ] Listen's failure table with an @Effect result, rolled with Roll Outcome: the button applies to Klein with no
+      token selected. Chat says "<effect> is applied to Klein."
+- [ ] Clicking again for Klein asks "Apply it again?"; No does nothing. Selecting a different owned token and clicking:
+      no question, that token gets it
+- [ ] A status Klein already has: "Klein already has Bound", nothing added
+- [ ] A compendium effect with a 1-round duration: it starts counting when applied
+- [ ] GM draws a table from the sidebar, selects a goblin, clicks Apply: the goblin gets it
+- [ ] A document result pointing at an effect (if Foundry lets an effect be dropped on a result), and a text result with
+      a plain @UUID link to an effect: both get an Apply button next to the link
+
+## Effects that end after an action is used
+
+Files: `module/effects/action-expiry.mjs`, `module/data/effect/effect.mjs`, `module/apps/effect-config.mjs`,
+`templates/effects/effect-expiry.hbs`, `module/helpers/action-roll.mjs`, `module/helpers/firearms.mjs`,
+`module/helpers/spirituality.mjs`, `module/effects/toggle-effects.mjs`, `module/sheets/base-actor-sheet.mjs`
+
+- [ ] Effect sheet, Duration tab: "Also ends when" box under Foundry's duration. Add: Action Used makes a row
+      reading "any action" (or "any action this effect grants" when it grants actions)
+- [ ] Drop an action on the box: a new row for it. Drop another on that row: the row's action changes. Drop a gear
+      Item: warns. The X goes back to "any..."; the trash can removes the row
+- [ ] Effect "Blessing": grants Smite, duration 1 hour, Action Used (blank) 1 time. On Klein, the Effects tab says
+      "Ends after 1 more use(s) of any action this effect grants"
+- [ ] Roll Smite: the roll posts, then "Blessing ends: Smite was used 1 time(s)." and Smite leaves the Actions tab
+- [ ] Close Smite's roll dialog without rolling: nothing counted. A gun that clicks empty: nothing counted
+- [ ] Rows Smite 3 times and Dodge 1 time: Smite twice then Dodge once ends it at Dodge (whichever first)
+- [ ] Same effect, advance world time 1 hour before using it: Foundry's duration ends it
+- [ ] Spend N button and a Fire button with no roll both count. Switching a toggle on counts; switching off doesn't.
+      A Toggle effect with "any action, 2 times": switching it on doesn't use one of its own uses
+- [ ] A Shoot action owned by Klein (copied from the compendium) counts for a row holding the compendium's Shoot
+- [ ] A passive gear effect with 1 use: after the use the effect is turned off on the gear (not deleted), and turning it
+      back on gives it its use again. Stowed gear: its effect doesn't count uses
+- [ ] Changing "used" on the sheet gives uses back. An effect applied to a target from a spell starts at 0 used
+
+## @Damage buttons
+
+Files: `module/helpers/enrichers.mjs`, `module/helpers/action-roll.mjs`, `css/roll-dialog.css`
+
+- [ ] `@Damage[2d6]` in a journal shows a "2d6" button. Click: a damage card ("Damage") with Damage / Heal buttons;
+      select a goblin and click Damage: its damage reduction applies, the "took damage" message is posted
+- [ ] `@Damage[2d6[fire] + 1d4[cold]]{Fire Trap}`: the button reads "Fire Trap"; the card "Fire Trap: Damage (Fire, Cold)"
+      with "5 Fire · 3 Cold"
+- [ ] `@Damage[1d8+3|fire]`: the button reads "1d8+3 Fire", all of it Fire on the card
+- [ ] `@Damage[1d6+@attributes.str.total]` in Klein's ability description: rolls with Klein's Strength, posted as Klein
+      even with a goblin selected. In a journal as the GM with nothing selected: warns it needs a character
+- [ ] `@Damage[2d6+]` (bad formula) shows crossed out; clicking warns it isn't a valid formula
+- [ ] An outcome table result with `@Damage[1d6]`: the card is posted as the character who made the check
+- [ ] An action's own Roll Damage and Big Success still post the same cards as before

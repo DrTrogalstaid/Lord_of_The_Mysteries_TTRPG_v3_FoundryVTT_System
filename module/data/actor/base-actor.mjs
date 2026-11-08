@@ -7,6 +7,7 @@ import { activeStatusRules } from "../../effects/status-effects.mjs";
 import { combineStatusRules, movementAgility, physicalDefense } from "../../effects/status-math.mjs";
 import { syncHealthStatuses } from "../../effects/health-statuses.mjs";
 import { syncGrantedEffects } from "../../effects/granted-effects.mjs";
+import { applySkillRaises, collectSkillRaises } from "../../effects/effect-grants.mjs";
 import { syncSanityStatuses } from "../../helpers/sanity.mjs";
 import { normalizeDamageType } from "../../helpers/damage-math.mjs";
 
@@ -210,6 +211,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             }
         }
 
+        // Active Effects' skill increases (effects/effect-grants.mjs): +levels while the effect is active, each capped at
+        // its own "at most" level. Display only, not in the schema: { [skill uuid]: [{ value, maxLevel, name, effectId }] }.
+        // They're temporary, so Education growth below and studying go by the level without them (raisedSkillLevel).
+        this.effectSkillRaises = collectSkillRaises(this.parent?.allApplicableEffects?.() ?? []);
+
         // Sequence Knowledge and Training bonus: skills in a Sequence's trainingBonus list study one schedule
         // faster (helpers/skill-learning.mjs), one step per owned Sequence that lists the skill.
         // Display only, not in the schema: { [skill uuid]: steps }. Read with sequenceTrainingSteps[uuid] ?? 0.
@@ -337,6 +343,25 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
 
     /**
+     * The level a skill is at before related skills raise it (helpers/skill-associations.mjs):
+     *   the level given (the player's pick), at least the skill's starting level (Dodge: Trained),
+     *   + the Sequences' skill increases,
+     *   + the active effects' skill increases, each capped at its "at most" level (effects/effect-grants.mjs).
+     * withEffects: false leaves the effects out, for what the character has learned (studying, learning by doing).
+     * Needs prepareDerivedData to have run (sequenceSkillSteps, effectSkillRaises).
+     * @param {string} uuid      The skill's uuid.
+     * @param {string} [level]   The player's pick. Default: untrained.
+     * @param {{withEffects?: boolean}} [options]
+     * @returns {string}  A key of CONFIG.LORD_OF_THE_MYSTERIES.skillLevels
+     */
+    raisedSkillLevel(uuid, level = "untrained", { withEffects = true } = {}) {
+        const minimum = CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[uuid];
+        const learned = raiseLevel(atLeastLevel(level ?? "untrained", minimum), this.sequenceSkillSteps?.[uuid] ?? 0);
+        return withEffects ? applySkillRaises(learned, this.effectSkillRaises?.[uuid]) : learned;
+    }
+
+
+    /**
      * Agility lost for carrying more than Strength allows (whole slots over the limit, see helpers/inventory.mjs).
      * NPCs override this to 0 (actor-npc.mjs), so the GM never has to manage their gear.
      * @returns {number}
@@ -375,10 +400,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // a character who has never touched it gets +2. (Before, that case gave 0, and a saved "untrained" gave -4.)
         const dodgeUuid = CONFIG.LORD_OF_THE_MYSTERIES.dodgeSkillUuid;
         const dodgeEntry = (this.skills.agi ?? []).find((entry) => entry.skill === dodgeUuid);
-        const dodgeLevel = raiseLevel(
-            atLeastLevel(dodgeEntry?.level ?? "untrained", CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[dodgeUuid]),
-            this.sequenceSkillSteps?.[dodgeUuid] ?? 0   // a Sequence that raises Dodge raises the defense too
-        );
+        // A Sequence or an active effect that raises Dodge raises the defense too.
+        const dodgeLevel = this.raisedSkillLevel(dodgeUuid, dodgeEntry?.level ?? "untrained");
         this.defenses.dodge = calculateSkillModifier(dodgeLevel, 0);
         // Physical: Agility + Armor + Dodge + 10. Statuses can halve or remove the Agility and Dodge parts, or lower
         // them (Disadvantage), see physicalDefense in effects/status-math.mjs. The Dodge value above isn't changed.

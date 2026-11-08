@@ -1,6 +1,7 @@
 /**
  * The level a character rolls a skill at, with related-skill improvement applied
- * (see skill-associations.mjs) and starting levels like Dodge's Trained (CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels).
+ * (see skill-associations.mjs) and starting levels like Dodge's Trained (CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels),
+ * plus the raises from the character's Sequences and active effects (raisedSkillLevel in data/actor/base-actor.mjs).
  * Used by action rolls (helpers/action-roll.mjs).
  *
  * The character sheet works the same thing out on its own while it builds the skill list,
@@ -55,17 +56,24 @@ async function actorSkillEntries(actor, extraUuid) {
   if (extraUuid && !stored.some((entry) => entry.skill === extraUuid)) {
     stored.push({ skill: extraUuid, level: "untrained" });
   }
+  // A skill only an active effect raises (no level saved yet) can still raise its related skills.
+  for (const uuid of Object.keys(actor.system.effectSkillRaises ?? {})) {
+    if (!stored.some((entry) => entry.skill === uuid)) stored.push({ skill: uuid, level: "untrained" });
+  }
 
   const minimums = CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels ?? {};
   const sequenceSteps = actor.system.sequenceSkillSteps ?? {};   // Sequence skill increases (base-actor.mjs)
+  // The player's pick, at least the starting level (Dodge), then raised by the character's Sequences and effects.
+  const raised = (entry) => (typeof actor.system.raisedSkillLevel === "function"
+    ? actor.system.raisedSkillLevel(entry.skill, entry.level)
+    : raiseLevel(atLeastLevel(entry.level, minimums[entry.skill]), sequenceSteps[entry.skill] ?? 0));
   const entries = await Promise.all(stored.map(async (entry) => {
     const info = await skillInfo(entry.skill);
     if (!info) return null;
     return {
       uuid: entry.skill,
       name: info.name,
-      // The player's pick, at least the starting level (Dodge), then raised by the character's Sequences.
-      level: raiseLevel(atLeastLevel(entry.level, minimums[entry.skill]), sequenceSteps[entry.skill] ?? 0),
+      level: raised(entry),
       categories: info.categories,
     };
   }));

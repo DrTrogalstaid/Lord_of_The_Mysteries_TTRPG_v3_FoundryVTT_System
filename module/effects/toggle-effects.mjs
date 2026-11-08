@@ -21,6 +21,7 @@
 import { createEffectsOn, deleteEffectsOn, effectCopyData, effectUse } from "./effect-application.mjs";
 import { confirmStatusRestrictions, postUsedDespite } from "./status-restrictions.mjs";
 import { currentSpirituality, spendSpirituality, spiritualityCost, spiritualityNote } from "../helpers/spirituality.mjs";
+import { recordActionUse } from "./action-expiry.mjs";
 
 /** The effect Use (system.application.mode) for effects that are switched on and off. */
 export const TOGGLE_USE = "toggle";
@@ -111,6 +112,8 @@ export async function useToggleAction(actor, action) {
     await spendSpirituality(actor, cost, { reason: action.name, chat: false });
     return null;
   }
+  // Switching on is a use (effects/action-expiry.mjs). Counted before the copies go on, so they don't count it.
+  await recordActionUse(actor, action);
   if (!(await createEffectsOn(actor, effects.map(toggledCopyData)))) return null;
   const spent = cost > 0 ? await spendSpirituality(actor, cost, { reason: action.name, chat: false }) : null;
 

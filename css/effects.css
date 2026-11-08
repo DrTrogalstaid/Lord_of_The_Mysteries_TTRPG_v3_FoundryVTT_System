@@ -348,6 +348,70 @@
   font-style: italic;
 }
 
+/* LotM tab: Grants (actions and skill increases, apps/effect-config.mjs) */
+.lotm-effect-config .lotm-grant-list {
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--color-border-light-tertiary, #888);
+  border-radius: 4px;
+}
+
+.lotm-effect-config .lotm-grant-list.drag-over {
+  border-style: solid;
+  background: rgba(120, 90, 200, 0.12);
+}
+
+.lotm-effect-config .lotm-grant-list h4 {
+  margin: 0 0 0.25rem;
+  border: none;
+}
+
+.lotm-effect-config .lotm-grant-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lotm-effect-config .lotm-grant-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 2px 0;
+}
+
+.lotm-effect-config .lotm-grant-row img {
+  flex: 0 0 24px;
+  border: none;
+}
+
+.lotm-effect-config .lotm-grant-row .lotm-grant-name {
+  flex: 1;
+}
+
+.lotm-effect-config .lotm-grant-row.broken .lotm-grant-name {
+  color: var(--color-level-error, #c33);
+}
+
+.lotm-effect-config .lotm-grant-row .lotm-grant-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.lotm-effect-config .lotm-grant-row .lotm-grant-value input {
+  width: 3rem;
+}
+
+.lotm-effect-config .lotm-grant-row select {
+  flex: 0 0 9rem;
+}
+
+.lotm-effect-config .lotm-grant-hint {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* -------------------------------------------------------------------- */
 /* Chat: Apply buttons on attack cards, and "X applies Y to Z"           */
 /* effects/effect-application.mjs                                        */
@@ -428,4 +492,15 @@
   border: 1px solid var(--lotm-status-active, #c9a227);
   border-radius: 4px;
   font-size: 12px;
+}
+
+/* Duration tab: "Also ends when" (Action Used rows, apps/effect-config.mjs) */
+.lotm-effect-config .lotm-effect-expiry .lotm-expiry-type {
+  flex: 0 0 auto;
+  font-weight: bold;
+}
+
+.lotm-effect-config .lotm-effect-expiry .lotm-expiry-add {
+  margin-top: 0.25rem;
+  width: auto;
 }
