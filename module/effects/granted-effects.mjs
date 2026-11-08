@@ -24,6 +24,8 @@
  * on a character's Effects tab, or the macro module/macros/sync-granted-effects.js for every actor.
  */
 
+import { resetExpiryEvents } from "./action-expiry.mjs";
+
 /** Item types that grant abilities (their abilities_gained list). */
 export const GRANTER_TYPES = ["sequence", "gear"];
 
@@ -96,6 +98,7 @@ export function grantedCopyData(effect, { abilityUuid, origin = null, disabled }
     grantedModifiedTime: effect._stats?.modifiedTime ?? null,
     impliedBy: "",
     turnChecks: [],
+    expiryEvents: resetExpiryEvents(data.system?.expiryEvents),   // all its uses (effects/action-expiry.mjs)
   };
   return data;
 }

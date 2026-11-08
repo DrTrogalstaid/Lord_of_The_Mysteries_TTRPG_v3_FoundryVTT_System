@@ -24,6 +24,8 @@
  * Each copy is a fresh effect: its clock starts when it's made, and resisted / halved marks start cleared.
  */
 
+import { resetExpiryEvents } from "./action-expiry.mjs";
+
 /** Item types whose new effects start as passive (they lend themselves to the owner). Others start as "targets". */
 const PASSIVE_ITEM_TYPES = ["ability", "sequence", "gear"];
 
@@ -130,6 +132,8 @@ export function effectCopyData(effect, { source = null, origin = null } = {}) {
     impliedBy: "",
     turnChecks: [],
     grantedFrom: null,
+    // A fresh copy has all its uses (effects/action-expiry.mjs).
+    expiryEvents: resetExpiryEvents(data.system?.expiryEvents),
   };
 
   if (data._stats) {
@@ -308,6 +312,24 @@ async function postApplied(caster, effect, names) {
   });
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: caster }),
+    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
+  });
+}
+
+
+/**
+ * The chat line for an effect nobody cast (an @Effect button, a Roll Table result): "Cursed is applied to Klein."
+ * @param {{name: string, img: string}} effect
+ * @param {string[]} names    Who got it.
+ * @param {Actor|null} [speaker]  Posted as this character (the first one who got it).
+ */
+export async function postEffectGiven(effect, names, speaker = null) {
+  const text = format("LORD_OF_THE_MYSTERIES.Effects.Apply.ChatNoCaster", {
+    effect: escape(effect.name),
+    targets: names.map(escape).join(", "),
+  });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker(speaker ? { actor: speaker } : {}),
     content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
   });
 }

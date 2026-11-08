@@ -36,6 +36,24 @@
       "Empty": "No effects. Click a status above, or drop an effect on the sheet.",
       "Source": "Source: {name}",
       "Via": "From {name}",
+      "Grants": "Grants: {list}",
+      "Expiry": {
+        "Label": "Also ends when",
+        "Hint": "The effect ends at whichever comes first: the duration above, or any of these. Drag an action or spell here for a new row, or onto a row to change its action.",
+        "ActionUsed": "Action Used",
+        "AnyGranted": "any action this effect grants",
+        "AnyAction": "any action",
+        "Times": "time(s)",
+        "UsesHint": "How many uses the effect lasts",
+        "Used": "used",
+        "UsedHint": "Uses so far. Counted by the system; change it to give uses back.",
+        "ClearAction": "Count the effect's granted actions instead (any action, if it grants none)",
+        "Add": "Add: Action Used",
+        "Empty": "Nothing else. The effect only ends with its duration.",
+        "NotAnAction": "{name} isn't an action or a spell.",
+        "UsesLeft": "Ends after {count} more use(s) of {action}",
+        "Ended": "{effect} ends: {action} was used {count} time(s)."
+      },
       "Disabled": "Turned off",
       "Suppressed": "Not active",
       "SuppressedStowed": "Not active while stowed",
@@ -87,6 +105,7 @@
       "Apply": {
         "Button": "Apply {name}",
         "Chat": "{name} applies {effect} to {targets}.",
+        "ChatNoCaster": "{effect} is applied to {targets}.",
         "Passive": "{name} is passive: it applies to the item's owner by itself.",
         "NoCaster": "Who's using {name}? Select your token, or open the item from a character.",
         "NoTargets": "Target the tokens that get {name} first.",
@@ -147,7 +166,21 @@
         "HasResisted": "Resisted (no more forced movement)",
         "IsPenaltyHalved": "Penalty halved (Meditation, Half)",
         "HasInternalBleeding": "Internal bleeding",
-        "GrantedFrom": "Copied from the ability {name}."
+        "GrantedFrom": "Copied from the ability {name}.",
+        "Grants": {
+          "Label": "Grants",
+          "Hint": "While the effect is active, whoever has it gets these actions, and these skills are rolled higher. Drag actions and skills onto the lists.",
+          "Actions": "Actions",
+          "Skills": "Skill Increases",
+          "DropAction": "Drag an action here",
+          "DropSkill": "Drag a skill here",
+          "LevelsHint": "Levels the skill goes up",
+          "NoLimit": "No limit",
+          "AtMost": "at most {level}",
+          "Remove": "Remove",
+          "NotAnAction": "{name} isn't an action.",
+          "NotASkill": "{name} isn't a skill."
+        }
       }
     },
 
@@ -641,6 +674,9 @@
       "AllUsed": "This skill is already in every category.",
       "RaisedBy": "Rolled at {level}, raised by {sources}",
       "RaisedBySequence": "Sequence: +{steps} level(s)",
+      "RaisedByEffects": "Effects: {sources}",
+      "EffectSteps": "+{steps}",
+      "EffectStepsCapped": "+{steps}, at most {level}",
       "Modes": {
         "both": "Raises and is raised",
         "gives": "Only raises others",
@@ -1022,6 +1058,9 @@
     "Action":{
       "RollDamage": "Roll Damage",
       "DamageFlavor": "{action}: Damage{type}",
+      "PlainDamageFlavor": "Damage{type}",
+      "InvalidFormula": "\"{formula}\" isn't a valid damage formula.",
+      "FormulaNeedsActor": "\"{formula}\" uses a character's values. Select your token, or set your character in User Configuration.",
       "InvalidDamage": "{name} has no valid damage formula.",
       "NoActor": "{name} needs a character to roll.",
       "Gone": "That action or character no longer exists.",
@@ -1417,7 +1456,15 @@
       "CheckDC": "{name} (DC {dc})",
       "CheckHint": "Roll for the selected token(s), or this character. Shift-click: roll straight away.",
       "NoActor": "Select a token you own, or set your character in User Configuration.",
-      "UnknownSkill": "No skill named \"{name}\" in the Skills compendium or the sidebar."
+      "UnknownSkill": "No skill named \"{name}\" in the Skills compendium or the sidebar.",
+      "Effect": "Apply {name}",
+      "EffectMissing": "Unknown effect",
+      "EffectHint": "Apply to the selected token(s), or this character.",
+      "DamageHint": "Roll this damage. The card's Damage / Heal buttons apply it to the selected tokens.",
+      "EffectGone": "The effect {name} can't be found. It may have been deleted.",
+      "EffectAlready": "{name} already has {effect}.",
+      "EffectAgainTitle": "Apply Again?",
+      "EffectAgain": "{names} already got {effect} from this message. Apply it again?"
     }
   },
 

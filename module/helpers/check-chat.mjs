@@ -8,7 +8,8 @@
  *   - the Burn Luck button, for whoever can burn Luck on that roll (helpers/luck.mjs)
  *   - the Roll Outcome button, for a roll with outcome tables (helpers/outcome-tables.mjs)
  *   - the Roll Loss button, on a Sanity check: rolls the loss and takes it off (rollSanityLoss, helpers/sanity.mjs)
- *   - on an outcome's message, its @Sanity / @Check buttons are tied to the character who made the check
+ *   - a drawn Roll Table result that is an Active Effect (or links one) gets an Apply button (helpers/enrichers.mjs)
+ *   - on an outcome's message, its @Sanity / @Check / @Effect buttons are tied to the character who made the check
  *     (helpers/enrichers.mjs)
  *   - parts of a message only the GM should see (class "lotm-gm-only", e.g. defenses on a Luck burn) are removed
  *     for everyone else
@@ -20,6 +21,7 @@
 import { luckBurners, openBurnLuckDialog } from "./luck.mjs";
 import { canRollOutcome, rollOutcome } from "./outcome-tables.mjs";
 import { canRollSanityLoss, rollSanityLoss, sanityLossMessage } from "./sanity.mjs";
+import { addTableEffectButtons } from "./enrichers.mjs";
 
 const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
@@ -34,7 +36,10 @@ export function registerCheckChatListeners() {
   Hooks.on("renderChatMessageHTML", (message, html) => {
     if (!game.user.isGM) html.querySelectorAll(".lotm-gm-only").forEach((element) => element.remove());
 
-    // An outcome table's result: its @Sanity / @Check buttons roll for the character who made the check.
+    // A drawn table result that is an effect: an Apply button next to it. Before the next step, so it's tied too.
+    addTableEffectButtons(message, html);
+
+    // An outcome table's result: its @Sanity / @Check / @Effect buttons are for the character who made the check.
     const outcomeActor = message.getFlag("lotm", "outcome")?.actorUuid;
     if (outcomeActor) {
       for (const link of html.querySelectorAll("[data-lotm-enricher]")) link.dataset.actorUuid ||= outcomeActor;

@@ -34,6 +34,8 @@ import { GunHandling } from "../helpers/gun-handling.mjs";
 import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
 import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
 import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
+import { grantedActionUuids, isEffectActive } from "../effects/effect-grants.mjs";
+import { usesLeft } from "../effects/action-expiry.mjs";
 import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
 import { normalizeDamageType } from "../helpers/damage-math.mjs";
 import { openSanityCheck } from "../helpers/sanity.mjs";
@@ -73,6 +75,24 @@ export const SHARED_PARTIALS = [
   DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL, SECTION_ENTRY_PARTIAL, ACTION_GROUPS_PARTIAL, HIDDEN_GRANTS_PARTIAL,
   ENTRY_ROLLS_PARTIAL, ENTRY_FAVORITE_PARTIAL,
 ];
+
+/**
+ * Hover text for a skill that active effects raise: "Effects: Eagle Eye (+1, at most Advanced), Focus (+1)".
+ * Used by the player and NPC sheets' skill lists.
+ * @param {{value: number, maxLevel: string, name: string}[]} raises   actor.system.effectSkillRaises[uuid]
+ * @param {(level: string) => string} levelLabel
+ * @returns {string}
+ */
+export function effectRaiseText(raises, levelLabel) {
+  const parts = (raises ?? []).map((raise) => {
+    const detail = raise.maxLevel
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectStepsCapped", { steps: raise.value, level: levelLabel(raise.maxLevel) })
+      : game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectSteps", { steps: raise.value });
+    return `${raise.name} (${detail})`;
+  });
+  return game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedByEffects", { sources: parts.join(", ") });
+}
+
 
 /* -------------------------------------------- */
 /*  Drop section configuration                   */
@@ -128,7 +148,7 @@ const NESTED_FIELDS = [
   { path: "skill_increase",   section: "skills", pick: "skill_uuid" },      // Sequence -> Skills it raises
   { path: "trainingBonus",    section: "skills" },                          // Sequence -> Knowledge / Training
   { path: "spellList.spells", section: "spells" },                          // Ability  -> Spells
-  { path: "actionList",       section: "actions" },                         // Ability / Gear -> Actions
+  { path: "actionList",       section: "actions" },                         // Ability / Gear / Active Effect -> Actions
 ];
 
 /**
@@ -761,6 +781,11 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
    * Each source UUID appears once: an Item the actor owns *and* is granted by something else is shown
    * once (as owned) with the granting Items listed, and reference loops (A -> B -> A) terminate.
    *
+   * Active Effects can grant actions too (their system.actionList, effects/effect-grants.mjs). Every active effect
+   * on the actor, or lent to it by one of its Items, is looked inside like an owned Item, so its actions are listed
+   * "Granted by" the effect. Turned off, suppressed (stowed gear) or gone: its actions go away. An action the actor
+   * already has from somewhere else is listed once, with the effect added to its "Granted by".
+   *
    * Hidden grants (NPCs, see canHideGrants): a granted entry whose hide key is in the actor's hiddenGrants list
    * goes in `hidden` instead of `sections`, and nothing inside it is looked at, so hiding an ability also hides
    * its spells and actions (unless something else grants them too). The Item that grants it isn't changed.
@@ -826,6 +851,12 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       if (entry.isRollable) actionRows.push([entry, item]);
       if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
       queue.push(item);
+    }
+
+    // 1b. Active effects that grant actions. The queue below reads their system.actionList (NESTED_FIELDS) the
+    // same way it reads an Item's. Their type is "effect", so none of the gear / spell / ability special cases apply.
+    for (const effect of this.actor.allApplicableEffects?.() ?? []) {
+      if (isEffectActive(effect) && grantedActionUuids(effect).length) queue.push(effect);
     }
 
     // 2. Nested Items, breadth first
@@ -1657,6 +1688,9 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
         details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
       }
       if (bringer) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: bringer.name }));
+      const grants = await this.#effectGrantsText(effect);
+      if (grants) details.push(grants);
+      details.push(...(await this.#effectUsesText(effect)));
       if (effect.system?.zone) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Zone.MarkerDetail"));
       if (effect.disabled) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
       else if (effect.isSuppressed) {
@@ -1687,6 +1721,53 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
     const grantedOutOfDate = !!(granted && (granted.create.length || granted.remove.length));
     return { statuses, effects, grantedOutOfDate };
+  }
+
+
+  /**
+   * How many uses an effect has left, for its row on the Effects tab: one line per Action Used row
+   * (effects/action-expiry.mjs), e.g. "Ends after 2 more uses of Smite".
+   * @param {ActiveEffect} effect
+   * @returns {Promise<string[]>}
+   */
+  async #effectUsesText(effect) {
+    const rows = effect.system?.expiryEvents ?? [];
+    if (!rows.length) return [];
+    const anyKey = grantedActionUuids(effect).length ? "AnyGranted" : "AnyAction";
+    return Promise.all(rows.map(async (row) => {
+      const action = row.actionUuid
+        ? ((await fromUuid(row.actionUuid).catch(() => null))?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"))
+        : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Effects.Expiry.${anyKey}`);
+      return game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Expiry.UsesLeft", { count: usesLeft(row), action });
+    }));
+  }
+
+
+  /**
+   * What an effect gives, for its row on the Effects tab: "Grants: Smite, Pistol +1 (at most Advanced)".
+   * Empty when it grants nothing (effects/effect-grants.mjs).
+   * @param {ActiveEffect} effect
+   * @returns {Promise<string>}
+   */
+  async #effectGrantsText(effect) {
+    const actions = grantedActionUuids(effect);
+    const skills = (effect.system?.skillIncreases ?? []).filter((row) => row?.skillUuid && row.value > 0);
+    if (!actions.length && !skills.length) return "";
+
+    const nameOf = async (uuid) => (await fromUuid(uuid).catch(() => null))?.name
+      ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing");
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+
+    const parts = await Promise.all([
+      ...actions.map(nameOf),
+      ...skills.map(async (row) => {
+        const text = `${await nameOf(row.skillUuid)} +${row.value}`;
+        return row.maxLevel
+          ? `${text} (${game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Config.Grants.AtMost", { level: levelLabel(row.maxLevel) })})`
+          : text;
+      }),
+    ]);
+    return game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Grants", { list: parts.join(", ") });
   }
 
 

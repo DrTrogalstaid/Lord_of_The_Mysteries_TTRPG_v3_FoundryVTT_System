@@ -7,9 +7,10 @@
  * (with study, learning by doing and granted-skill tabs), languages, rests, money and the biography pages.
  **/
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS } from "./base-actor-sheet.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, effectRaiseText } from "./base-actor-sheet.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
+import { applySkillRaises } from "../effects/effect-grants.mjs";
 import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
 import { meterPercent, openStudyDialog, openSuccessDialog } from "../apps/study-dialog.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
@@ -446,18 +447,20 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
 
     for (const row of Object.values(skillsByCategory).flat()) {
+      // The learned level: without active effects' raises (see #applySkillAssociations).
+      const level = row.learnLevel ?? row.effectiveLevel;
       row.teachers = teachers
         .filter((ability) => abilityTeaches(ability.system.fastLearning, row)
-          && canTeachTo(row.effectiveLevel, ability.system.fastLearning.maxLevel))
+          && canTeachTo(level, ability.system.fastLearning.maxLevel))
         .map((ability) => ability.uuid)
         .join("|");
 
-      const count = successesFor(learning.get(row.uuid), row.effectiveLevel);
-      const next = nextLevel(row.effectiveLevel);
+      const count = successesFor(learning.get(row.uuid), level);
+      const next = nextLevel(level);
       row.successText = "";
       row.successTooltip = "";
       if (count > 0 && next) {
-        const needed = successesNeeded(row.effectiveLevel);
+        const needed = successesNeeded(level);
         row.successText = `${count}/${needed}`;
         row.successTooltip = game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.Fast.ProgressTooltip", {
           count, needed, next: levelLabel(next),
@@ -478,9 +481,11 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
 
     for (const row of Object.values(skillsByCategory).flat()) {
-      const next = nextLevel(row.effectiveLevel);
+      // The learned level: without active effects' raises (see #applySkillAssociations).
+      const level = row.learnLevel ?? row.effectiveLevel;
+      const next = nextLevel(level);
       row.canStudy = !!next;
-      row.studyPercent = next ? meterPercent(studyProgressFor(learning.get(row.uuid), row.effectiveLevel)) : 0;
+      row.studyPercent = next ? meterPercent(studyProgressFor(learning.get(row.uuid), level)) : 0;
       row.studyTooltip = row.studyPercent
         ? game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.ProgressTooltip", {
             percent: row.studyPercent,
@@ -500,27 +505,38 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const rows = Object.values(skillsByCategory).flat();
     const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
 
-    // First the character's Sequences raise their skills (base-actor.mjs sequenceSkillSteps), then related
-    // skills raise each other from those levels: a Sequence that makes Sword Advanced also lifts Melee.
+    // First the character's Sequences raise their skills (base-actor.mjs sequenceSkillSteps), then active effects
+    // (effectSkillRaises, effects/effect-grants.mjs), then related skills raise each other from those levels:
+    // a Sequence or effect that makes Sword Advanced also lifts Melee.
+    // The same is worked out once more without the effects: what the character has learned. Studying and learning
+    // by doing go by that level (row.learnLevel), so a temporary buff is never saved as a learned level.
     const sequenceSteps = this.actor.system.sequenceSkillSteps ?? {};
-    const raised = rows.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
-    const results = computeAssociatedLevels(raised);
+    const effectRaises = this.actor.system.effectSkillRaises ?? {};
+    const learnedRows = rows.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
+    const boostedRows = learnedRows.map((row) => ({ ...row, level: applySkillRaises(row.level, effectRaises[row.uuid]) }));
+    const learned = computeAssociatedLevels(learnedRows);
+    const results = computeAssociatedLevels(boostedRows);
 
-    for (const row of rows) {
+    rows.forEach((row, index) => {
+      row.learnLevel = learned.get(row.uuid)?.level ?? learnedRows[index].level;
+
       const steps = sequenceSteps[row.uuid] ?? 0;
+      const raises = effectRaises[row.uuid] ?? [];
+      const boostedByEffects = boostedRows[index].level !== learnedRows[index].level;
       const result = results.get(row.uuid);
-      const effective = result?.level ?? row.level;
-      if (effective === row.level) continue;   // nothing raised it: no badge
+      const effective = result?.level ?? boostedRows[index].level;
+      if (effective === row.level) return;   // nothing raised it: no badge
 
       row.effectiveLevel = effective;
       row.associated = true;
       row.modifier = PlayerCharacterSheet._calculateSkillModifier(effective, row.attributeTotal);
 
-      // Hover text: why it's higher than the dropdown says. Either reason, or both.
+      // Hover text: why it's higher than the dropdown says. Any of the reasons, or several.
       const reasons = [];
       if (steps > 0) {
         reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
       }
+      if (boostedByEffects) reasons.push(effectRaiseText(raises, levelLabel));
       if (result?.raised) {
         reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
           level: levelLabel(result.level),
@@ -528,7 +544,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
         }));
       }
       row.associatedTooltip = reasons.join(" · ");
-    }
+    });
   }
 
   
@@ -841,7 +857,8 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
   /**
    * The book button on a skill row: open the Study dialog (apps/study-dialog.mjs).
-   * data-level on the row is the level the skill is rolled at, so study carries on from a related skill's raise.
+   * data-learn-level on the row is the level the skill is rolled at without active effects' raises, so study carries
+   * on from a related skill's raise, but not from a temporary buff. (data-level, with the buffs, is for rolling.)
    */
   static async #onStudySkill(event, target) {
     if (!this.isEditable) return;
@@ -850,7 +867,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     await openStudyDialog(this.actor, {
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
-      level: row.dataset.level,
+      level: row.dataset.learnLevel || row.dataset.level,
     });
   }
 
@@ -867,7 +884,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     await openSuccessDialog(this.actor, {
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
-      level: row.dataset.level,
+      level: row.dataset.learnLevel || row.dataset.level,   // without active effects' raises, like Study
     }, teachers);
   }
 

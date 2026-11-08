@@ -10,7 +10,7 @@
 --}}
 <li class="drop-entry granted granted-skill-entry{{#if broken}} broken{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"
     {{#if skill}}data-skill-uuid="{{skill.uuid}}" data-skill-name="{{skill.name}}" data-category="{{skill.category}}"
-    data-attribute="{{skill.attribute}}" data-level="{{skill.effectiveLevel}}" data-teachers="{{skill.teachers}}"
+    data-attribute="{{skill.attribute}}" data-level="{{skill.effectiveLevel}}" data-learn-level="{{skill.learnLevel}}" data-teachers="{{skill.teachers}}"
     data-flat-modifier="{{skill.flatModifier}}"{{/if}}>
 
   {{#if broken}}

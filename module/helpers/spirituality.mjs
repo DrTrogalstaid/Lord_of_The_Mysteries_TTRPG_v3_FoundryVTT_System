@@ -1,4 +1,5 @@
 import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
+import { recordActionUse } from "../effects/action-expiry.mjs";
 
 /**
  * Spending Spirituality.
@@ -147,5 +148,6 @@ export async function useActionSpirituality(actor, action) {
   if (!proceed) return null;
   const result = await spendSpirituality(actor, spiritualityCost(action), { reason: action.name });
   if (result) await postUsedDespite(actor, action, note);
+  if (result) await recordActionUse(actor, action);   // effects that end after it's used (effects/action-expiry.mjs)
   return result;
 }

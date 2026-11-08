@@ -358,7 +358,7 @@
   margin: 0;
 }
 
-/* ---- @Sanity[...] and @Check[...] buttons in any text (helpers/enrichers.mjs) ---- */
+/* ---- @Sanity[...], @Check[...], @Effect[...] and @Damage[...] buttons in any text (helpers/enrichers.mjs) ---- */
 
 a.lotm-enricher-link {
   display: inline-flex;
@@ -385,4 +385,18 @@ a.lotm-sanity-link i {
 
 a.lotm-check-link i {
   color: #3d6fa8;
+}
+
+a.lotm-effect-link i {
+  color: #2f8a5b;
+}
+
+a.lotm-damage-link i {
+  color: #b23a2e;
+}
+
+/* An @Effect whose effect can't be found (deleted, or a typo in the UUID / status name). */
+a.lotm-enricher-link.lotm-enricher-broken {
+  opacity: 0.6;
+  text-decoration: line-through;
 }

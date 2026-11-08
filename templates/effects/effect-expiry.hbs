@@ -1,0 +1,61 @@
+{{!-- "Also ends when" (apps/effect-config.mjs, effects/action-expiry.mjs): on Foundry's Duration tab, below its own
+      duration settings. Each row ends the effect once its action has been used that many times. Whichever comes
+      first ends the effect: the duration, or any row. Drop an action or spell on the box (new row) or on a row. --}}
+<section class="tab lotm-effect-tab lotm-effect-expiry {{tab.cssClass}}" data-group="sheet" data-tab="{{lotmExpiry.tabId}}">
+  <fieldset class="lotm-grant-list" data-lotm-expiry-zone>
+    <legend>{{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Label"}}</legend>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Hint"}}</p>
+
+    <ol>
+      {{#each lotmExpiry.rows as |row|}}
+      <li class="lotm-grant-row lotm-expiry-row{{#if row.broken}} broken{{/if}}" data-expiry-index="{{row.index}}">
+        <input type="hidden" name="system.expiryEvents.{{row.index}}.type" value="{{row.type}}" />
+        <input type="hidden" name="system.expiryEvents.{{row.index}}.actionUuid" value="{{row.actionUuid}}" />
+        <span class="lotm-expiry-type">{{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.ActionUsed"}}:</span>
+        <img src="{{row.img}}" alt="" width="24" height="24" />
+        {{#if row.hasAction}}
+          {{#if row.broken}}
+          <span class="lotm-grant-name">{{row.name}}</span>
+          {{else}}
+          <a class="lotm-grant-name" data-action="openGrant" data-uuid="{{row.actionUuid}}">{{row.name}}</a>
+          {{/if}}
+          {{#if @root.lotmExpiry.editable}}
+          <a class="lotm-grant-control" data-action="clearExpiryAction" data-index="{{row.index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Expiry.ClearAction'}}">
+            <i class="fa-solid fa-xmark"></i>
+          </a>
+          {{/if}}
+        {{else}}
+        <span class="lotm-grant-name lotm-grant-hint">{{row.name}}</span>
+        {{/if}}
+
+        <label class="lotm-grant-value" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Expiry.UsesHint'}}">
+          <input type="number" name="system.expiryEvents.{{row.index}}.uses" value="{{row.uses}}" min="1" step="1"
+                 {{#unless @root.lotmExpiry.editable}}disabled{{/unless}} />
+          {{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Times"}}
+        </label>
+        <label class="lotm-grant-value" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Expiry.UsedHint'}}">
+          ({{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Used"}}
+          <input type="number" name="system.expiryEvents.{{row.index}}.used" value="{{row.used}}" min="0" step="1"
+                 {{#unless @root.lotmExpiry.editable}}disabled{{/unless}} />)
+        </label>
+
+        {{#if @root.lotmExpiry.editable}}
+        <a class="lotm-grant-control" data-action="removeExpiryEvent" data-index="{{row.index}}"
+           data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Remove'}}">
+          <i class="fa-solid fa-trash"></i>
+        </a>
+        {{/if}}
+      </li>
+      {{else}}
+      <li class="lotm-grant-hint">{{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Empty"}}</li>
+      {{/each}}
+    </ol>
+
+    {{#if lotmExpiry.editable}}
+    <button type="button" class="lotm-expiry-add" data-action="addExpiryEvent">
+      <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.Effects.Expiry.Add"}}
+    </button>
+    {{/if}}
+  </fieldset>
+</section>

@@ -15,9 +15,10 @@
  * because NPC data has a hiddenGrants list (data/actor/actor-npc.mjs).
  */
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS } from "./base-actor-sheet.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, effectRaiseText } from "./base-actor-sheet.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
+import { applySkillRaises } from "../effects/effect-grants.mjs";
 import { CARRY_MODES } from "../helpers/inventory-config.mjs";
 import { autoPlacement } from "../helpers/inventory.mjs";
 
@@ -195,6 +196,7 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
     const minimums = config.defaultSkillLevels ?? {};
     const system = this.actor.system;
     const sequenceSteps = system.sequenceSkillSteps ?? {};   // already leaves out hidden raises (base-actor.mjs)
+    const effectRaises = system.effectSkillRaises ?? {};     // active effects' raises (effects/effect-grants.mjs)
     const levelLabel = (level) => game.i18n.localize(config.skillLevels[level] ?? level);
 
     // Which owned Sequences raise each skill, for the "Raised by" label.
@@ -210,7 +212,14 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
       }
     }
 
-    // 1. What to list: the skills the GM dropped on, then skills only a Sequence raises.
+    // Active effects raising a skill are named in the "Raised by" label too.
+    for (const [uuid, raises] of Object.entries(effectRaises)) {
+      const names = raisedBy.get(uuid) ?? [];
+      for (const { name } of raises) if (name && !names.includes(name)) names.push(name);
+      raisedBy.set(uuid, names);
+    }
+
+    // 1. What to list: the skills the GM dropped on, then skills only a Sequence or an active effect raises.
     const listed = new Map();   // skill uuid -> { category, level } (level null = only from a Sequence)
     for (const [category, entries] of Object.entries(system.skills ?? {})) {
       for (const entry of entries ?? []) {
@@ -219,6 +228,9 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
     }
     for (const [uuid, steps] of Object.entries(sequenceSteps)) {
       if (steps > 0 && !listed.has(uuid)) listed.set(uuid, { category: null, level: null });
+    }
+    for (const uuid of Object.keys(effectRaises)) {
+      if (!listed.has(uuid)) listed.set(uuid, { category: null, level: null });
     }
 
     // 2. One row per skill.
@@ -266,15 +278,17 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
     }));
     const skills = rows.filter(Boolean);
 
-    // 3. Sequence raises, then related skills (same steps as the player sheet's #applySkillAssociations).
+    // 3. Sequence raises, then active effects' raises, then related skills (the player sheet's #applySkillAssociations).
     const working = skills.filter((row) => !row.broken);
-    const raised = working.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
+    const sequenced = working.map((row) => raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0));
+    const raised = working.map((row, index) => ({ ...row, level: applySkillRaises(sequenced[index], effectRaises[row.uuid]) }));
     const results = computeAssociatedLevels(raised);
 
-    for (const row of working) {
+    for (const [index, row] of working.entries()) {
       const steps = sequenceSteps[row.uuid] ?? 0;
+      const boostedByEffects = raised[index].level !== sequenced[index];
       const result = results.get(row.uuid);
-      row.effectiveLevel = result?.level ?? row.level;
+      row.effectiveLevel = result?.level ?? raised[index].level;
       row.modifier = calculateSkillModifier(row.effectiveLevel, row.attributeTotal);
       if (row.effectiveLevel === row.level) continue;   // nothing raised it: no badge
 
@@ -283,6 +297,7 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
       if (steps > 0) {
         reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
       }
+      if (boostedByEffects) reasons.push(effectRaiseText(effectRaises[row.uuid], levelLabel));
       if (result?.raised) {
         reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
           level: levelLabel(result.level),
