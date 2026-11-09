@@ -4,12 +4,12 @@
   _prepareSkillList (player-character-sheet.mjs), the same row the attribute tabs show. With it, this row has the
   same controls as a tab row: roll, level, study and learning by doing.
 
-  The level dropdown has no `name`. It saves through PlayerCharacterSheet.#onGrantedSkillLevel, so it can't fight
-  with the same skill's dropdown on its attribute tab (that one is part of the form).
+  The level dropdown has no `name`: like the tabs' dropdowns, it saves only this skill (data-skill-field,
+  #onSkillFieldChange in base-actor-sheet.mjs).
   Granted skills can't be removed here; take them off the Sequence.
 --}}
 <li class="drop-entry granted granted-skill-entry{{#if broken}} broken{{/if}}" data-key="{{key}}" data-uuid="{{uuid}}"
-    {{#if skill}}data-skill-uuid="{{skill.uuid}}" data-skill-name="{{skill.name}}" data-category="{{skill.category}}"
+    {{#if skill}}data-skill-key="{{skill.key}}" data-skill-uuid="{{skill.uuid}}" data-skill-name="{{skill.name}}" data-category="{{skill.category}}"
     data-attribute="{{skill.attribute}}" data-level="{{skill.effectiveLevel}}" data-learn-level="{{skill.learnLevel}}" data-teachers="{{skill.teachers}}"
     data-flat-modifier="{{skill.flatModifier}}"{{/if}}>
 
@@ -25,7 +25,7 @@
   {{/if}}
 
   {{#if skill}}
-    <a class="modifier rollable-number granted-skill-modifier" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+    <a class="modifier rollable-number granted-skill-modifier{{#if skill.hasBonus}} has-skill-bonus{{/if}}" data-action="rollSkill" data-tooltip="{{skill.rollTooltip}}">
       {{numberFormat skill.modifier decimals=0 sign=true}}
     </a>
   {{/if}}
@@ -50,7 +50,7 @@
         <i class="fa-solid fa-link"></i> {{localize (lookup @root.skillLevelOptions row.effectiveLevel)}}
       </span>
     {{/if}}
-    <select class="skill-level-select" data-granted-skill-level {{#unless (and @root.editable row.category)}}disabled{{/unless}}>
+    <select class="skill-level-select" data-skill-field="level" {{#unless (and @root.editable row.canSave)}}disabled{{/unless}}>
       {{selectOptions @root.skillLevelOptions selected=row.level localize=true}}
     </select>
     {{!-- Study meter and button, same as the tab rows. --}}

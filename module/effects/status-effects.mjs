@@ -36,7 +36,7 @@ const ICONS = "icons/svg";
  *   roll       A modifier on the creature's own rolls: { modifier, kinds, scope } (scope "source": only against
  *              the effect's source). kinds: "skill", "attribute", "action"; default all.
  *   targetRoll A modifier on rolls made against the creature: { modifier, kinds, label }.
- *   note       A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks).
+ *   note       A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks, by its key).
  *   targetNote A note on rolls made against the creature: { key, kinds }.
  *   restrict   What it stops the creature doing: { actionTypes, traits, all, reason }. Using it warns first,
  *              with Use Anyway (effects/status-restrictions.mjs). Traits are in CONFIG.LORD_OF_THE_MYSTERIES.actionTraits.
@@ -150,8 +150,8 @@ const STATUSES = {
   deaf: {
     img: `${ICONS}/deaf.svg`,
     page: "LnKIsSLeDHsM9uoB",
-    // Only on Listen checks (the skill in CONFIG.LORD_OF_THE_MYSTERIES.listenSkillUuid).
-    note: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.Deaf", kinds: ["skill"], skill: "Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP" },
+    // Only on Listen checks: the skill with this key (CONFIG.LORD_OF_THE_MYSTERIES.listenSkillKey).
+    note: { key: "LORD_OF_THE_MYSTERIES.Status.Notes.Deaf", kinds: ["skill"], skill: "listening" },
   },
   shock: {
     img: `${ICONS}/daze.svg`,

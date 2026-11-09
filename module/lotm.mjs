@@ -8,7 +8,6 @@ import { LordOfTheMysteriesCombat } from './documents/combat.mjs';
 // Both actor sheets extend LordOfTheMysteriesActorSheetBase (sheets/base-actor-sheet.mjs).
 import { PlayerCharacterSheet } from "./sheets/player-character-sheet.mjs";
 import { NpcSheet } from "./sheets/npc-sheet.mjs";
-import { LordOfTheMysteriesItemSheet } from './sheets/item-sheet.mjs';
 import { LordOfTheMysteriesSequenceSheet } from './sheets/item/character_building/sequence-sheet.mjs';
 import { LordOfTheMysteriesSkillSheet } from './sheets/item/character_building/skill-sheet.mjs';
 import { LordOfTheMysteriesAbilitySheet } from './sheets/item/character_building/ability-sheet.mjs';
@@ -45,6 +44,9 @@ import { registerCheckChatListeners } from './helpers/check-chat.mjs';
 import { openSanityCheck } from './helpers/sanity.mjs';
 import { registerPromotionHooks } from './helpers/promotion.mjs';
 import { registerEnrichers } from './helpers/enrichers.mjs';
+import { registerSkillRegistry, rebuildSkillRegistry, skillInfo, skillKeyFor } from './helpers/skill-registry.mjs';
+import { skillKeyFromName } from './helpers/skill-keys.mjs';
+import { migrateWorldSkillData, registerSkillDataMigration } from './helpers/skill-data.mjs';
 import AttributeCheckDialog from './apps/attribute-check-dialog.mjs';
 
 // Import DataModel classes
@@ -74,10 +76,19 @@ Hooks.once('init', function () {
     //   game.lotm.sanityCheck(null, { loss: "1/1d3", reason: "Saw the Wraith" })
     // sanityCheck is the same function, under the rulebook's name.
     sanityCheck: openSanityCheck,
-    sanityCheck: openSanityCheck,
     // A spiritual intuition check (Inspiration, DC 25, with Spirit Vision's bonus), e.g.
     //   game.lotm.spiritualIntuition(canvas.tokens.controlled[0].actor)
     spiritualIntuition: (actor, options = {}) => AttributeCheckDialog.prompt(actor, "ins", { ...options, isSpiritualIntuition: true }),
+    // Skills by key (helpers/skill-registry.mjs), e.g.
+    //   game.lotm.skillKeyFor("Compendium.lotm.skills_compendium.Item.4lpSNEoI9LMoqRQ9")   -> "pistol"
+    //   game.lotm.skillInfo("pistol")                                                     -> name, attribute, ...
+    //   actor.system.skillFor("pistol")                                                   -> its level, bonus, total
+    skillKeyFor,
+    skillKeyFromName,
+    skillInfo,
+    rebuildSkillRegistry,
+    // Move old skill data to skill keys (helpers/skill-data.mjs). Used by module/macros/migrate-skill-data.js.
+    migrateSkillData: migrateWorldSkillData,
   };
 
   // Add custom constants for configuration.
@@ -132,6 +143,12 @@ Hooks.once('init', function () {
   // Token "Display Name" / "Resource Bars" for every actor (helpers/token-settings.mjs).
   registerTokenSettings();
 
+  // Skills are known by key on actors (helpers/skill-keys.mjs). The registry finds each key's skill Item, and is
+  // kept up to date as skills change (helpers/skill-registry.mjs). Old skill data is moved to keys when the world
+  // loads, for the GM (helpers/skill-data.mjs).
+  registerSkillRegistry();
+  registerSkillDataMigration();
+
   // Define custom Document and DataModel classes
   CONFIG.Actor.documentClass = LordOfTheMysteriesActor;
   // Note that you don't need to declare a DataModel
@@ -143,8 +160,6 @@ Hooks.once('init', function () {
   }
   CONFIG.Item.documentClass = LordOfTheMysteriesItem;
   CONFIG.Item.dataModels = {
-    item: models.LordOfTheMysteriesItem,
-    feature: models.LordOfTheMysteriesFeature,
     spell: models.LordOfTheMysteriesSpell,
     sequence: models.LordOfTheMysteriesSequence,
     skill: models.LordOfTheMysteriesSkill,
@@ -206,10 +221,6 @@ Hooks.once('init', function () {
   });
 
   foundry.documents.collections.Items.unregisterSheet('core', foundry.appv1.sheets.ItemSheet);
-  foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesItemSheet, {
-    makeDefault: true,
-    label: 'LORD_OF_THE_MYSTERIES.SheetLabels.Item',
-  });
   foundry.documents.collections.Items.registerSheet('lotm', LordOfTheMysteriesSequenceSheet, {
     types: ['sequence'],
     makeDefault: true,

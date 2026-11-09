@@ -13,6 +13,12 @@ import { FEEDS, ammoBoxStatus, chamberRound, feedOf, firearmStatus, reloadGun, r
 import { GunHandling } from "../../../helpers/gun-handling.mjs";
 import { LordOfTheMysteriesItemSheetBase, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
 
+/**
+ * The Value field both sheets show: typed in gold pounds ("£3 10s", "8d", "2.5s"), saved as pennies by
+ * InventoryItemSheet._processFormData. Listed in each sheet's PARTS so it's loaded before the sheet draws.
+ */
+const VALUE_FIELD_PARTIAL = "systems/lotm/templates/item/inventory/value-field.hbs";
+
 
 /**
  * What both sheets share: the image picker, the money text boxes, and the basic context.
@@ -136,7 +142,7 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
   static HAS_EFFECTS = true;
 
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
+    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [VALUE_FIELD_PARTIAL, ITEM_EFFECTS_PARTIAL] },
   };
 
   /** @override */
@@ -315,7 +321,7 @@ export class LordOfTheMysteriesContainerSheet extends InventoryItemSheet {
   };
 
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/container-sheet.hbs" },
+    form: { template: "systems/lotm/templates/item/inventory/container-sheet.hbs", templates: [VALUE_FIELD_PARTIAL] },
   };
 
   /** @override */

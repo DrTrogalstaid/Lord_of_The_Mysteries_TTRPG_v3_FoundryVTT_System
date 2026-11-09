@@ -4,7 +4,6 @@ export default class LordOfTheMysteriesCharacter extends LordOfTheMysteriesActor
 
     static defineSchema() {
         const fields = foundry.data.fields;
-        const requiredInteger = { required: true, nullable: false, integer: true };
         const schema = super.defineSchema();
 
         schema.age = new fields.NumberField({ required: true, integer: true, min: 0 });

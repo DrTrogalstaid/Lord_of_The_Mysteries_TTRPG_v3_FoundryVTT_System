@@ -47,6 +47,8 @@ things start in report-only mode (`APPLY = false`): check the report, then set `
 | `retire-gun-actions.js` | Copies old Reload / Pull Bolt / Rotate / Unload actions' Action Type onto their gun's Handling and takes them off the gun's action list (compendium, world, actors, unlinked tokens). Lists the old actions to delete by hand | Once, after the gun handling update, or after importing old guns |
 | `assign-skill-categories.js` | Gives the Skills compendium's skills the rulebook's related-skill categories | After adding skills to the compendium |
 | `move-spirit-vision-bonus.js` | Moves Spirit Vision effects' +2 from every Inspiration check (`system.attributes.ins.checkBonus`) to spiritual intuition checks only (`system.spiritualIntuitionBonus`), in the compendiums, world Items, actors and unlinked tokens | Once, after the hit / sanity / luck update |
+| `set-skill-identifiers.js` | Fills in every skill's Identifier (from its name) and Standard skill box (from its compendium folder), in the Skills compendium and world skills, only where they're blank. Lists skills that share a key | Once, after the skill keys update (then commit `packs/skills_compendium`), and after adding skills |
+| `migrate-skill-data.js` | Moves actors' old skill data (lists per attribute, learning saved under UUIDs) to skill keys, with a backup flag on each actor. Runs by itself for the GM when the world loads; the macro gives a dry run | To see what the automatic move did or would do, or to retry after fixing something it reported |
 
 ---
 
@@ -826,7 +828,7 @@ Files: `module/effects/effect-grants.mjs`, `module/data/effect/effect.mjs`, `mod
 
 ## Effects that raise skills
 
-Files: `module/effects/effect-grants.mjs`, `module/data/actor/base-actor.mjs`, `module/helpers/skill-levels.mjs`,
+Files: `module/effects/effect-grants.mjs`, `module/data/actor/base-actor.mjs`, `module/helpers/skill-records.mjs`,
 `module/sheets/player-character-sheet.mjs`, `module/sheets/npc-sheet.mjs`, `templates/actor/player-character/character.hbs`,
 `templates/actor/player-character/parts/granted-skill-entry.hbs`
 
@@ -844,6 +846,75 @@ Files: `module/effects/effect-grants.mjs`, `module/data/actor/base-actor.mjs`, `
 - [ ] A skill at Mastery from an effect doesn't count toward Education growth
 - [ ] NPC: an effect raising a skill the NPC doesn't list adds a row for it, "Raised by: <effect>"; turning the effect
       off removes the row
+
+## Skill keys and the skill data move
+
+Files: `module/helpers/skill-keys.mjs`, `module/helpers/skill-registry.mjs`, `module/helpers/skill-records.mjs`,
+`module/helpers/skill-data.mjs`, `module/data/actor/base-actor.mjs`, `module/data/item/character_building/skill.mjs`,
+`module/sheets/`, `templates/actor/`, `templates/item/character_building/skill.hbs`
+
+Setup: **back up the world first** (Foundry's Backups, or copy the world folder). Before updating, write down a few
+skills from Klein's sheet (levels, the Education analysis counts, a skill's study %, the Extraordinary Knowledge tab).
+
+- [ ] Load the world as the GM: a notification says how many actors' skills were moved, and nothing failed. The
+      console (F12) has a table of what moved for each actor
+- [ ] Klein's sheet shows the same levels, numbers, study % and Education analysis counts as before. The
+      Extraordinary Knowledge tab still has its skills, levels and analyses
+- [ ] Klein's actor has `flags.lotm.skillsBackups` (console: `game.actors.getName("Klein").flags.lotm.skillsBackups`)
+      with the old lists
+- [ ] Reload: no notification this time (nothing left to move)
+- [ ] A skill dropped from the world that's a copy of a compendium skill lands on the compendium skill's row, not a
+      second row
+- [ ] Delete a world skill a character had saved, reload: the character's sheet lists it under "Missing skill", with its
+      level; the trash button removes it
+- [ ] Change a skill's level on a tab, then edit an attribute: the skill keeps its new level (the form doesn't save
+      skills any more). Change it in the Granted Skills box: the tab's dropdown follows
+- [ ] Education analysis box: type a number, and use the magnifier button: both save
+- [ ] Study a skill and record a success: both save and the meter moves; reload, they're still there
+- [ ] Skill sheet, Details tab: Identifier shows the key in grey when blank; Standard skill is ticked for the
+      attribute folders' skills and not for Knowledge of the Dead, Languages or the Extraordinary Knowledges
+- [ ] Rename a world skill with a blank Identifier: its Identifier fills in with the old name's key, and characters
+      keep their level for it
+- [ ] Untick Standard skill on a compendium skill a character never touched: it disappears from their tab. Tick it
+      again: it's back
+- [ ] Corpse Collector on Klein: Knowledge of the Dead is in the Granted Skills box but on no tab, and no other
+      character has it. Change its level in the box: it's saved, and it now also shows on the Education tab
+- [ ] NPC: only dropped skills (and Sequence / effect raises) are listed; Dodge defense is still +2; an action using
+      a skill the NPC wasn't given still rolls (Untrained, or raised by a related skill)
+- [ ] Import an actor from a compendium that has old skill data: its skills are moved straight away (no reload needed)
+- [ ] As a player: Klein's sheet works the same; changing a skill level saves
+
+## Effects that give skill roll bonuses
+
+Files: `module/effects/skill-bonuses.mjs`, `module/apps/effect-config.mjs`, `templates/effects/effect-lotm.hbs`,
+`module/apps/skill-check-dialog.mjs`, `module/helpers/check-bonuses.mjs`, `module/helpers/action-roll.mjs`,
+`module/data/actor/base-actor.mjs`, `module/sheets/`
+
+- [ ] Effect sheet, LotM tab: drop Pistol and Rifle on Skill Roll Bonuses: two rows at +1. The Changes tab has
+      `system.skills.pistol.bonus` and `system.skills.rifle.bonus`, Add 1. Dropping Pistol again adds nothing
+- [ ] Change Pistol's value to 2 on the LotM tab: the Changes tab shows 2. Type something on the Changes tab first,
+      then drop a skill: what was typed is kept
+- [ ] Category Bonuses: pick Firearms, Add: a row at +1, and `system.skillCategoryBonuses.firearms` on the Changes tab
+- [ ] Put the effect on Klein (Pistol Trained, Agility 5): Pistol's number is 7 + 2 + 1 = +10, underlined; hovering
+      it lists "Bonuses: <effect> +2, <effect> (Firearms) +1". The level dropdown and badge don't change
+- [ ] Roll Pistol: the dialog has a row for each bonus, named after the effect; removing one lowers the total for that
+      roll only. The chat card's formula has them as `+2[<effect>]`
+- [ ] Shoot (with Pistol): the dice button's bonus includes them, and so does its roll dialog
+- [ ] `@Check[Pistol]`: the dialog has the rows
+- [ ] Shift-click roll: the bonuses are included
+- [ ] The Effects tab's row for the effect says "Grants: Pistol +2 to rolls, Firearms skills +1 to rolls"
+- [ ] An effect with `system.skills.dodge.bonus` Add 1: Dodge defense and Physical Defense go up by 1
+- [ ] One effect with Social +1 and Reconnaissance +2: Psychology (in both) gets +2, not +3
+- [ ] An Override change (`system.skills.pistol.bonus` Override 5): the dialog has one row "Pistol bonus" for what
+      isn't an Add; the total is right
+- [ ] A Subtract change: a penalty row
+- [ ] Bonus on Knowledge of the Dead on someone without it: it isn't added to their sheet. A spell rolling with it
+      still gets the bonus
+- [ ] Extraordinary Knowledge tab: a Stealth bonus counts for the Education copy of Stealth (its number and its roll);
+      a custom typed-in skill gets none
+- [ ] Gear with a passive skill-bonus effect: the bonus goes away when the gear is stowed
+- [ ] Studying while a bonus is on: the study meter and level don't count the bonus
+- [ ] NPC sheet: the same number, underline and hover text
 
 ## @Effect buttons and Roll Table results
 

@@ -76,8 +76,9 @@ export function sanityCheckSucceeds({ total, natural = null, sanity, isPromotion
 }
 
 
-/**
- * Which defenses an action or spell can go against (system.defenseTarget). "" = no hit check.
+/*
+ * The defenses an action or spell can go against (system.defenseTarget; the keys of
+ * CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets). "" = no hit check.
  *   physical             10 + Agility + Armor + Dodge
  *   physicalNoEvasion    too fast to dodge (firearms): 10 + Armor, unless the target can quick dodge
  *                        (system.isQuickDodgable), then full Physical Defense
@@ -85,9 +86,7 @@ export function sanityCheckSucceeds({ total, natural = null, sanity, isPromotion
  *   physicalNoArmor      ignores armor (grapple): 10 + Agility + Dodge
  *   will                 10 + Will
  *   physique             10 + Physique
- * The labels are in CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets.
  */
-export const DEFENSE_TARGETS = ["physical", "physicalNoEvasion", "physicalUndodgeable", "physicalNoArmor", "will", "physique"];
 
 
 /**
@@ -95,7 +94,7 @@ export const DEFENSE_TARGETS = ["physical", "physicalNoEvasion", "physicalUndodg
  * (Uses ammo: Fire), "too fast to dodge". Guns made before Defense Targeted existed are all blank, and a shot is
  * always an attack, so they hit or miss without each one being edited. Anything else left blank has no hit check.
  * @param {{defenseTarget?: string, ammoUse?: string}} [system]   The action's or spell's system data.
- * @returns {string}  One of DEFENSE_TARGETS, or "".
+ * @returns {string}  One of the defenses above, or "".
  */
 export function effectiveDefenseTarget(system) {
   if (system?.defenseTarget) return system.defenseTarget;
@@ -121,7 +120,7 @@ export function isMissingDefenseTarget(system, targetCount) {
  * A creature's defense against one kind of attack.
  * Statuses still count (Off Guard, Bound, Disadvantage...): they're in system.statusModifiers (base-actor.mjs).
  * @param {object} system          The target actor's prepared system data.
- * @param {string} defenseTarget   One of DEFENSE_TARGETS.
+ * @param {string} defenseTarget   One of the defenses above.
  * @returns {number|null}          null for "" or an unknown defense (no hit check).
  */
 export function defenseValue(system, defenseTarget) {

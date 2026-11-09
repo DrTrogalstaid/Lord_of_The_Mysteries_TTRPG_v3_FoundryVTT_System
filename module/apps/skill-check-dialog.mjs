@@ -2,6 +2,8 @@ import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
 import { buildSkillCheckFormula, computeSkillCheckTotal, signedTerm } from "../helpers/skill-check-formula.mjs";
 import { spiritualityCost } from "../helpers/spirituality.mjs";
+import { skillBonusRowsFor } from "../helpers/check-bonuses.mjs";
+import { skillKeyFor } from "../helpers/skill-registry.mjs";
 
 /**
  * SkillCheckDialog
@@ -14,6 +16,8 @@ import { spiritualityCost } from "../helpers/spirituality.mjs";
  *     to cover the "a skill's related attribute can change based on how it's
  *     being used" house rule (e.g. rolling Performance with Inspiration
  *     instead of its default Charisma when the scene calls for it)
+ *   - see the skill's bonuses from Active Effects, one row per effect (effects/skill-bonuses.mjs), and take any
+ *     out for this roll
  *   - add any number of ad-hoc situational modifiers (label + value)
  *   - see the live total before committing
  *   - roll on submit
@@ -43,9 +47,11 @@ export default class SkillCheckDialog extends LotmRollDialog {
     /**
      * @param {Actor} actor
      * @param {object} skillEntry
+     * @param {string} [skillEntry.key]       The skill's key ("pistol"). Worked out from the uuid when it's missing.
+     *                                        Its bonuses from Active Effects are added as rows (effects/skill-bonuses.mjs).
      * @param {string} skillEntry.uuid        UUID of the Skill item (compendium or world)
      * @param {string} skillEntry.name        Display name (avoids an extra fromUuid before render)
-     * @param {string} skillEntry.category    The system.skills bucket this entry lives in (str/agi/cha/ins/edu/languages)
+     * @param {string} skillEntry.category    The attribute tab the skill is listed on (str/agi/cha/ins/edu)
      * @param {string} skillEntry.level       Current proficiency level for this actor (untrained/trained/.../grandMaster)
      * @param {string} [skillEntry.attribute] The skill's default linked attribute key, if already known (avoids a fromUuid lookup)
      * @param {Item} [skillEntry.action]      The action item, when rolling an action (e.g. a revolver's "Shoot") with
@@ -72,6 +78,8 @@ export default class SkillCheckDialog extends LotmRollDialog {
             ...options
         });
         this.skillEntry = skillEntry;
+        this.skillKey = skillEntry.key || skillKeyFor(skillEntry.uuid) || "";
+        this.skillBonusesAdded = false;
         this.action = action;
         this.defaultAttribute = skillEntry.attribute ?? skillEntry.category;
         this.attributeKey = this.defaultAttribute;
@@ -107,6 +115,27 @@ export default class SkillCheckDialog extends LotmRollDialog {
     /** @override */
     get rollSkillUuid() {
         return this.skillEntry.uuid ?? null;
+    }
+
+    /** @override */
+    get rollSkillKey() {
+        return this.skillKey || null;
+    }
+
+    /**
+     * The statuses' modifiers (LotmRollDialog), then this skill's bonuses from Active Effects: one row per effect,
+     * removable for this roll like any other. Done once, when the dialog opens (or before a Shift-click roll).
+     * @override
+     */
+    addStatusExtras() {
+        super.addStatusExtras();
+        if (this.skillBonusesAdded) return;
+        this.skillBonusesAdded = true;
+        for (const row of skillBonusRowsFor(this.actor, this.skillKey)) {
+            // The label goes into the roll formula as "+2[Marksman's Focus]", so it can't have square brackets of its own.
+            const label = row.label.replace(/[[\]]/g, "");
+            this.modifiers.push({ id: foundry.utils.randomID(), label, value: row.value, img: row.img, skillBonus: true });
+        }
     }
 
     /**

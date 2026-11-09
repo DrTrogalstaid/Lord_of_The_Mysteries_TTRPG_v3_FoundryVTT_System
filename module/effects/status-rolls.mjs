@@ -40,15 +40,16 @@ function activeRules(actor) {
  * @param {object} context
  * @param {Actor} context.actor              Who's rolling.
  * @param {string} context.kind              "skill", "attribute" or "action".
- * @param {string} [context.skillUuid]       For skill checks: the skill's UUID (Deaf only notes Listen checks).
+ * @param {string} [context.skillKey]        For skill checks: the skill's key (Deaf only notes Listen checks).
+ * @param {string} [context.skillUuid]       For skill checks: the skill's UUID.
  * @param {Actor[]} [context.targets]        The actors of the roller's targeted tokens.
  * @returns {{modifiers: {key: string, label: string, value: number}[], notes: string[]}}
  *   notes are HTML (escaped).
  */
-export function statusRollExtras({ actor, kind, skillUuid = null, targets = [] }) {
+export function statusRollExtras({ actor, kind, skillKey = null, skillUuid = null, targets = [] }) {
   const modifiers = new Map();   // key -> modifier, so the same status isn't added twice
   const notes = new Set();
-  const context = { kind, skillUuid, targets };
+  const context = { kind, skillKey, skillUuid, targets };
 
   // The roller's own statuses.
   for (const { effect, rule } of activeRules(actor)) {

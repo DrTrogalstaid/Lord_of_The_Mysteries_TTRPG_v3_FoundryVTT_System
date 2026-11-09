@@ -39,17 +39,8 @@
     </div>
   </div>
 
-  {{!-- Value of the coat / bag itself, typed in gold pounds ("£1 10s"); what's inside is totalled below.
-        Saved as pennies by InventoryItemSheet._processFormData (inventory-sheets.mjs). --}}
-  <div class="form-group">
-    <label>{{localize "LORD_OF_THE_MYSTERIES.Money.Value"}}</label>
-    <div class="form-fields">
-      <input type="text" name="valueText" value="{{valueText}}" placeholder="£0" {{#unless editable}}disabled{{/unless}}>
-      {{#if valueLocal}}<span class="value-local">{{valueLocal}}</span>{{/if}}
-      <i class="fa-solid fa-coins value-other" data-tooltip="{{valueTooltip}}"></i>
-    </div>
-    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.ValueHint"}}</p>
-  </div>
+  {{!-- Value of the coat / bag itself (value-field.hbs); what's inside is totalled below. --}}
+  {{> "systems/lotm/templates/item/inventory/value-field.hbs"}}
 
   {{!-- The numbers this kind + upgrade work out to (container.mjs prepareDerivedData). --}}
   <dl class="inventory-readout">

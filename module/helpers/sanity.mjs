@@ -198,21 +198,6 @@ export async function applySanityLoss(actor, loss) {
 
 
 /**
- * Give Sanity back (never above the maximum).
- * @param {Actor} actor
- * @param {number} amount
- * @returns {Promise<{before: number, after: number}>}
- */
-export async function restoreSanity(actor, amount) {
-  const rp = actor.system.resources.rp;
-  const before = Number(rp.value) || 0;
-  const after = Math.min(Number(rp.max) || 0, before + Math.max(0, Number(amount) || 0));
-  if (after !== before) await actor.update({ "system.resources.rp.value": after });
-  return { before, after };
-}
-
-
-/**
  * HTML for what a sanity loss did, for a chat card: "Loses 3 Sanity: 12 → 9.", and Semi-Out-of-Control.
  * The loss has already been rolled and taken off; this only reports it.
  * @param {object} result        What applySanityLoss returned.

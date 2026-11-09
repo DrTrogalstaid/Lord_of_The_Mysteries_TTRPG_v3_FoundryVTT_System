@@ -38,10 +38,6 @@
 /*  Counting (pure)                              */
 /* -------------------------------------------- */
 
-/** The expiry event types there are. Only Action Used for now. */
-export const EXPIRY_EVENT_TYPES = ["actionUsed"];
-
-
 /**
  * The UUIDs an action is known by: its own, and the compendium entry it was made from (old and new field names).
  * @param {Item|object} action

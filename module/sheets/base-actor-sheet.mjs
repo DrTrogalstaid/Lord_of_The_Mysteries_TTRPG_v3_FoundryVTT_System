@@ -39,6 +39,10 @@ import { usesLeft } from "../effects/action-expiry.mjs";
 import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
 import { normalizeDamageType } from "../helpers/damage-math.mjs";
 import { openSanityCheck } from "../helpers/sanity.mjs";
+import { deleteSkillUpdate, skillRecordUpdate } from "../helpers/skill-data.mjs";
+import { skillKeyFor } from "../helpers/skill-registry.mjs";
+import { CATEGORY_BONUS_PATTERN, SKILL_BONUS_PATTERN, changeAmount, effectChanges } from "../effects/skill-bonuses.mjs";
+import { skillBonusRowsFor } from "../helpers/check-bonuses.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -91,6 +95,48 @@ export function effectRaiseText(raises, levelLabel) {
     return `${raise.name} (${detail})`;
   });
   return game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedByEffects", { sources: parts.join(", ") });
+}
+
+
+/**
+ * Hover text for a skill rolled higher than the player's pick: "Sequence: +1 level(s) · Effects: ... · Rolled at
+ * Trained, raised by Sword (Advanced)". Empty when nothing raised it. Used by the player and NPC sheets.
+ * @param {object} record   The skill's record (actor.system.skills[key]).
+ * @param {(level: string) => string} levelLabel
+ * @returns {string}
+ */
+export function skillRaiseText(record, levelLabel) {
+  if (!record || record.effectiveLevel === record.ownLevel) return "";
+  const reasons = [];
+  if (record.sequenceSteps > 0) {
+    reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps: record.sequenceSteps }));
+  }
+  if (record.boostedByEffects) reasons.push(effectRaiseText(record.effectRaises, levelLabel));
+  const associated = record.associated;
+  if (associated?.raised) {
+    reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
+      level: levelLabel(associated.level),
+      sources: associated.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
+    }));
+  }
+  return reasons.join(" · ");
+}
+
+
+/**
+ * Hover text for a skill's number: "Click to roll", and its bonuses from effects when it has any
+ * ("Bonuses: Marksman's Focus +2, Drill (Firearms) +1"). Used by the player and NPC sheets.
+ * @param {Actor} actor
+ * @param {string} key   The skill's key.
+ * @returns {string}
+ */
+export function skillRollTooltip(actor, key) {
+  const roll = game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip");
+  const rows = skillBonusRowsFor(actor, key);
+  if (!rows.length) return roll;
+  const signed = (n) => (n < 0 ? `${n}` : `+${n}`);
+  const list = rows.map((row) => `${row.label} ${signed(row.value)}`).join(", ");
+  return `${roll} · ${game.i18n.format("LORD_OF_THE_MYSTERIES.SkillBonuses.Tooltip", { list })}`;
 }
 
 
@@ -680,6 +726,14 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       });
     });
 
+    // Skill level dropdowns and analysis boxes (player tabs, Granted Skills box, NPC skill list). They have no `name`:
+    // each saves only its own skill's record (#onSkillFieldChange), so the sheet's form never saves skill lists.
+    for (const input of this.element.querySelectorAll("[data-skill-field]")) {
+      if (input.dataset.bound) continue;
+      input.dataset.bound = "1";
+      input.addEventListener("change", (event) => this.#onSkillFieldChange(event));
+    }
+
     // Inventory controls (quantity, hidden pocket, equipped) belong to the gear / container Item, not the actor,
     // so like the digestion inputs they have no `name` and save here instead. `bound` stops a control that
     // wasn't re-rendered from getting a second listener.
@@ -1184,38 +1238,30 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   }
 
   /**
-   * Skills are not embedded: the actor only stores a level per skill UUID
-   * (system.skills[category] = [{ skill, level }]) and the sheet lists them under their attribute.
-   * Any skill Item can be dropped, from a compendium or the world. Dropping records it at "trained"; a skill
-   * the actor already lists as "untrained" (every compendium skill is, once a field has been edited) is raised
-   * to "trained" instead of being rejected as a duplicate.
+   * Skills are not embedded: the actor saves a record per skill, by the skill's key
+   * (system.skills.pistol = { level, ... }, see data/actor/base-actor.mjs), and the sheet lists it under its attribute.
+   * Any skill Item can be dropped, from a compendium or the world (a world copy of a compendium skill is the same
+   * skill: same key). Dropping saves it at "trained"; a skill the actor has at "untrained" (every standard skill, until
+   * it's trained) is raised to "trained" instead of being rejected as a duplicate. Its other saved values are kept.
    * @param {Item} item
    * @returns {Promise<Item|null>}
    */
   async #dropSkill(item) {
-    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-    // Skills are filed under their linked attribute's tab. (This used to check system.category first, but
-    // those are related-skill categories like "fighting", never a tab, and the field is now system.categories.)
-    const category = [item.system.skill_attribute].find((key) => key && key in folders);
-    if (!category) {
+    // Skills are listed on their linked attribute's tab, so only those attributes can be saved.
+    const tabs = CONFIG.LORD_OF_THE_MYSTERIES.skillTabAttributes ?? [];
+    const key = skillKeyFor(item);
+    if (!key || !tabs.includes(item.system.skill_attribute)) {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.NoSkillCategory", { name: item.name }));
       return null;
     }
 
-    const current = this.actor.toObject().system.skills?.[category] ?? [];
-    const index = current.findIndex((entry) => entry.skill === item.uuid);
-
-    let updated;
-    if (index < 0) {
-      updated = [...current, { skill: item.uuid, level: "trained" }];
-    } else if (current[index].level === "untrained") {
-      updated = current.map((entry, i) => (i === index ? { ...entry, level: "trained" } : entry));
-    } else {
+    const record = this.actor.system.skills?.[key];
+    if (record?.isSaved && record.level !== "untrained") {
       ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.Duplicate", { name: item.name }));
       return null;
     }
 
-    await this.actor.update({ [`system.skills.${category}`]: updated });
+    await this.actor.update(skillRecordUpdate(this.actor, key, { level: "trained", uuid: record?.uuid || item.uuid }));
     return item;
   }
 
@@ -1355,6 +1401,8 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     if (!row) return;
 
     SkillCheckDialog.prompt(this.actor, {
+      // The skill's key, for its effect bonuses. Rows without one (a custom skill on an ability's tab) get none.
+      key: row.dataset.skillKey || skillKeyFor(row.dataset.skillUuid),
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
       category: row.dataset.category,
@@ -1606,14 +1654,32 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * Remove a skill the actor has recorded. Expects data-uuid (skill) and data-category on the button.
+   * A skill's level dropdown or analysis box changed (data-skill-field = "level" or "analysis"; the row has
+   * data-skill-key). Saves that one skill's record (helpers/skill-data.mjs). The event is stopped so the sheet's form
+   * doesn't also save.
+   * @param {Event} event
+   */
+  async #onSkillFieldChange(event) {
+    event.stopPropagation();
+    if (!this.isEditable) return;
+    const input = event.currentTarget;
+    const key = input.closest("[data-skill-key]")?.dataset.skillKey;
+    const field = input.dataset.skillField;
+    if (!key || !["level", "analysis"].includes(field)) return;
+    const value = field === "analysis" ? Math.max(0, Math.floor(Number(input.value) || 0)) : input.value;
+    await this.actor.update(skillRecordUpdate(this.actor, key, { [field]: value }));
+  }
+
+
+  /**
+   * Remove a skill the actor has saved (its record, and any old-format entry for it). Expects data-skill-key on the
+   * button (or data-uuid, for older templates).
    */
   static async #onDeleteSkill(event, target) {
     if (!this.isEditable) return;
-    const { uuid, category } = target.dataset;
-    if (!uuid || !category) return;
-    const current = this.actor.toObject().system.skills?.[category] ?? [];
-    await this.actor.update({ [`system.skills.${category}`]: current.filter((entry) => entry.skill !== uuid) });
+    const key = target.dataset.skillKey || skillKeyFor(target.dataset.uuid);
+    const update = deleteSkillUpdate(this.actor, key);
+    if (Object.keys(update).length) await this.actor.update(update);
   }
 
 
@@ -1752,7 +1818,8 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   async #effectGrantsText(effect) {
     const actions = grantedActionUuids(effect);
     const skills = (effect.system?.skillIncreases ?? []).filter((row) => row?.skillUuid && row.value > 0);
-    if (!actions.length && !skills.length) return "";
+    const bonuses = this.#effectBonusParts(effect);
+    if (!actions.length && !skills.length && !bonuses.length) return "";
 
     const nameOf = async (uuid) => (await fromUuid(uuid).catch(() => null))?.name
       ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing");
@@ -1766,8 +1833,36 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
           ? `${text} (${game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Config.Grants.AtMost", { level: levelLabel(row.maxLevel) })})`
           : text;
       }),
+      ...bonuses,
     ]);
     return game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Grants", { list: parts.join(", ") });
+  }
+
+
+  /**
+   * An effect's skill roll bonuses, for its row on the Effects tab: "Pistol +2 to rolls", "Firearms skills +1 to rolls"
+   * (effects/skill-bonuses.mjs). Override changes are left out: they don't add a set amount.
+   * @param {ActiveEffect} effect
+   * @returns {string[]}
+   */
+  #effectBonusParts(effect) {
+    const signed = (n) => (n < 0 ? `${n}` : `+${n}`);
+    const parts = [];
+    for (const change of effectChanges(effect)) {
+      const amount = changeAmount(change);
+      if (!amount) continue;
+      const key = String(change.key ?? "");
+      const skill = key.match(SKILL_BONUS_PATTERN)?.[1];
+      const category = skill ? null : key.match(CATEGORY_BONUS_PATTERN)?.[1];
+      if (skill) {
+        const name = this.actor.system.skillFor?.(skill)?.name || skill;
+        parts.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.SkillBonus", { skill: name, value: signed(amount) }));
+      } else if (category) {
+        const label = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories?.[category] ?? category);
+        parts.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.CategoryBonus", { category: label, value: signed(amount) }));
+      }
+    }
+    return parts;
   }
 
 

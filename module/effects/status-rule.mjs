@@ -79,7 +79,7 @@ export default class StatusRule {
     this.roll = config.roll ?? null;
     /** A modifier on rolls made against a creature with this status: { modifier, kinds, label }, or null. */
     this.targetRoll = config.targetRoll ?? null;
-    /** A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks), or null. */
+    /** A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks, by key), or null. */
     this.note = config.note ?? null;
     /** A note on rolls made against a creature with this status: { key, kinds }, or null. */
     this.targetNote = config.targetNote ?? null;
@@ -167,13 +167,14 @@ export default class StatusRule {
    * A note in the creature's own roll dialog and on its chat card (Deaf on a Listen check), or null.
    * @param {Actor} actor
    * @param {ActiveEffect} effect
-   * @param {{kind: string, skillUuid?: string}} context
+   * @param {{kind: string, skillKey?: string, skillUuid?: string}} context
+   *   The note's skill is a skill key ("listening"); a UUID there still works.
    * @returns {string|null}  HTML (escaped).
    */
-  rollNote(actor, effect, { kind, skillUuid = null }) {
+  rollNote(actor, effect, { kind, skillKey = null, skillUuid = null }) {
     const note = this.note;
     if (!note || !StatusRule.coversKind(note, kind)) return null;
-    if (note.skill && note.skill !== skillUuid) return null;
+    if (note.skill && note.skill !== skillKey && note.skill !== skillUuid) return null;
     return this.text(note.key, actor, effect);
   }
 

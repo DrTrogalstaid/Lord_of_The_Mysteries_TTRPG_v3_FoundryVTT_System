@@ -11,7 +11,7 @@
  * How to use:
  *   1. Make a Script macro with this code. Run it as the GM.
  *   2. Run it once BEFORE installing an update and once AFTER, then compare the two reports.
- *      Problems in both reports were already there (e.g. the old "item" / "feature" sheets); new ones came with the update.
+ *      Problems in both reports were already there; new ones came with the update.
  *
  * It only finds errors. Whether a sheet LOOKS right and SAVES right is in tests/MANUAL_QA.md ("Item sheets").
  */

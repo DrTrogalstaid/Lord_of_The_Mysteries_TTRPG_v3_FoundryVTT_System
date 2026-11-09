@@ -25,6 +25,29 @@
     {{!-- Details Tab --}}
     <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
 
+      {{!-- The skill's key and whether every character has it (data/item/character_building/skill.mjs). --}}
+      <fieldset class="skill-identity">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.Legend"}}</legend>
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.Identifier"}}</label>
+          <div class="form-fields">
+            <input type="text" name="system.identifier" value="{{system.identifier}}" placeholder="{{identifierPlaceholder}}"
+                   {{#unless editable}}disabled{{/unless}} />
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IdentifierHint" key=skillKey}}</p>
+          {{#if keyUsedBy}}
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.KeyUsedBy" name=keyUsedBy}}</p>
+          {{/if}}
+        </div>
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IsStandard"}}</label>
+          <div class="form-fields">
+            <input type="checkbox" name="system.isStandard" {{checked isStandard}} {{#unless editable}}disabled{{/unless}} />
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IsStandardHint"}}</p>
+        </div>
+      </fieldset>
+
       <!--Skill Attribute Drop Down-->
       <fieldset class="skillAttributes flexrow">
         <legend>Skill Attribute</legend>

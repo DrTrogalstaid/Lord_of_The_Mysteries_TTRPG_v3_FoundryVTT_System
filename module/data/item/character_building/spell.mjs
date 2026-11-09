@@ -4,7 +4,7 @@ import { rollActionAttack, rollActionDamage } from "../../../helpers/action-roll
 /**
  * A spell. It rolls the same way an action does (helpers/action-roll.mjs), with the same roll fields and names:
  * skill, attackRollMacro, modifiers, damageRollMacro, damageType. The one difference: a spell with no skill set
- * rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
+ * rolls with Occultism (the skill with the key CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey).
  */
 export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase {
 
@@ -60,12 +60,6 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );
-
-    schema.spellMacro = new fields.StringField({ required: false, initial: "na" });
-    //Active effects?
-    //TODO: How do I do this? Is this another object that needs created? Is this the same as a spell macro??
-    //TODO: When a spell active effect is on a player, can I add actions to their actions tab? If so, that might be really nice.
-    schema.activeEffectMacro = new fields.StringField({ required: false, initial: "na" });
 
     /**
      * Exampled of spells for reference

@@ -22,16 +22,8 @@
     </div>
   </div>
 
-  {{!-- Value of one, typed in gold pounds ("£3 10s", "8d", "2.5s"). Saved as pennies by InventoryItemSheet._processFormData. --}}
-  <div class="form-group">
-    <label>{{localize "LORD_OF_THE_MYSTERIES.Money.Value"}}</label>
-    <div class="form-fields">
-      <input type="text" name="valueText" value="{{valueText}}" placeholder="£0" {{#unless editable}}disabled{{/unless}}>
-      {{#if valueLocal}}<span class="value-local">{{valueLocal}}</span>{{/if}}
-      <i class="fa-solid fa-coins value-other" data-tooltip="{{valueTooltip}}"></i>
-    </div>
-    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.ValueHint"}}</p>
-  </div>
+  {{!-- Value of one (value-field.hbs). --}}
+  {{> "systems/lotm/templates/item/inventory/value-field.hbs"}}
 
   {{!-- Purse / wallet: carries cash. Its balances also show in the character's Money panel. --}}
   <div class="form-group">

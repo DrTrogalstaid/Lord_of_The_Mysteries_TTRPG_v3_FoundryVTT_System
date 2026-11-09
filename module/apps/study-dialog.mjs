@@ -5,12 +5,14 @@
  *   Success dialog   (✋ on a skill row)  Record a success with a Sequence ability that teaches by doing
  *                                         (its "Learning by Doing" settings, on the ability sheet).
  *
- * Progress is saved on the actor in system.learning (one entry per skill, see base-actor.mjs).
+ * Progress is saved on the actor in system.learning (one entry per skill, by the skill's key, see base-actor.mjs).
+ * The skills passed in are { key, uuid, name, level }; a skill with no key is found by its uuid.
  * When a meter fills, the skill's level goes up straight away and a chat message says so.
  */
 
-import { findSkillEntry } from "../helpers/action-roll.mjs";
 import { lowerLevel } from "../helpers/skill-associations.mjs";
+import { learningEntryFor, skillRecordUpdate } from "../helpers/skill-data.mjs";
+import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import {
   applyStudyWeeks, applySuccess, canTeachTo, inspirationBoost, nextLevel, studyProgressFor, studyWeeksNeeded,
   successesFor, successesNeeded, STUDY_SCHEDULES, WEEKS_PER_MONTH, WEEKS_PER_YEAR,
@@ -64,43 +66,28 @@ function canSaveLearning(actor) {
 }
 
 /**
- * The actor's learning list as plain data (safe to change), and this skill's entry in it
- * (added to the list if it's the skill's first time).
- * @param {Actor} actor
- * @param {string} uuid  The skill's uuid.
- * @returns {{learning: object[], entry: object}}
+ * A skill's key: the one given, or its uuid's (helpers/skill-registry.mjs).
+ * @param {{key?: string, uuid?: string}} skill
+ * @returns {string}
  */
-function learningData(actor, uuid) {
-  const learning = foundry.utils.deepClone(actor.toObject().system.learning ?? []);
-  let entry = learning.find((e) => e.skill === uuid);
-  if (!entry) {
-    entry = { skill: uuid, study: 0, studyFrom: "", successes: 0, successesFrom: "", gained: [] };
-    learning.push(entry);
-  }
-  entry.gained ??= [];
-  return { learning, entry };
+function keyOf(skill) {
+  return skill.key || skillKeyFor(skill.uuid);
 }
 
+
 /**
- * The update that sets a skill's level (the level the player sees in its dropdown), or {} if the skill is gone.
+ * The update that sets a skill's level (the level the player sees in its dropdown), or {} if the skill has no key.
  * `level` is the level the skill is now rolled at. When a Sequence raises the skill, that raise is taken back off
  * before saving, because it's added again on top: a skill raised one level by a Sequence and studied up to
  * Mastery is saved as Advanced, so it doesn't count the Sequence twice.
  * @param {Actor} actor
- * @param {string} uuid
+ * @param {string} key   The skill's key.
  * @param {string} level
- * @returns {Promise<object>}
+ * @returns {object}
  */
-async function skillLevelUpdate(actor, uuid, level) {
-  const skillItem = await fromUuid(uuid).catch(() => null);
-  if (!skillItem) return {};
-  level = lowerLevel(level, actor.system.sequenceSkillSteps?.[uuid] ?? 0);
-  const { uuid: storedUuid, category } = findSkillEntry(actor, skillItem, uuid);
-  const list = foundry.utils.deepClone(actor.toObject().system.skills?.[category] ?? []);
-  const index = list.findIndex((e) => e.skill === storedUuid);
-  if (index >= 0) list[index].level = level;
-  else list.push({ skill: storedUuid, level, analysis: 0 });
-  return { [`system.skills.${category}`]: list };
+function skillLevelUpdate(actor, key, level) {
+  if (!key) return {};
+  return skillRecordUpdate(actor, key, { level: lowerLevel(level, actor.system.sequenceSkillSteps?.[key] ?? 0) });
 }
 
 /**
@@ -132,7 +119,7 @@ async function postLearningMessage(actor, lines) {
 /**
  * Open the Study dialog for a skill.
  * @param {Actor} actor
- * @param {{uuid: string, name: string, level: string}} skill
+ * @param {{key?: string, uuid: string, name: string, level: string}} skill
  *   `level` is the level the skill is rolled at (a related skill may have raised it): study goes on from there.
  */
 export async function openStudyDialog(actor, skill) {
@@ -143,10 +130,11 @@ export async function openStudyDialog(actor, skill) {
     return;
   }
 
+  const key = keyOf(skill);
   const inspiration = actor.system.attributes.ins?.total ?? 0;
   // Sequences with this skill in their Knowledge and Training list: one schedule faster each (base-actor.mjs).
-  const extraSteps = actor.system.sequenceTrainingSteps?.[skill.uuid] ?? 0;
-  const entry = (actor.system.learning ?? []).find((e) => e.skill === skill.uuid);
+  const extraSteps = actor.system.sequenceTrainingSteps?.[key] ?? 0;
+  const entry = actor.system.learningByKey?.[key];
   const progress = studyProgressFor(entry, skill.level);
 
   // The schedule dropdown, fastest first. "3-5 days a week" is picked to start with.
@@ -230,13 +218,14 @@ export async function openStudyDialog(actor, skill) {
 /**
  * Save weeks of study: fill the meter, raise the skill if it fills, and post a chat message.
  * @param {Actor} actor
- * @param {{uuid: string, name: string, level: string}} skill
+ * @param {{key?: string, uuid: string, name: string, level: string}} skill
  * @param {{weeks: number, schedule: string, selfStudy: boolean}} choice
  */
 export async function logStudy(actor, skill, { weeks, schedule, selfStudy }) {
+  const key = keyOf(skill);
   const inspiration = actor.system.attributes.ins?.total ?? 0;
-  const extraSteps = actor.system.sequenceTrainingSteps?.[skill.uuid] ?? 0;
-  const { learning, entry } = learningData(actor, skill.uuid);
+  const extraSteps = actor.system.sequenceTrainingSteps?.[key] ?? 0;
+  const { learning, entry } = learningEntryFor(actor, key);
 
   const result = applyStudyWeeks({
     level: skill.level,
@@ -250,7 +239,7 @@ export async function logStudy(actor, skill, { weeks, schedule, selfStudy }) {
   entry.gained.push(...result.gained.map((step) => ({ ...step, source: "study", detail: "" })));
 
   const update = { "system.learning": learning };
-  if (result.gained.length) Object.assign(update, await skillLevelUpdate(actor, skill.uuid, result.level));
+  if (result.gained.length) Object.assign(update, skillLevelUpdate(actor, key, result.level));
   const growthLine = await updateWithGrowth(actor, update);
 
   // "Studied Melee for 2 week(s) (3-5 days a week). Melee went up to Trained! 12% of the way to Proficient."
@@ -274,7 +263,7 @@ export async function logStudy(actor, skill, { weeks, schedule, selfStudy }) {
  * Open the Success dialog: confirm a success with an ability that teaches this skill.
  * When more than one ability teaches it, the player picks which one the success came from.
  * @param {Actor} actor
- * @param {{uuid: string, name: string, level: string}} skill  `level` = the level the skill is rolled at.
+ * @param {{key?: string, uuid: string, name: string, level: string}} skill  `level` = the level the skill is rolled at.
  * @param {string[]} abilityUuids  The abilities that teach this skill (from the skill row's data-teachers).
  */
 export async function openSuccessDialog(actor, skill, abilityUuids) {
@@ -289,7 +278,7 @@ export async function openSuccessDialog(actor, skill, abilityUuids) {
     return;
   }
 
-  const entry = (actor.system.learning ?? []).find((e) => e.skill === skill.uuid);
+  const entry = actor.system.learningByKey?.[keyOf(skill)];
   const count = successesFor(entry, skill.level);
   const needed = successesNeeded(skill.level);
 
@@ -351,7 +340,7 @@ export async function openSuccessDialog(actor, skill, abilityUuids) {
 /**
  * Save one success: add to the count, raise the skill if the count is reached, and post a chat message.
  * @param {Actor} actor
- * @param {{uuid: string, name: string, level: string}} skill
+ * @param {{key?: string, uuid: string, name: string, level: string}} skill
  * @param {Item} ability  The ability the success came from.
  */
 export async function recordSuccess(actor, skill, ability) {
@@ -361,7 +350,8 @@ export async function recordSuccess(actor, skill, ability) {
     return;
   }
 
-  const { learning, entry } = learningData(actor, skill.uuid);
+  const key = keyOf(skill);
+  const { learning, entry } = learningEntryFor(actor, key);
   const result = applySuccess({ level: skill.level, successes: successesFor(entry, skill.level) });
 
   entry.successes = result.successes;
@@ -369,7 +359,7 @@ export async function recordSuccess(actor, skill, ability) {
   if (result.gained) entry.gained.push({ ...result.gained, source: "ability", detail: ability.name });
 
   const update = { "system.learning": learning };
-  if (result.gained) Object.assign(update, await skillLevelUpdate(actor, skill.uuid, result.level));
+  if (result.gained) Object.assign(update, skillLevelUpdate(actor, key, result.level));
   const growthLine = await updateWithGrowth(actor, update);
 
   // "Recorded a success for Clever Hands with Thief's Hand. 1 of 2 successes toward Proficient."

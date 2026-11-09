@@ -12,7 +12,7 @@
  *
  *   @Check[wil|15]                 an attribute check against DC 15: str agi wil phy cha ins luc edu, or their names
  *                                  (Strength, Will, Willpower, Constitution, Physique, Dexterity, Luck, ...)
- *   @Check[Listening|30]           a skill check, by the skill's name in the Skills compendium (or a world skill)
+ *   @Check[Listening|30]           a skill check, by the skill's name (any capitals) or its key ("listening")
  *   @Check[phy|dc=15]{Hold on}     "DC 15" and "dc=15" work too; {label} is the button's text and the check's reason
  *   @Check[Medicine]               no DC
  *
@@ -454,7 +454,7 @@ async function applyEffectLink(link, actors) {
 
 /**
  * Roll a @Check button for one actor: an attribute check, or a skill check at the actor's level in that skill
- * (with related-skill raises and Sequence raises, the same as the sheet).
+ * (with related-skill raises, Sequence and effect raises, and the skill's effect bonuses, the same as the sheet).
  * @param {Actor} actor
  * @param {{attribute?: string, skill?: string, dc: number|null, reason: string, fast: boolean}} check
  */
@@ -464,38 +464,22 @@ async function rollCheckLink(actor, { attribute, skill, dc, reason, fast }) {
     return AttributeCheckDialog.prompt(actor, attribute, { dc, reason, fast });
   }
 
-  const skillItem = await skillByName(skill);
-  if (!skillItem) {
+  const [{ skillInfoByName }, { default: SkillCheckDialog }] = await Promise.all([
+    import("./skill-registry.mjs"), import("../apps/skill-check-dialog.mjs"),
+  ]);
+  const info = skillInfoByName(skill);
+  const record = info ? actor.system?.skillFor?.(info.key) : null;
+  if (!record) {
     ui.notifications.warn(L("UnknownSkill", { name: skill ?? "" }));
     return null;
   }
-  const [{ findSkillEntry }, { effectiveSkillLevel }, { default: SkillCheckDialog }] = await Promise.all([
-    import("./action-roll.mjs"), import("./skill-levels.mjs"), import("../apps/skill-check-dialog.mjs"),
-  ]);
-  const { uuid, category } = findSkillEntry(actor, skillItem, skillItem.uuid);
-  const level = await effectiveSkillLevel(actor, uuid);
   return SkillCheckDialog.prompt(actor, {
-    uuid,
-    name: skillItem.name,
-    category,
-    attribute: skillItem.system.skill_attribute || category,
-    level,
-    flatModifier: skillItem.system.modifier ?? 0,
+    key: record.key,
+    uuid: record.uuid,
+    name: record.name,
+    category: record.attribute,
+    attribute: record.attribute,
+    level: record.effectiveLevel,
+    flatModifier: record.flatModifier ?? 0,
   }, { fast, dc });
-}
-
-
-/**
- * A skill Item by name (any capitals): the Skills compendium's first, then a world skill.
- * @param {string} name
- * @returns {Promise<Item|null>}
- */
-async function skillByName(name) {
-  const lower = String(name ?? "").trim().toLowerCase();
-  if (!lower) return null;
-  const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
-  const index = await pack?.getIndex();
-  const entry = index?.find((row) => row.name?.toLowerCase() === lower);
-  if (entry?.uuid) return fromUuid(entry.uuid).catch(() => null);
-  return game.items.find((item) => item.type === "skill" && item.name.toLowerCase() === lower) ?? null;
 }

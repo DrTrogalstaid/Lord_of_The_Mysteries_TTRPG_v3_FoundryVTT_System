@@ -1,4 +1,8 @@
 import { effectUse, targetedTokens, useData } from "../effects/effect-application.mjs";
+import {
+  CATEGORY_BONUS_PATTERN, SKILL_BONUS_PATTERN, categoryBonusChangeKey, skillBonusChangeKey,
+} from "../effects/skill-bonuses.mjs";
+import { skillInfo, skillKeyFor } from "../helpers/skill-registry.mjs";
 
 const { ActiveEffectConfig } = foundry.applications.sheets;
 
@@ -18,9 +22,13 @@ const { ActiveEffectConfig } = foundry.applications.sheets;
  *                   no action counts the actions the effect grants (any action, if it grants none). The effect ends
  *                   at whichever comes first: the duration, or any row. (No Duration tab: the box is on the LotM tab.)
  *   Grants          what the effect gives while it's active (effects/effect-grants.mjs):
- *                     Actions          drop actions on the list (system.actionList)
- *                     Skill Increases  drop skills on the list, then set +levels and "at most" (system.skillIncreases)
+ *                     Actions            drop actions on the list (system.actionList)
+ *                     Skill Increases    drop skills on the list, then set +levels and "at most" (system.skillIncreases)
+ *                     Skill Roll Bonuses drop one or more skills on the list, then set each one's bonus
+ *                     Category Bonuses   pick a related-skill category and set its bonus (every skill in it)
  *                   Dropping or removing saves what's typed on the sheet first, then the change, so nothing is lost.
+ *                   The two bonus lists are ordinary changes (system.skills.<key>.bonus, system.skillCategoryBonuses.
+ *                   <category>; effects/skill-bonuses.mjs): they show on the Changes tab too, and can be edited there.
  *
  * "Use" isn't a field of its own: Passive is core's transfer, the others are system.application.mode.
  * _processFormData turns the dropdown into those two fields.
@@ -36,6 +44,8 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
       openGrant: LotmActiveEffectConfig.#onOpenGrant,
       removeGrantedAction: LotmActiveEffectConfig.#onRemoveGrantedAction,
       removeSkillIncrease: LotmActiveEffectConfig.#onRemoveSkillIncrease,
+      removeBonusChange: LotmActiveEffectConfig.#onRemoveBonusChange,
+      addCategoryBonus: LotmActiveEffectConfig.#onAddCategoryBonus,
       addExpiryEvent: LotmActiveEffectConfig.#onAddExpiryEvent,
       removeExpiryEvent: LotmActiveEffectConfig.#onRemoveExpiryEvent,
       clearExpiryAction: LotmActiveEffectConfig.#onClearExpiryAction,
@@ -189,7 +199,102 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
         level: game.i18n.localize(label),
       });
     }
-    return { grantedActions, skillIncreases, maxLevelOptions };
+    return { grantedActions, skillIncreases, maxLevelOptions, ...this.#prepareBonuses() };
+  }
+
+
+  /**
+   * The Skill Roll Bonuses and Category Bonuses lists: the effect's changes that point at a skill's or a category's
+   * bonus (effects/skill-bonuses.mjs), each with its place in the changes list (index), so it can be edited or removed.
+   * @returns {{skillBonuses: object[], categoryBonuses: object[], categoryOptions: Record<string, string>}}
+   */
+  #prepareBonuses() {
+    const categories = CONFIG.LORD_OF_THE_MYSTERIES.skillCategories ?? {};
+    const localize = (key) => game.i18n.localize(key);
+    const skillBonuses = [];
+    const categoryBonuses = [];
+
+    this.#savedChanges().forEach((change, index) => {
+      const key = String(change?.key ?? "");
+      const type = change?.type ?? "add";
+      // Not Add: say how it changes the bonus ("Override"), since the number alone would read as "+".
+      const typeLabel = type === "add" ? "" : (localize(CONFIG.ActiveEffect?.changeTypes?.[type]?.label ?? "") || type);
+      const skill = key.match(SKILL_BONUS_PATTERN)?.[1];
+      if (skill) {
+        const info = skillInfo(skill);
+        skillBonuses.push({
+          index, key: skill, value: change.value ?? 0, typeLabel,
+          uuid: info?.uuid ?? "", name: info?.name ?? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillKeys.MissingSkill", { key: skill }),
+          img: info?.img ?? "icons/svg/hazard.svg", broken: !info,
+        });
+        return;
+      }
+      const category = key.match(CATEGORY_BONUS_PATTERN)?.[1];
+      if (category) {
+        categoryBonuses.push({ index, category, value: change.value ?? 0, typeLabel, name: localize(categories[category] ?? category) });
+      }
+    });
+
+    const categoryOptions = Object.fromEntries(Object.entries(categories).map(([key, label]) => [key, localize(label)]));
+    return { skillBonuses, categoryBonuses, categoryOptions };
+  }
+
+
+  /**
+   * Where this effect keeps its changes: "system.changes" (Foundry v14), or "changes" on older data.
+   * @returns {string}
+   */
+  #changesPath() {
+    return Array.isArray(this.document._source.system?.changes) || !Array.isArray(this.document._source.changes)
+      ? "system.changes" : "changes";
+  }
+
+
+  /**
+   * The effect's saved changes.
+   * @returns {object[]}
+   */
+  #savedChanges() {
+    return foundry.utils.deepClone(foundry.utils.getProperty(this.document._source, this.#changesPath()) ?? []);
+  }
+
+
+  /**
+   * Change the effect's changes list and save it, together with everything typed on the sheet (the Changes tab's rows
+   * as they are on the sheet, so edits there that weren't saved yet aren't lost).
+   * @param {(changes: object[]) => void} mutate   Changes the list in place.
+   */
+  async #saveChanges(mutate) {
+    const path = this.#changesPath();
+    let data = {};
+    try {
+      const form = this.form ?? this.element.querySelector("form") ?? this.element;
+      const formData = new foundry.applications.ux.FormDataExtended(form);
+      data = foundry.utils.expandObject(this._prepareSubmitData(null, form, formData) ?? {});
+    } catch (error) {
+      console.warn("lotm | Couldn't save the effect sheet's other fields with this change", error);
+      data = {};
+    }
+
+    // The changes as they are on the sheet; the saved ones if the form doesn't have them.
+    let changes = foundry.utils.getProperty(data, path);
+    if (changes && !Array.isArray(changes) && typeof changes === "object") {
+      changes = Object.keys(changes).sort((a, b) => Number(a) - Number(b)).map((k) => changes[k]);
+    }
+    changes = Array.isArray(changes) ? foundry.utils.deepClone(changes) : this.#savedChanges();
+    mutate(changes);
+    foundry.utils.setProperty(data, path, changes);
+    await this.document.update(data);
+  }
+
+
+  /**
+   * A new Add change, set up like the system's other effects' changes.
+   * @param {string} key
+   * @returns {object}
+   */
+  static #newBonusChange(key) {
+    return { key, type: "add", value: 1, phase: "initial", priority: null };
   }
 
 
@@ -205,6 +310,26 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
     });
     this.#bindGrantZones();
     this.#bindExpiryZone();
+    this.#bindBonusValues();
+  }
+
+
+  /**
+   * The bonus boxes in Skill Roll Bonuses and Category Bonuses (data-lotm-change-index = the change's place in the
+   * changes list). They have no `name` (the Changes tab has the real field); a new value is saved straight away.
+   */
+  #bindBonusValues() {
+    if (!this.isEditable) return;
+    for (const input of this.element.querySelectorAll("[data-lotm-change-index]")) {
+      input.addEventListener("change", async (event) => {
+        event.stopPropagation();
+        const index = Number(event.currentTarget.dataset.lotmChangeIndex);
+        const value = Math.round(Number(event.currentTarget.value)) || 0;
+        await this.#saveChanges((changes) => {
+          if (changes[index]) changes[index].value = value;
+        });
+      });
+    }
   }
 
 
@@ -282,6 +407,17 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
     const wanted = kind === "actions" ? "action" : "skill";
     if (doc.type !== wanted) {
       ui.notifications.warn(game.i18n.format(`LORD_OF_THE_MYSTERIES.Effects.Config.Grants.${kind === "actions" ? "NotAnAction" : "NotASkill"}`, { name: doc.name }));
+      return;
+    }
+
+    // Skill Roll Bonuses: a change to the skill's bonus, by its key (not added twice).
+    if (kind === "bonuses") {
+      const key = skillKeyFor(doc);
+      if (!key) return;
+      const changeKey = skillBonusChangeKey(key);
+      await this.#saveChanges((changes) => {
+        if (!changes.some((change) => change?.key === changeKey)) changes.push(LotmActiveEffectConfig.#newBonusChange(changeKey));
+      });
       return;
     }
 
@@ -452,6 +588,28 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
     if (!rows[index]) return;
     rows[index].actionUuid = "";
     await this.#saveWith({ "system.expiryEvents": rows });
+  }
+
+
+  /** The trash can on a skill or category bonus (data-index = its change's place in the changes list). */
+  static async #onRemoveBonusChange(event, target) {
+    if (!this.isEditable) return;
+    const index = Number(target.dataset.index);
+    await this.#saveChanges((changes) => {
+      if (Number.isInteger(index) && index >= 0 && index < changes.length) changes.splice(index, 1);
+    });
+  }
+
+
+  /** "Add" next to the category dropdown: a bonus to every skill in that category (not added twice). */
+  static async #onAddCategoryBonus(event, target) {
+    if (!this.isEditable) return;
+    const category = this.element.querySelector("[data-lotm-bonus-category]")?.value;
+    if (!category) return;
+    const changeKey = categoryBonusChangeKey(category);
+    await this.#saveChanges((changes) => {
+      if (!changes.some((change) => change?.key === changeKey)) changes.push(LotmActiveEffectConfig.#newBonusChange(changeKey));
+    });
   }
 
 

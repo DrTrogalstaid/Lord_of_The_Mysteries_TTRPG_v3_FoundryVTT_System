@@ -35,14 +35,6 @@ LORD_OF_THE_MYSTERIES.resources = {
 
 };
 
-LORD_OF_THE_MYSTERIES.resourcesAbbreviations = {
-    hp: 'LORD_OF_THE_MYSTERIES.Attributes.Health.abbr',
-    sp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirit.abbr',
-    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Sanity.abbr',
-    lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.abbr',
-    spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.abbr',
-};
-
 LORD_OF_THE_MYSTERIES.skillLevels = {
     untrained: 'LORD_OF_THE_MYSTERIES.Skill_Level.untrained',
     trained: 'LORD_OF_THE_MYSTERIES.Skill_Level.trained',
@@ -91,34 +83,42 @@ LORD_OF_THE_MYSTERIES.skillAttributes = {
     edu: 'LORD_OF_THE_MYSTERIES.Attributes.Edu.long',
 };
 
-LORD_OF_THE_MYSTERIES.skillCompendiumCategories = {
-    str: 'LORD_OF_THE_MYSTERIES.Attributes.Str.long',
-    agi: 'LORD_OF_THE_MYSTERIES.Attributes.Agi.long',
-    cha: 'LORD_OF_THE_MYSTERIES.Attributes.Cha.long',
-    ins: 'LORD_OF_THE_MYSTERIES.Attributes.Ins.long',
-    edu: 'LORD_OF_THE_MYSTERIES.Attributes.Edu.long',
-    languages: 'Languages'
-};
-
 LORD_OF_THE_MYSTERIES.skillsCompendiumId = 'lotm.skills_compendium';
 
-/** The Dodge skill in the Skills compendium (its defense bonus is worked out in base-actor.mjs). */
-LORD_OF_THE_MYSTERIES.dodgeSkillUuid = 'Compendium.lotm.skills_compendium.Item.iY814DRe7O6m6NLQ';
-
-/**
- * The skill a spell rolls with when its Skill slot is empty: Occultism, in the Skills compendium
- * (see rollSkillUuid in helpers/action-roll.mjs).
+/*
+ * Skills are known by their key on actors and in Active Effects ("dodge", "pistol"; see helpers/skill-keys.mjs): the
+ * skill Item's Identifier, or its name in camelCase while that's blank. The keys below are the skills the system
+ * itself needs. If a compendium skill is replaced, give the new one the same Identifier and nothing else has to change.
  */
-LORD_OF_THE_MYSTERIES.spellSkillUuid = 'Compendium.lotm.skills_compendium.Item.23huemg1lJ4Wk90O';
+
+/** The Dodge skill: its level bonus is the Dodge defense (data/actor/base-actor.mjs). */
+LORD_OF_THE_MYSTERIES.dodgeSkillKey = 'dodge';
+
+/** The skill a spell rolls with when its Skill slot is empty (see rollSkillUuid in helpers/action-roll.mjs). */
+LORD_OF_THE_MYSTERIES.spellSkillKey = 'occultism';
+
+/** The Listen skill: Deaf makes its checks fail (effects/status-effects.mjs). */
+LORD_OF_THE_MYSTERIES.listenSkillKey = 'listening';
 
 /**
- * Skills every character has at least this level in, keyed by skill UUID.
+ * Skills every character has at least this level in, keyed by skill key.
  * Rulebook: "Your dodge skill is trained by default." Picking Proficient (with Education) still works.
  */
 LORD_OF_THE_MYSTERIES.defaultSkillLevels = {
-    [LORD_OF_THE_MYSTERIES.dodgeSkillUuid]: 'trained',
+    [LORD_OF_THE_MYSTERIES.dodgeSkillKey]: 'trained',
 };
 
+/**
+ * The player sheet's skill tabs, one per attribute. A skill is listed on its linked attribute's tab, so only skills
+ * linked to one of these can be dropped on a sheet or have their level saved (the same rule as before skill keys).
+ */
+LORD_OF_THE_MYSTERIES.skillTabAttributes = ['str', 'agi', 'cha', 'ins', 'edu'];
+
+/**
+ * Folders of the Skills compendium. Skills in the attribute tabs' folders count as standard skills (every player
+ * character has them) until their own "Standard skill" box is saved (helpers/skill-registry.mjs).
+ * Languages aren't listed on the skill tabs (languages are the Languages lists), so they aren't standard.
+ */
 LORD_OF_THE_MYSTERIES.skillCompendiumFolders = {
     str: 'Strength',
     agi: 'Agility',
@@ -206,26 +206,6 @@ LORD_OF_THE_MYSTERIES.madnessTendencies = {
     8: 'LORD_OF_THE_MYSTERIES.Madness.Tendencies.8',
 };
 
-LORD_OF_THE_MYSTERIES.commonLanguages = {
-    ancientFeysac: "Ancient Feysac",
-    loenese: "Loenese",
-    intisian: "Intisian",
-    feysac: "Faysac",
-    highlander: "Highlander",
-    lenburg: "Lenburg",
-    duntanese: "Duntanese"
-};
-
-LORD_OF_THE_MYSTERIES.mysticalLanguages = {
-    elvish: "Elvish",
-    dragonese: "Dragonese",
-    jotun: "Jotun",
-    devil: "Devil",
-    ancientHermes: "Ancient Hermes",
-    hermes: "Hermes",
-    death: "Death"
-};
-
 LORD_OF_THE_MYSTERIES.strengthDamageBonus = [
     { strength: 0,  bonus: "-2" },
     { strength: 1,  bonus: "-1" },
@@ -284,5 +264,3 @@ LORD_OF_THE_MYSTERIES.actionTraits = {
 /** Spiritual intuition checks: an Inspiration check against this DC (rulebook: Special Actions). */
 LORD_OF_THE_MYSTERIES.spiritualIntuitionDC = 25;
 
-/** The Listen skill in the Skills compendium: Deaf adds a note to its checks (effects/status-effects.mjs). */
-LORD_OF_THE_MYSTERIES.listenSkillUuid = 'Compendium.lotm.skills_compendium.Item.NLLyOSb3OqhMvLVP';

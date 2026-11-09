@@ -7,11 +7,11 @@
  * (with study, learning by doing and granted-skill tabs), languages, rests, money and the biography pages.
  **/
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, effectRaiseText } from "./base-actor-sheet.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, skillRaiseText, skillRollTooltip } from "./base-actor-sheet.mjs";
 import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
-import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
-import { applySkillRaises } from "../effects/effect-grants.mjs";
 import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
+import { skillRecordUpdate } from "../helpers/skill-data.mjs";
+import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import { meterPercent, openStudyDialog, openSuccessDialog } from "../apps/study-dialog.mjs";
 import { addGrantedSkill, buildGrantedSkillTab, recordSkillAnalysis, updateGrantedSkill } from "../helpers/granted-skills.mjs";
 import { autoPlacement, buildInventoryView } from "../helpers/inventory.mjs";
@@ -168,8 +168,11 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
           grantedSkills.filter((entry) => !entry.broken).map((entry) => entry.uuid)
         );
         // Each Granted Skills row gets its skill's row, for the roll, level and study controls (granted-skill-entry.hbs).
-        const rowByUuid = new Map(Object.values(context.skillsByCategory).flat().map((row) => [row.uuid, row]));
-        for (const entry of grantedSkills) entry.skill = entry.broken ? null : (rowByUuid.get(entry.uuid) ?? null);
+        // Found by key, so a world copy of a skill finds the compendium skill's row.
+        const rowByKey = new Map(Object.values(context.skillsByCategory).flat().map((row) => [row.key, row]));
+        for (const entry of grantedSkills) entry.skill = entry.broken ? null : (rowByKey.get(skillKeyFor(entry.uuid)) ?? null);
+        // Saved skills whose Item can't be found any more, so they can be removed.
+        context.missingSkills = this._missingSkills ?? [];
         context.skillLevelOptions = CONFIG.LORD_OF_THE_MYSTERIES.skillLevels;
         context.grantedSkillTabs = await this._prepareGrantedSkills();
         context.attributeOptions = CONFIG.LORD_OF_THE_MYSTERIES.attributes;
@@ -292,139 +295,100 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
 
   /**
-   * Build the full, per-category skill list from the skills_compendium pack's folder structure.
+   * The skill tabs' rows, from the character's skill records (actor.system.skills, worked out in
+   * data/actor/base-actor.mjs). A skill is on its attribute's tab when every character has it (a standard skill) or
+   * the character has saved it (dropped, trained, studied, analyzed). Levels, totals and bonuses come from the record.
    * @param {object[]} [abilityEntries]  The Abilities section's entries, for the learning-by-doing buttons.
-   * @param {string[]} [grantedUuids]    The Granted Skills box's skills. Any that aren't on a tab get a row under
-   *                                     GRANTED_ONLY, so that box can show their controls too.
-   * @returns {Promise<Record<string, {uuid: string, name: string, img: string, level: string, attribute: string, flatModifier: number, modifier: number}[]>>}
+   * @param {string[]} [grantedUuids]    The Granted Skills box's skills (Sequence grants). Any that aren't on a tab get
+   *                                     a row under GRANTED_ONLY, so that box can show their controls too.
+   * @returns {Promise<Record<string, object[]>>}  Tab id -> rows, plus GRANTED_ONLY. Saved skills whose Item can't be
+   *                                               found are put in this._missingSkills.
    */
   async _prepareSkillList(abilityEntries = [], grantedUuids = []) {
-    const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
-    const skillsByCategory = {};
+    const tabs = CONFIG.LORD_OF_THE_MYSTERIES.skillTabAttributes ?? [];
+    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+    const grantedKeys = new Set(grantedUuids.map((uuid) => skillKeyFor(uuid)).filter(Boolean));
 
-
-    if (!pack) {
-      console.warn(`Lord of the Mysteries | Skills compendium "${CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId}" not found.`);
-      return skillsByCategory;
-    }
-
-    // Request the two extra system fields the roll dialog needs (the skill's
-    // own linked attribute and its flat item modifier) so opening the dialog
-    // doesn't need a separate fromUuid() round trip per skill.
-    // system.categories (and the old system.category, on skills saved before it existed) feed
-    // related-skill improvement in #applySkillAssociations below.
-    await pack.getIndex({ fields: ["system.skill_attribute", "system.modifier", "system.categories", "system.category"] });
-
-    for (const [category, folderName] of Object.entries(CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders)) {
-      const folder = pack.folders.getName(folderName);
-      if (!folder) {
-        console.warn(`Lord of the Mysteries | No "${folderName}" folder found in the skills compendium (category: ${category}).`);
-      }
-      const indexEntries = folder?.contents ?? [];
-
-      // Preserve whatever level the actor already has recorded for a skill, matched by uuid.
-      // Anything not yet touched simply defaults to "untrained" for display.
-      const stored = this.actor.system.skills[category] ?? [];
-      const storedByUuid = new Map(stored.map(entry => [entry.skill, entry]));
-
-      // One row per skill. `entry` is a compendium index entry or, for skills outside the compendium, the
-      // resolved Item: both carry uuid / name / img / system.{skill_attribute, modifier}.
-      const toRow = (entry, removable) => {
-        // Skills every character starts with (Dodge) never show below their starting level.
-        const level = atLeastLevel(
-          storedByUuid.get(entry.uuid)?.level ?? "untrained",
-          CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[entry.uuid]
-        );
-        // NOTE: the sheet's displayed number still uses the tab/category attribute,
-        // same as before this change -- unchanged to avoid shifting every skill's
-        // displayed modifier as a side effect of this PR. The roll dialog instead
-        // defaults to the skill item's own `skill_attribute` field below, which is
-        // the actual rules-relevant "linked attribute" and may differ from the
-        // compendium folder/tab a skill happens to be filed under. Worth reconciling
-        // in a follow-up once you've decided which should really drive the display.
-        // Buckets that aren't attributes themselves (e.g. "knowledge") fall back to
-        // the skill item's own linked attribute -- Education, for every Knowledge.
-        const attributeKey = category in CONFIG.LORD_OF_THE_MYSTERIES.attributes
-          ? category
-          : (entry.system?.skill_attribute ?? category);
-        const attributeTotal = this.actor.system.attributes[attributeKey]?.total ?? 0;
-        return {
-          uuid: entry.uuid,
-          name: entry.name,
-          img: entry.img,
-          // The level the player picked: what the dropdown shows and saves.
-          level,
-          // The level the skill is rolled at. Same as `level` unless a related skill raises it
-          // (#applySkillAssociations fills these three in once every tab's rows exist).
-          effectiveLevel: level,
-          associated: false,
-          associatedTooltip: "",
-          categories: skillCategoriesOf(entry.system),
-          attributeTotal,
-          analysis: storedByUuid.get(entry.uuid)?.analysis ?? 0,
-          category,
-          attribute: entry.system?.skill_attribute ?? category,
-          flatModifier: entry.system?.modifier ?? 0,
-          modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal),
-          removable
-        };
-      };
-
-      const rows = indexEntries.map(entry => toRow(entry, false));
-
-      // Skills the actor has recorded that aren't in the compendium folder (dropped from the world, another
-      // compendium, ...). They must be listed: the Character tab submits this whole list back as
-      // system.skills[category], so anything left out here would be deleted on the next field change.
-      // Entries that no longer resolve (deleted skills) are left out and so drop away on that same submit.
-      const listed = new Set(indexEntries.map(entry => entry.uuid));
-      for (const { skill: uuid } of stored) {
-        if (!uuid || listed.has(uuid)) continue;
-        listed.add(uuid);
-        const doc = await fromUuid(uuid).catch(() => null);
-        if (doc) rows.push(toRow({ uuid, name: doc.name, img: doc.img, system: doc.system }, true));
-      }
-
-      skillsByCategory[category] = rows.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    // Skills a Sequence gives that aren't on any tab: a skill from the world or another compendium that the
-    // character has no level saved for yet. They get a row too, so the Granted Skills box can roll and level them.
-    // Kept under GRANTED_ONLY, which isn't a tab, so the tabs (and the form they're part of) don't list them.
-    // Once one's level is changed it's saved, and from then on it's also listed on its attribute's tab.
-    const onTabs = new Set(Object.values(skillsByCategory).flat().map((row) => row.uuid));
-    const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders;
+    const skillsByCategory = Object.fromEntries(tabs.map((tab) => [tab, []]));
     const grantedOnly = [];
-    for (const uuid of new Set(grantedUuids)) {
-      if (!uuid || onTabs.has(uuid)) continue;
-      const doc = await fromUuid(uuid).catch(() => null);
-      if (doc?.type !== "skill") continue;
-      const attribute = doc.system?.skill_attribute;
-      // Where a drop would save it (#dropSkill in base-actor-sheet.mjs). "" = it can't be saved, so its level can't change.
-      const category = [attribute].find((key) => key && key in folders) ?? "";
-      const level = atLeastLevel("untrained", CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels?.[uuid]);
-      const attributeKey = category in CONFIG.LORD_OF_THE_MYSTERIES.attributes ? category : (attribute ?? category);
-      const attributeTotal = this.actor.system.attributes[attributeKey]?.total ?? 0;
-      grantedOnly.push({
-        uuid, name: doc.name, img: doc.img,
-        level, effectiveLevel: level, associated: false, associatedTooltip: "",
-        categories: skillCategoriesOf(doc.system),
-        attributeTotal, analysis: 0, category,
-        attribute: attribute ?? category,
-        flatModifier: doc.system?.modifier ?? 0,
-        modifier: PlayerCharacterSheet._calculateSkillModifier(level, attributeTotal),
-        removable: false,
-      });
+    this._missingSkills = [];
+
+    for (const record of Object.values(this.actor.system.skills ?? {})) {
+      if (record.isBroken) {
+        if (record.isSaved) this._missingSkills.push(this.#missingSkillRow(record, levelLabel));
+        continue;
+      }
+      const onTab = (record.isStandard || record.isSaved) && tabs.includes(record.attribute);
+      // Skills a Sequence gives that aren't on a tab (not saved yet, or linked to an attribute with no tab) are only
+      // in the Granted Skills box. Kept under GRANTED_ONLY, which isn't a tab, so the tabs never list them.
+      if (!onTab && !grantedKeys.has(record.key)) continue;
+      const row = this.#skillRow(record, levelLabel);
+      (onTab ? skillsByCategory[record.attribute] : grantedOnly).push(row);
     }
+    for (const rows of Object.values(skillsByCategory)) rows.sort((a, b) => a.name.localeCompare(b.name));
     skillsByCategory[GRANTED_ONLY] = grantedOnly;
 
-    // Related categories cross the attribute tabs (Social has Strength, Charisma and Inspiration skills),
-    // so this runs once every tab's rows are built.
-    this.#applySkillAssociations(skillsByCategory);
-    // Study meters count from the level the skill is rolled at, so this comes after the associations.
+    // Study meters count from the learned level (with related skills, without effects).
     this.#applyStudyProgress(skillsByCategory);
     await this.#applyFastLearning(skillsByCategory, abilityEntries);
 
     return skillsByCategory;
+  }
+
+
+  /**
+   * One skill row for the tabs and the Granted Skills box (character.hbs, granted-skill-entry.hbs).
+   *   level           the player's pick (the dropdown)
+   *   effectiveLevel  the level it's rolled at, with the reason on hover (associatedTooltip) when it's higher
+   *   learnLevel      what studying and learning by doing go on from (no effects)
+   *   modifier        the number shown: attribute + level bonus + its own modifier + effect bonuses
+   *   rollTooltip     "Click to roll", plus its effect bonuses
+   *   canSave         its level can be changed (its attribute has a tab)
+   * @param {object} record   actor.system.skills[key]
+   * @param {(level: string) => string} levelLabel
+   * @returns {object}
+   */
+  #skillRow(record, levelLabel) {
+    const raisedText = skillRaiseText(record, levelLabel);
+    return {
+      key: record.key,
+      uuid: record.uuid,
+      name: record.name,
+      img: record.img,
+      level: record.ownLevel,
+      effectiveLevel: record.effectiveLevel,
+      learnLevel: record.learnLevel,
+      associated: !!raisedText,
+      associatedTooltip: raisedText,
+      categories: record.categories,
+      attributeTotal: record.attributeTotal,
+      analysis: record.analysis ?? 0,
+      category: record.attribute,
+      attribute: record.attribute,
+      flatModifier: record.flatModifier ?? 0,
+      modifier: record.total,
+      hasBonus: (record.bonusTotal ?? 0) !== 0,
+      rollTooltip: skillRollTooltip(this.actor, record.key),
+      canSave: record.canSave,
+    };
+  }
+
+
+  /**
+   * A saved skill whose Item can't be found (deleted, or its compendium isn't installed). Its level and analyses are
+   * still saved under its key; the row lets the player see that and remove it.
+   * @param {object} record
+   * @param {(level: string) => string} levelLabel
+   * @returns {{key: string, uuid: string, name: string, levelLabel: string, analysis: number}}
+   */
+  #missingSkillRow(record, levelLabel) {
+    return {
+      key: record.key,
+      uuid: record.uuid,
+      name: game.i18n.format("LORD_OF_THE_MYSTERIES.SkillKeys.MissingSkill", { key: record.key }),
+      levelLabel: levelLabel(record.level),
+      analysis: record.analysis ?? 0,
+    };
   }
 
 
@@ -443,19 +407,24 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
       .map((entry) => fromUuid(entry.uuid).catch(() => null)));
     const teachers = docs.filter((doc) => doc?.system?.fastLearning?.enabled);
 
-    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+    const learning = this.actor.system.learningByKey ?? {};
     const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
+    // Each ability's single skills by key, so a world copy of a skill dropped on the ability counts too.
+    const teaching = teachers.map((ability) => ({
+      ability,
+      fastLearning: { ...ability.system.fastLearning, skills: (ability.system.fastLearning.skills ?? []).map((uuid) => skillKeyFor(uuid)) },
+    }));
 
     for (const row of Object.values(skillsByCategory).flat()) {
-      // The learned level: without active effects' raises (see #applySkillAssociations).
+      // The learned level: without active effects' raises (learnLevel, data/actor/base-actor.mjs).
       const level = row.learnLevel ?? row.effectiveLevel;
-      row.teachers = teachers
-        .filter((ability) => abilityTeaches(ability.system.fastLearning, row)
+      row.teachers = teaching
+        .filter(({ ability, fastLearning }) => abilityTeaches(fastLearning, { uuid: row.key, categories: row.categories })
           && canTeachTo(level, ability.system.fastLearning.maxLevel))
-        .map((ability) => ability.uuid)
+        .map(({ ability }) => ability.uuid)
         .join("|");
 
-      const count = successesFor(learning.get(row.uuid), level);
+      const count = successesFor(learning[row.key], level);
       const next = nextLevel(level);
       row.successText = "";
       row.successTooltip = "";
@@ -478,14 +447,14 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
    * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
    */
   #applyStudyProgress(skillsByCategory) {
-    const learning = new Map((this.actor.system.learning ?? []).map((entry) => [entry.skill, entry]));
+    const learning = this.actor.system.learningByKey ?? {};
 
     for (const row of Object.values(skillsByCategory).flat()) {
-      // The learned level: without active effects' raises (see #applySkillAssociations).
+      // The learned level: without active effects' raises (learnLevel, data/actor/base-actor.mjs).
       const level = row.learnLevel ?? row.effectiveLevel;
       const next = nextLevel(level);
       row.canStudy = !!next;
-      row.studyPercent = next ? meterPercent(studyProgressFor(learning.get(row.uuid), level)) : 0;
+      row.studyPercent = next ? meterPercent(studyProgressFor(learning[row.key], level)) : 0;
       row.studyTooltip = row.studyPercent
         ? game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.ProgressTooltip", {
             percent: row.studyPercent,
@@ -496,58 +465,6 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
   }
 
 
-  /**
-   * Related-skill improvement: raise skills whose related skill is Advanced or better (helpers/skill-associations.mjs).
-   * Only the rolled level and the shown modifier change; the dropdown keeps the player's own pick.
-   * @param {Record<string, object[]>} skillsByCategory  The rows from _prepareSkillList, changed in place.
-   */
-  #applySkillAssociations(skillsByCategory) {
-    const rows = Object.values(skillsByCategory).flat();
-    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
-
-    // First the character's Sequences raise their skills (base-actor.mjs sequenceSkillSteps), then active effects
-    // (effectSkillRaises, effects/effect-grants.mjs), then related skills raise each other from those levels:
-    // a Sequence or effect that makes Sword Advanced also lifts Melee.
-    // The same is worked out once more without the effects: what the character has learned. Studying and learning
-    // by doing go by that level (row.learnLevel), so a temporary buff is never saved as a learned level.
-    const sequenceSteps = this.actor.system.sequenceSkillSteps ?? {};
-    const effectRaises = this.actor.system.effectSkillRaises ?? {};
-    const learnedRows = rows.map((row) => ({ ...row, level: raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0) }));
-    const boostedRows = learnedRows.map((row) => ({ ...row, level: applySkillRaises(row.level, effectRaises[row.uuid]) }));
-    const learned = computeAssociatedLevels(learnedRows);
-    const results = computeAssociatedLevels(boostedRows);
-
-    rows.forEach((row, index) => {
-      row.learnLevel = learned.get(row.uuid)?.level ?? learnedRows[index].level;
-
-      const steps = sequenceSteps[row.uuid] ?? 0;
-      const raises = effectRaises[row.uuid] ?? [];
-      const boostedByEffects = boostedRows[index].level !== learnedRows[index].level;
-      const result = results.get(row.uuid);
-      const effective = result?.level ?? boostedRows[index].level;
-      if (effective === row.level) return;   // nothing raised it: no badge
-
-      row.effectiveLevel = effective;
-      row.associated = true;
-      row.modifier = PlayerCharacterSheet._calculateSkillModifier(effective, row.attributeTotal);
-
-      // Hover text: why it's higher than the dropdown says. Any of the reasons, or several.
-      const reasons = [];
-      if (steps > 0) {
-        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
-      }
-      if (boostedByEffects) reasons.push(effectRaiseText(raises, levelLabel));
-      if (result?.raised) {
-        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
-          level: levelLabel(result.level),
-          sources: result.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
-        }));
-      }
-      row.associatedTooltip = reasons.join(" · ");
-    });
-  }
-
-  
   /**
    * The actor's abilities that grant skills, in sheet order. Each gets its own skill tab.
    * @returns {Item[]}
@@ -584,6 +501,14 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const attributeTotals = Object.fromEntries(
       Object.entries(this.actor.system.attributes).map(([key, attr]) => [key, attr.total ?? 0])
     );
+    // A granted skill picked from the options, or an Education copy of a regular skill, has that skill's key, and gets
+    // its bonuses from effects (a Stealth bonus counts for the Education copy of Stealth too). Typed-in custom skills
+    // have no key, so effects can't point at them.
+    const skills = {
+      keyOf: (uuid) => skillKeyFor(uuid),
+      bonusOf: (key) => this.actor.system.skillFor?.(key)?.bonusTotal ?? 0,
+      tooltipOf: (key) => (key ? skillRollTooltip(this.actor, key) : game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip")),
+    };
     const entries = await Promise.all(this._grantingAbilities().map(async item => {
       const options = (await Promise.all(
         item.system.skillOptions.map(async uuid => {
@@ -593,7 +518,8 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
       )).filter(Boolean);
       const tab = buildGrantedSkillTab(
         { id: item.id, name: item.name, grantedSkills: item.system.grantedSkills, options },
-        attributeTotals
+        attributeTotals,
+        skills
       );
       return [`ability-${item.id}`, tab];
     }));
@@ -628,12 +554,8 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
       });
     });
 
-    // Level dropdowns in the Granted Skills box (granted-skill-entry.hbs). No `name`: see #onGrantedSkillLevel.
-    for (const select of this.element.querySelectorAll("[data-granted-skill-level]")) {
-      if (select.dataset.bound) continue;
-      select.dataset.bound = "1";
-      select.addEventListener("change", (event) => this.#onGrantedSkillLevel(event));
-    }
+    // Skill level dropdowns and Education analysis boxes (tabs and Granted Skills box) save through the base sheet
+    // (data-skill-field, #onSkillFieldChange in base-actor-sheet.mjs).
 
     // Enter in the custom-skill box adds it instead of submitting the sheet.
     this.element.querySelectorAll(".granted-skill-custom").forEach(input => {
@@ -643,33 +565,6 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
         PlayerCharacterSheet._onAddGrantedCustom.call(this, ev, ev.currentTarget);
       });
     });
-  }
-
-
-  /**
-   * A level dropdown in the Granted Skills box: save the new level to that one skill (system.skills[category]).
-   *
-   * The same skill usually also has a dropdown on its attribute tab, and that one is part of the sheet's form.
-   * If this change reached the form, the form would save right away with the tab's OLD level and undo this one,
-   * so the event is stopped here and the level is saved directly. The sheet then redraws both dropdowns.
-   * @param {Event} event
-   */
-  async #onGrantedSkillLevel(event) {
-    event.stopPropagation();
-    if (!this.isEditable) return;
-    const select = event.currentTarget;
-    const row = select.closest("[data-skill-uuid]");
-    const uuid = row?.dataset.skillUuid;
-    const category = row?.dataset.category;
-    if (!uuid || !category) return;
-
-    const level = select.value;
-    const current = this.actor.toObject().system.skills?.[category] ?? [];
-    const index = current.findIndex((entry) => entry.skill === uuid);
-    const updated = index < 0
-      ? [...current, { skill: uuid, level }]
-      : current.map((entry, i) => (i === index ? { ...entry, level } : entry));
-    await this.actor.update({ [`system.skills.${category}`]: updated });
   }
 
 
@@ -865,6 +760,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const row = target.closest("[data-skill-uuid]");
     if (!row) return;
     await openStudyDialog(this.actor, {
+      key: row.dataset.skillKey,
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
       level: row.dataset.learnLevel || row.dataset.level,
@@ -882,6 +778,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const teachers = row?.dataset.teachers?.split("|").filter(Boolean) ?? [];
     if (!teachers.length) return;
     await openSuccessDialog(this.actor, {
+      key: row.dataset.skillKey,
       uuid: row.dataset.skillUuid,
       name: row.dataset.skillName,
       level: row.dataset.learnLevel || row.dataset.level,   // without active effects' raises, like Study
@@ -951,13 +848,10 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const row = target.closest("[data-skill-uuid]");
     if (!ability || !row) return;
 
-    const { category, skillUuid } = row.dataset;
-    if (category === "edu") {
-      const entries = this.actor.toObject().system.skills[category] ?? [];
-      const entry = entries.find(e => e.skill === skillUuid);
-      if (entry) entry.analysis = (entry.analysis ?? 0) + 1;
-      else entries.push({ skill: skillUuid, level: "untrained", analysis: 1 });
-      await this.actor.update({ [`system.skills.${category}`]: entries });
+    const { category, skillKey } = row.dataset;
+    if (category === "edu" && skillKey) {
+      const analysis = (this.actor.system.skills?.[skillKey]?.analysis ?? 0) + 1;
+      await this.actor.update(skillRecordUpdate(this.actor, skillKey, { analysis }));
       return;
     }
     await ability.update({

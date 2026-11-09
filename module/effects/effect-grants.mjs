@@ -6,11 +6,12 @@
  *   system.skillIncreases  Skill levels: { skillUuid, value, maxLevel }. The skill is rolled `value` levels higher,
  *                          but this effect never takes it above maxLevel (blank = no limit). A skill that's already
  *                          at or above maxLevel is left alone, never lowered.
+ *   Skill roll bonuses are ordinary changes (system.skills.<key>.bonus), see effects/skill-bonuses.mjs.
  *
  * "Active" means turned on and not suppressed (gear that's stowed, see documents/active-effect.mjs). Effects an Item
  * lends its owner count, and so do the copies of granted abilities' passive effects (effects/granted-effects.mjs).
  *
- * Skill raises are worked out with the others, in this order (base-actor.mjs raisedSkillLevel):
+ * Skill raises are worked out with the others, in this order (helpers/skill-records.mjs computeSkillLevels):
  *   1. the level the player picked (at least the starting level, like Dodge's Trained)
  *   2. + the Sequences' skill increases
  *   3. + the effects' skill increases, each one capped at its own maxLevel
@@ -42,17 +43,22 @@ export function isEffectActive(effect) {
 /**
  * Every skill raise the active effects give, by skill.
  * @param {Iterable<ActiveEffect|object>} effects   E.g. actor.allApplicableEffects().
+ * @param {(uuid: string) => string} [keyOf]        Turns each row's skill UUID into the skill's key
+ *                                                  (helpers/skill-registry.mjs skillKeyFor). Default: keep the UUID.
  * @returns {Record<string, {value: number, maxLevel: string, name: string, effectId: string}[]>}
- *   skill uuid -> its raises. Rows with no skill or a value of 0 are left out.
+ *   skill key (or uuid) -> its raises. Rows with no skill or a value of 0 are left out, and so are rows whose skill
+ *   keyOf can't find.
  */
-export function collectSkillRaises(effects) {
+export function collectSkillRaises(effects, keyOf = (uuid) => uuid) {
   const raises = {};
   for (const effect of effects ?? []) {
     if (!isEffectActive(effect)) continue;
     for (const row of effect.system?.skillIncreases ?? []) {
       const value = Number(row?.value) || 0;
       if (!row?.skillUuid || value <= 0) continue;
-      (raises[row.skillUuid] ??= []).push({
+      const key = keyOf(row.skillUuid);
+      if (!key) continue;
+      (raises[key] ??= []).push({
         value,
         maxLevel: row.maxLevel ?? "",
         name: effect.name ?? "",

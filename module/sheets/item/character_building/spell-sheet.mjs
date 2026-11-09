@@ -44,7 +44,7 @@ export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBas
     context.enrichedDescription = await this._enrich(this.item.system.description);
     context.enrichedSpecial = await this._enrich(this.item.system.special);
 
-    // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
+    // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey).
     context.actionSkill = await prepareSkillSlot(this.item);
     context.outcomeTables = await prepareTableSlots(this.item);
 

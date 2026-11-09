@@ -149,6 +149,72 @@
         {{/each}}
       </ol>
     </div>
+
+    {{!-- Bonuses to skill rolls (effects/skill-bonuses.mjs). Each row is one of the effect's changes
+          (system.skills.<key>.bonus), so it shows on the Changes tab too. The boxes have no `name`: they save the
+          change straight away (data-lotm-change-index = its place in the changes list). --}}
+    <div class="lotm-grant-list" data-lotm-grant-zone="bonuses">
+      <h4>{{localize "LORD_OF_THE_MYSTERIES.SkillBonuses.SkillsTitle"}}</h4>
+      <ol>
+        {{#each lotm.skillBonuses as |row|}}
+        <li class="lotm-grant-row{{#if row.broken}} broken{{/if}}">
+          <img src="{{row.img}}" alt="" width="24" height="24" />
+          {{#if row.broken}}
+          <span class="lotm-grant-name">{{row.name}}</span>
+          {{else}}
+          <a class="lotm-grant-name" data-action="openGrant" data-uuid="{{row.uuid}}">{{row.name}}</a>
+          {{/if}}
+          <label class="lotm-grant-value" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillBonuses.ValueHint'}}">
+            {{#if row.typeLabel}}<span class="lotm-change-type">{{row.typeLabel}}</span>{{else}}+{{/if}}<input type="number" step="1" value="{{row.value}}"
+                    data-lotm-change-index="{{row.index}}" {{#unless @root.lotm.editable}}disabled{{/unless}} />
+          </label>
+          {{#if @root.lotm.editable}}
+          <a class="lotm-grant-control" data-action="removeBonusChange" data-index="{{row.index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Remove'}}">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+          {{/if}}
+        </li>
+        {{else}}
+        <li class="lotm-grant-hint">{{localize "LORD_OF_THE_MYSTERIES.SkillBonuses.DropSkill"}}</li>
+        {{/each}}
+      </ol>
+    </div>
+
+    {{!-- Bonuses to every skill in a related-skill category (system.skillCategoryBonuses.<category>). --}}
+    <div class="lotm-grant-list lotm-category-bonuses">
+      <h4>{{localize "LORD_OF_THE_MYSTERIES.SkillBonuses.CategoriesTitle"}}</h4>
+      <ol>
+        {{#each lotm.categoryBonuses as |row|}}
+        <li class="lotm-grant-row">
+          <i class="fa-solid fa-layer-group lotm-category-icon"></i>
+          <span class="lotm-grant-name">{{row.name}}</span>
+          <label class="lotm-grant-value" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillBonuses.ValueHint'}}">
+            {{#if row.typeLabel}}<span class="lotm-change-type">{{row.typeLabel}}</span>{{else}}+{{/if}}<input type="number" step="1" value="{{row.value}}"
+                    data-lotm-change-index="{{row.index}}" {{#unless @root.lotm.editable}}disabled{{/unless}} />
+          </label>
+          {{#if @root.lotm.editable}}
+          <a class="lotm-grant-control" data-action="removeBonusChange" data-index="{{row.index}}"
+             data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Effects.Config.Grants.Remove'}}">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+          {{/if}}
+        </li>
+        {{else}}
+        <li class="lotm-grant-hint">{{localize "LORD_OF_THE_MYSTERIES.SkillBonuses.NoCategories"}}</li>
+        {{/each}}
+      </ol>
+      {{#if lotm.editable}}
+      <div class="lotm-category-add">
+        <select data-lotm-bonus-category>
+          {{selectOptions lotm.categoryOptions}}
+        </select>
+        <button type="button" data-action="addCategoryBonus">
+          <i class="fa-solid fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.SkillBonuses.AddCategory"}}
+        </button>
+      </div>
+      {{/if}}
+    </div>
   </fieldset>
 
   {{#if lotm.grantedFrom}}

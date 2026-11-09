@@ -35,6 +35,7 @@
     <ul class="skill-list npc-skill-list">
       {{#each skills as |skill|}}
       <li class="skill-row npc-skill-row{{#unless skill.owned}} granted{{/unless}}{{#if skill.broken}} broken{{/if}}"
+          data-skill-key="{{skill.key}}"
           data-skill-uuid="{{skill.uuid}}"
           data-skill-name="{{skill.name}}"
           data-category="{{skill.category}}"
@@ -46,7 +47,7 @@
           <span class="modifier npc-skill-modifier"></span>
           <span class="skill-name">{{skill.name}}</span>
         {{else}}
-          <a class="modifier rollable-number npc-skill-modifier" data-action="rollSkill" data-tooltip="LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip">
+          <a class="modifier rollable-number npc-skill-modifier{{#if skill.hasBonus}} has-skill-bonus{{/if}}" data-action="rollSkill" data-tooltip="{{skill.rollTooltip}}">
             {{numberFormat skill.modifier decimals=0 sign=true}}
           </a>
           <a class="skill-name" data-action="openItem" data-uuid="{{skill.uuid}}">{{skill.name}}</a>
@@ -65,20 +66,22 @@
         {{/if}}
 
         {{#unless skill.broken}}
-        <select class="skill-level-select" data-npc-skill-level {{#unless (and @root.editable skill.canChangeLevel)}}disabled{{/unless}}>
+        {{!-- No `name`: the dropdown saves only this skill (data-skill-field, base-actor-sheet.mjs). A skill the NPC
+              only had through a Sequence gets its own saved level this way (and then a trash button). --}}
+        <select class="skill-level-select" data-skill-field="level" {{#unless (and @root.editable skill.canChangeLevel)}}disabled{{/unless}}>
           {{selectOptions @root.skillLevelOptions selected=skill.level localize=true}}
         </select>
         {{/unless}}
 
         {{#if @root.editable}}
           {{#if skill.owned}}
-            <button type="button" class="drop-entry-remove" data-action="deleteSkill" data-uuid="{{skill.uuid}}" data-category="{{skill.category}}"
+            <button type="button" class="drop-entry-remove" data-action="deleteSkill" data-skill-key="{{skill.key}}"
                     data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Remove" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
               <i class="fa-solid fa-trash"></i>
             </button>
           {{else}}
             {{!-- Only a Sequence gives this skill: hide the raise on this NPC (the Sequence isn't changed). --}}
-            <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{skill.uuid}}"
+            <button type="button" class="drop-entry-remove drop-entry-hide" data-action="hideGrant" data-hide-key="{{skill.hideKey}}"
                     data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Hide" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Hide'}}">
               <i class="fa-solid fa-eye-slash"></i>
             </button>

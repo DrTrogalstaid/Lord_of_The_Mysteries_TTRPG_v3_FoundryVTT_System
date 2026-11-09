@@ -865,3 +865,33 @@
 .lotm.sheet.actor .damage-resistance-only-box {
   margin-top: 4px;
 }
+
+/* A skill whose number includes a bonus from an Active Effect (hover the number to see which). */
+.lotm.sheet.actor .skill-row .modifier.has-skill-bonus,
+.lotm.sheet.actor .granted-skill-entry .modifier.has-skill-bonus {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* Saved skills whose Item can't be found any more (player sheet, under the skill tabs). */
+.lotm.sheet.actor .missing-skills {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--psx-border, currentColor);
+}
+
+.lotm.sheet.actor .missing-skills .hint {
+  margin: 0 0 2px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.lotm.sheet.actor .missing-skill-row .skill-name {
+  flex: 1;
+  font-style: italic;
+}
+
+.lotm.sheet.actor .missing-skill-row .missing-skill-level {
+  opacity: 0.8;
+  margin-right: 6px;
+}

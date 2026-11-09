@@ -14,6 +14,7 @@ import LordOfTheMysteriesActorBase from "./base-actor.mjs";
  *                  sheets/base-actor-sheet.mjs): the granted Item's uuid, or "<gear item id>#<action uuid>"
  *                  for an action on one piece of gear.
  *   No Agility penalty for carrying too much (_carryingAgilityPenalty below). Worn armor's penalty still applies.
+ *   Only the skills the GM drops on them, not every standard skill (_includesStandardSkills below).
  *
  * Notes are kept in `biography` (from the base schema).
  */
@@ -29,6 +30,14 @@ export default class LordOfTheMysteriesNPC extends LordOfTheMysteriesActorBase {
     );
 
     return schema;
+  }
+
+  /**
+   * NPCs only have the skills the GM drops on them (and any a Sequence or effect gives), not every standard skill.
+   * @override
+   */
+  _includesStandardSkills() {
+    return false;
   }
 
   /**

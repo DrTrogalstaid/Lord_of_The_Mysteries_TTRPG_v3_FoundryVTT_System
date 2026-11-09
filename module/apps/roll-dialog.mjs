@@ -54,7 +54,7 @@ export const ROLL_DIALOG_PARTIALS = [
  *   _totalLabel()         what the Roll button shows in brackets, e.g. "+7"
  *   _flavor()             the chat message's title, e.g. "Pistol Check (Agility)"
  *   rollKind              "skill", "attribute" or "action", for the status modifiers (default "attribute")
- *   rollSkillUuid         the skill rolled, for skill checks (Deaf notes Listen checks)
+ *   rollSkillKey          the skill rolled, for skill checks (Deaf notes Listen checks); rollSkillUuid its UUID
  *   usesStatusExtras      false for rolls the statuses' modifiers don't belong in (sanity and promotion checks)
  *   _resultFor(roll)      what the chat card says about the result, and the flags saved on the message
  * Like the sheets, Foundry merges DEFAULT_OPTIONS down the chain, so a dialog only lists what's new for it.
@@ -144,8 +144,13 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     return "attribute";
   }
 
-  /** For a skill check: the skill's UUID (Deaf notes Listen checks). */
+  /** For a skill check: the skill's UUID. */
   get rollSkillUuid() {
+    return null;
+  }
+
+  /** For a skill check: the skill's key (Deaf notes Listen checks). */
+  get rollSkillKey() {
     return null;
   }
 
@@ -195,6 +200,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     const { modifiers, notes } = statusRollExtras({
       actor: this.actor,
       kind: this.rollKind,
+      skillKey: this.rollSkillKey,
       skillUuid: this.rollSkillUuid,
       targets: targetedActors(),
     });

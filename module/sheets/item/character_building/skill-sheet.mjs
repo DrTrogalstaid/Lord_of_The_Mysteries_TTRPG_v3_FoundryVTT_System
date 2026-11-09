@@ -1,4 +1,6 @@
 import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { skillKeyFromName } from "../../../helpers/skill-keys.mjs";
+import { skillInfo } from "../../../helpers/skill-registry.mjs";
 
 /** The related-skill categories box. Include it in skill.hbs with {{> "systems/lotm/templates/item/character_building/parts/skill-categories.hbs"}} */
 const SKILL_CATEGORIES_PARTIAL = "systems/lotm/templates/item/character_building/parts/skill-categories.hbs";
@@ -36,6 +38,17 @@ export class LordOfTheMysteriesSkillSheet extends LordOfTheMysteriesItemSheetBas
     // Dropdown choices for the related-skill categories box.
     context.categoryChoices = CONFIG.LORD_OF_THE_MYSTERIES.skillCategories;
     context.categoryModes = CONFIG.LORD_OF_THE_MYSTERIES.skillCategoryModes;
+
+    // Identifier and Standard skill (data/item/character_building/skill.mjs, helpers/skill-registry.mjs).
+    // A blank Identifier shows the key its name gives. A Standard box that's never been saved shows what the
+    // registry decided from the compendium folder (only for the skill the registry actually uses under this key).
+    const key = this.item.system.key;
+    const info = skillInfo(key);
+    context.skillKey = key;
+    context.identifierPlaceholder = skillKeyFromName(this.item.name);
+    context.isStandard = this.item.system.isStandard ?? (info?.uuid === this.item.uuid ? info.isStandard : false);
+    // Another Item is the one actors use under this key (this is a world copy of a compendium skill, say).
+    context.keyUsedBy = info && info.uuid !== this.item.uuid ? info.name : "";
 
     return context;
   }
