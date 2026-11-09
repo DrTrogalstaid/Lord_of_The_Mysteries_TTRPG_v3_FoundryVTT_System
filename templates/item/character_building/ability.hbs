@@ -66,26 +66,8 @@
       </fieldset>
 
       <!--Sequence Upgrades-->
-      <fieldset class="sequence-upgrades">
-        <legend>Sequence Upgrades</legend>
-        <ol class="items-list">
-          {{#each higherSequenceUpgrades as |row|}}
-          <li class="item flexrow">
-            <input type="text" class="blend-input flexlarge"
-                  name="system.higherSequenceUpgrades.{{row.index}}"
-                  value="{{row.value}}" placeholder="Upgrade description" />
-            <div class="item-controls">
-              <a class="item-control" data-action="deleteSequenceUpgrade" data-index="{{row.index}}" title="Delete">
-                <i class="fas fa-trash"></i>
-              </a>
-            </div>
-          </li>
-          {{/each}}
-        </ol>
-        <a class="item-control add-row" data-action="addSequenceUpgrade">
-          <i class="fas fa-plus"></i> Add Upgrade
-        </a>
-      </fieldset>
+      {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.higherSequenceUpgrades" rows=higherSequenceUpgrades
+          class="sequence-upgrades" legend="Sequence Upgrades" placeholder="Upgrade description" addLabel="Add Upgrade"}}
 
       <!--Spell List-->
       <fieldset class="spell-list" data-drop-zone="spellList">

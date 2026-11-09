@@ -1,4 +1,5 @@
 import { effectUse, targetedTokens, useData } from "../effects/effect-application.mjs";
+import { bindDropZone, takeDrop } from "../helpers/listeners.mjs";
 import {
   CATEGORY_BONUS_PATTERN, SKILL_BONUS_PATTERN, categoryBonusChangeKey, skillBonusChangeKey,
 } from "../effects/skill-bonuses.mjs";
@@ -241,21 +242,29 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
 
 
   /**
-   * Where this effect keeps its changes: "system.changes" (Foundry v14), or "changes" on older data.
-   * @returns {string}
+   * The effect's saved changes (system.changes).
+   * @returns {object[]}
    */
-  #changesPath() {
-    return Array.isArray(this.document._source.system?.changes) || !Array.isArray(this.document._source.changes)
-      ? "system.changes" : "changes";
+  #savedChanges() {
+    return foundry.utils.deepClone(this.document._source.system?.changes ?? []);
   }
 
 
   /**
-   * The effect's saved changes.
-   * @returns {object[]}
+   * What's typed on the sheet, as update data (expanded), so a save from a drop or a button doesn't throw away edits
+   * that weren't saved yet (this sheet saves with its Save button, not on every change). Empty when a field doesn't
+   * validate yet: then only the change itself is saved, and the rest stays typed on the sheet.
+   * @returns {object}
    */
-  #savedChanges() {
-    return foundry.utils.deepClone(foundry.utils.getProperty(this.document._source, this.#changesPath()) ?? []);
+  #typedData() {
+    try {
+      const form = this.form ?? this.element.querySelector("form") ?? this.element;
+      const formData = new foundry.applications.ux.FormDataExtended(form);
+      return foundry.utils.expandObject(this._prepareSubmitData(null, form, formData) ?? {});
+    } catch (error) {
+      console.warn("lotm | Couldn't save the effect sheet's other fields with this change", error);
+      return {};
+    }
   }
 
 
@@ -265,16 +274,8 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
    * @param {(changes: object[]) => void} mutate   Changes the list in place.
    */
   async #saveChanges(mutate) {
-    const path = this.#changesPath();
-    let data = {};
-    try {
-      const form = this.form ?? this.element.querySelector("form") ?? this.element;
-      const formData = new foundry.applications.ux.FormDataExtended(form);
-      data = foundry.utils.expandObject(this._prepareSubmitData(null, form, formData) ?? {});
-    } catch (error) {
-      console.warn("lotm | Couldn't save the effect sheet's other fields with this change", error);
-      data = {};
-    }
+    const path = "system.changes";
+    const data = this.#typedData();
 
     // The changes as they are on the sheet; the saved ones if the form doesn't have them.
     let changes = foundry.utils.getProperty(data, path);
@@ -339,24 +340,9 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
    */
   #bindExpiryZone() {
     if (!this.isEditable) return;
-    const zone = this.element.querySelector("[data-lotm-expiry-zone]");
-    if (!zone) return;
-    zone.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      zone.classList.add("drag-over");
-    });
-    zone.addEventListener("dragleave", (event) => {
-      if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-    });
-    zone.addEventListener("drop", async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      zone.classList.remove("drag-over");
-
-      const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
-      if (data?.type !== "Item" || !data.uuid) return;
-      const doc = await fromUuid(data.uuid).catch(() => null);
-      if (!doc) return;
+    bindDropZone(this.element.querySelector("[data-lotm-expiry-zone]"), async (event) => {
+      const { data, doc } = await takeDrop(event);
+      if (data?.type !== "Item" || !doc) return;
       if (!["action", "spell"].includes(doc.type)) {
         ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Expiry.NotAnAction", { name: doc.name }));
         return;
@@ -375,14 +361,7 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
   #bindGrantZones() {
     if (!this.isEditable) return;
     for (const zone of this.element.querySelectorAll("[data-lotm-grant-zone]")) {
-      zone.addEventListener("dragover", (event) => {
-        event.preventDefault();               // without this the browser never fires "drop"
-        zone.classList.add("drag-over");
-      });
-      zone.addEventListener("dragleave", (event) => {
-        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-      });
-      zone.addEventListener("drop", (event) => this.#onDropGrant(event, zone));
+      bindDropZone(zone, (event) => this.#onDropGrant(event, zone));
     }
   }
 
@@ -394,15 +373,9 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
    * @param {HTMLElement} zone
    */
   async #onDropGrant(event, zone) {
-    event.preventDefault();
-    event.stopPropagation();
-    zone.classList.remove("drag-over");
-
+    const { data, doc } = await takeDrop(event);
+    if (data?.type !== "Item" || !doc) return;
     const kind = zone.dataset.lotmGrantZone;
-    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
-    if (data?.type !== "Item" || !data.uuid) return;
-    const doc = await fromUuid(data.uuid).catch(() => null);
-    if (!doc) return;
 
     const wanted = kind === "actions" ? "action" : "skill";
     if (doc.type !== wanted) {
@@ -470,19 +443,10 @@ export default class LotmActiveEffectConfig extends ActiveEffectConfig {
    * @param {object} changes   e.g. { "system.actionList": [...] }
    */
   async #saveWith(changes) {
-    let data = {};
-    try {
-      const form = this.form ?? this.element.querySelector("form") ?? this.element;
-      const formData = new foundry.applications.ux.FormDataExtended(form);
-      data = this._prepareSubmitData(null, form, formData) ?? {};
-    } catch (error) {
-      // A field that doesn't validate yet: save just the change, the rest stays typed on the sheet.
-      console.warn("lotm | Couldn't save the effect sheet's other fields with this change", error);
-      data = {};
-    }
-    data = foundry.utils.mergeObject(foundry.utils.expandObject(data), foundry.utils.expandObject(changes), { inplace: false });
+    const data = foundry.utils.mergeObject(this.#typedData(), foundry.utils.expandObject(changes), { inplace: false });
     await this.document.update(data);
   }
+
 
   /* -------------------------------------------- */
   /*  Saving                                       */

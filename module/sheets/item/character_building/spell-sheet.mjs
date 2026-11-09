@@ -1,102 +1,38 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
-// The Skill slot, the same one the action sheet uses.
-import { SKILL_SLOT_ACTIONS, prepareSkillSlot, bindSkillSlot } from "../../../helpers/skill-slot.mjs";
-// The On Success / On Failure table slots, the same as the action sheet's.
-import { TABLE_SLOT_ACTIONS, prepareTableSlots, bindTableSlots } from "../../../helpers/table-slot.mjs";
+import { ITEM_HEADER_PART } from "../../base-item-sheet.mjs";
+import { RollableItemSheet, ROLLABLE_PARTIALS } from "./rollable-item-sheet.mjs";
 
 
-export class LordOfTheMysteriesSpellSheet extends LordOfTheMysteriesItemSheetBase {
+/**
+ * The spell sheet. A spell rolls like an action (RollableItemSheet: the roll fields, Traits, Effects tab); this adds
+ * the spell's own fields: Special, Target, and Sequence Upgrades. An empty Skill slot means Occultism
+ * (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey).
+ */
+export class LordOfTheMysteriesSpellSheet extends RollableItemSheet {
   /** @override */
   static DEFAULT_OPTIONS = {
     classes: ["spell"],
     window: {
       title: "LORD_OF_THE_MYSTERIES.SheetTitles.Skill"
     },
-    dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
-    actions: {
-      ...SKILL_SLOT_ACTIONS,
-      ...TABLE_SLOT_ACTIONS,
-      addSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onAddSequenceUpgrade,
-      deleteSequenceUpgrade: LordOfTheMysteriesSpellSheet.#onDeleteSequenceUpgrade,
-    },
   };
 
-  /** The Effects tab (sheets/base-item-sheet.mjs). */
-  static HAS_EFFECTS = true;
-
   /** @override */
-  static TABS = LordOfTheMysteriesItemSheetBase.EFFECTS_TABS;
+  static SKILL_HINTS = {
+    empty: "LORD_OF_THE_MYSTERIES.ActionSkill.SpellDefault",
+    drop: "LORD_OF_THE_MYSTERIES.ActionSkill.SpellHint",
+  };
 
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/spell.hbs", templates: [ACTION_TRAITS_PARTIAL, ITEM_EFFECTS_PARTIAL] },
+    form: { template: "systems/lotm/templates/item/character_building/spell.hbs", templates: ROLLABLE_PARTIALS },
   };
-
-  /* -------------------------------------------- */
-  /*  Context Preparation                          */
-  /* -------------------------------------------- */
 
   /** @override */
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-
-    context.enrichedDescription = await this._enrich(this.item.system.description);
     context.enrichedSpecial = await this._enrich(this.item.system.special);
-
-    // The Skill slot. Empty = the spell rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey).
-    context.actionSkill = await prepareSkillSlot(this.item);
-    context.outcomeTables = await prepareTableSlots(this.item);
-
-    // The Traits checkboxes (templates/item/parts/action-traits.hbs).
-    context.traitOptions = this._traitOptions();
-
-    // Sequence Upgrade rows just need their array index for input naming.
-    context.higherSequenceUpgrades = (context.system.higherSequenceUpgrades ?? []).map((value, index) => ({
-      index,
-      value,
-    }));
-
+    context.higherSequenceUpgrades = this._textRows("system.higherSequenceUpgrades");
     return context;
   }
-
-
-  /** @override */
-  _onRender(context, options) {
-    super._onRender(context, options);
-
-    // Let the Skill slot accept a dropped skill (only when the sheet can be edited; bindSkillSlot checks).
-    bindSkillSlot(this);
-    bindTableSlots(this);
-  }
-
-  /* -------------------------------------------- */
-  /*  Drag & Drop                                  */
-  /* -------------------------------------------- */
-
-  /**
-   * Items dropped on the sheet itself are ignored: the Skill slot handles its own drops (helpers/skill-slot.mjs).
-   * Anything else (e.g. an Active Effect) goes to Foundry's own handling.
-   * @override
-   */
-  async _onDropDocument(event, document) {
-    if (document.documentName !== "Item") return super._onDropDocument(event, document);
-    return document;
-  }
-
-  /* -------------------------------------------- */
-  /*  Actions                                      */
-  /* -------------------------------------------- */
-
-  /** Add a blank Sequence Upgrade row. */
-  static async #onAddSequenceUpgrade(event, target) {
-    const current = this.item.system.higherSequenceUpgrades ?? [];
-    await this.item.update({ "system.higherSequenceUpgrades": [...current, ""] });
-  }
-
-  /** Remove a Sequence Upgrade row (data-index = its position). */
-  static async #onDeleteSequenceUpgrade(event, target) {
-    await this._removeFromList("system.higherSequenceUpgrades", target.dataset.index);
-  }
-
 }

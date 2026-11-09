@@ -75,8 +75,15 @@ This system includes a handful of helper CSS classes to help you lay out your sh
 - `grid`: When combined with the `grid-Ncol` classes, this will lay out child elements in a grid.
 - `grid-Ncol`: Replace `N` with any number from 1-12, such as `grid-3col`. When combined with `grid`, this will layout child elements in a grid with a number of columns equal to the number specified.
 
-## Compiling the CSS
+## Styles
 
-This repo includes both CSS for the theme and SCSS source files. If you're new to CSS, it's probably easier to just work in those files directly and delete the SCSS directory. If you're interested in using a CSS preprocessor to add support for nesting, variables, and more, you can run `npm install` in this directory to install the dependencies for the scss compiler. After that, just run `npm run build` to compile the SCSS and start a process that watches for new changes.
+The styles are plain CSS in `css/`, edited directly (no build step). `system.json` lists them under `styles`:
+`lotm.css` has the shared basics (window, flex and grid helpers, form fields); the others are one file per part of the
+system (actor sheets, item sheets, drop sections, inventory, NPC sheet, roll dialogs, effects).
+
+## Tests
+
+`npm test` runs the unit tests in `tests/` with Node (no install needed). `tests/MANUAL_QA.md` lists what to check by
+hand in Foundry.
 
 ![image](http://mattsmith.in/images/lotm.png)

@@ -1,5 +1,6 @@
 import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
+import { promptSpend } from "../apps/spend-dialog.mjs";
 
 /**
  * Spending Spirituality.
@@ -94,43 +95,8 @@ export function spiritualityNote(spent) {
  */
 export async function openSpendSpiritualityDialog(actor) {
   const { value, max } = currentSpirituality(actor);
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Spirituality.${key}`);
-
-  const content = `
-    <div class="lotm spend-spirituality-dialog">
-      <p class="spend-spirituality-current">
-        ${game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.Current", { value, max })}
-      </p>
-      <div class="form-group">
-        <label>${localize("Amount")}</label>
-        <input type="number" name="amount" value="1" min="1" max="${value}" step="1" autofocus>
-      </div>
-      <div class="form-group">
-        <label>${localize("Reason")}</label>
-        <input type="text" name="reason" placeholder="${localize("ReasonPlaceholder")}">
-      </div>
-    </div>`;
-
-  // Closing the window gives null (rejectClose: false), so nothing is spent.
-  const input = await foundry.applications.api.DialogV2.prompt({
-    window: { title: "LORD_OF_THE_MYSTERIES.Spirituality.SpendTitle", icon: "fa-solid fa-sparkles" },
-    content,
-    ok: {
-      label: "LORD_OF_THE_MYSTERIES.Spirituality.Spend",
-      icon: "fa-solid fa-sparkles",
-      callback: (event, button) => ({
-        amount: button.form.elements.amount.valueAsNumber,
-        reason: button.form.elements.reason.value.trim(),
-      }),
-    },
-    rejectClose: false,
-  });
+  const input = await promptSpend({ section: "Spirituality", icon: "fa-solid fa-sparkles", value, max });
   if (!input) return null;
-
-  if (!Number.isFinite(input.amount) || input.amount < 1) {
-    ui.notifications.warn(localize("InvalidAmount"));
-    return null;
-  }
   return spendSpirituality(actor, input.amount, { reason: input.reason });
 }
 

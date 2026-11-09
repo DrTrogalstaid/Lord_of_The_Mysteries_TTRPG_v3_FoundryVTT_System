@@ -24,6 +24,7 @@
  */
 
 import { checkSucceeds, isAttackHit, sanityCheckSucceeds, totalWithLuck } from "./check-results.mjs";
+import { promptSpend } from "../apps/spend-dialog.mjs";
 
 const escape = (text) => Handlebars.escapeExpression(text ?? "");
 const t = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Luck.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Luck.${key}`));
@@ -83,36 +84,8 @@ export async function openSpendLuckDialog(actor) {
     ui.notifications.warn(t("NoneLeft", { name: actor.name }));
     return null;
   }
-  const content = `
-    <div class="lotm spend-luck-dialog">
-      <p>${t("Current", { value, max })}</p>
-      <div class="form-group">
-        <label>${t("Amount")}</label>
-        <input type="number" name="amount" value="1" min="1" max="${value}" step="1" autofocus>
-      </div>
-      <div class="form-group">
-        <label>${t("Reason")}</label>
-        <input type="text" name="reason" placeholder="${escape(t("ReasonPlaceholder"))}">
-      </div>
-    </div>`;
-  const input = await foundry.applications.api.DialogV2.prompt({
-    window: { title: "LORD_OF_THE_MYSTERIES.Luck.SpendTitle", icon: "fa-solid fa-clover" },
-    content,
-    ok: {
-      label: "LORD_OF_THE_MYSTERIES.Luck.Spend",
-      icon: "fa-solid fa-clover",
-      callback: (event, button) => ({
-        amount: button.form.elements.amount.valueAsNumber,
-        reason: button.form.elements.reason.value.trim(),
-      }),
-    },
-    rejectClose: false,
-  });
+  const input = await promptSpend({ section: "Luck", icon: "fa-solid fa-clover", value, max });
   if (!input) return null;
-  if (!Number.isFinite(input.amount) || input.amount < 1) {
-    ui.notifications.warn(t("InvalidAmount"));
-    return null;
-  }
   return spendLuck(actor, input.amount, { reason: input.reason });
 }
 

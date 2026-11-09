@@ -15,7 +15,8 @@
  * because NPC data has a hiddenGrants list (data/actor/actor-npc.mjs).
  */
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, skillRaiseText, skillRollTooltip } from "./base-actor-sheet.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";
+import { skillRaiseText, skillRollTooltip } from "./actor/skill-tooltips.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import { CARRY_MODES } from "../helpers/inventory-config.mjs";
 import { autoPlacement } from "../helpers/inventory.mjs";
@@ -30,6 +31,9 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
 
   /** NPC actions have no Favorites section or stars. */
   static FAVORITES = false;
+
+  /** The GM types an NPC's Spirituality straight in. */
+  static SPIRITUALITY_EDITABLE = true;
 
   /**
    * @override
@@ -50,7 +54,7 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
   /** @override */
   static PARTS = {
     header:    { template: `${TEMPLATES}/npc/header.hbs` },
-    sidebar:   { template: `${TEMPLATES}/npc/sidebar.hbs` },
+    sidebar:   { template: SIDEBAR_TEMPLATE },
     tabs:      { template: `${TEMPLATES}/npc/tab-nav.hbs` },
     main:      { template: `${TEMPLATES}/npc/main.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
     abilities: { template: `${TEMPLATES}/npc/abilities.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },

@@ -5,16 +5,16 @@
  *     ├─ PlayerCharacterSheet          (player-character-sheet.mjs) skills from the compendium, study, money, rests, biography
  *     └─ NpcSheet                      (npc-sheet.mjs) stat block, dropped-on skills, hiding granted entries
  *
- * What lives here:
- *   - the drop sections (Sequences, Abilities, Actions, Spells, Inventory) and everything nested inside them
+ * What lives here: the sheet itself, putting together what the modules in sheets/actor/ work out, and the buttons.
+ *   - the drop sections' context (Sequences, Abilities, Actions, Spells, Inventory, and what they grant):
+ *     actor/sections.mjs builds the entries, actor/groups.mjs the Favorites, action sections and Spell Lists
  *   - drag and drop onto the sheet
- *   - action rows: attack / damage / ammo buttons
- *   - moving entries up / down, sending to chat, opening, creating and deleting Items
+ *   - moving entries up / down, favorites, sending to chat, opening, creating and deleting Items
  *   - attribute, skill and action rolls (the roll dialogs in apps/; Shift-click skips the dialog),
- *     damage resistance rows, spending Spirituality
+ *     damage reduction / resistance rows, spending Spirituality
  *   - hiding granted entries, for actors whose data has a hiddenGrants list (NPCs, see actor-npc.mjs)
- *   - the Effects tab: status toggles and every effect on the actor (effects/status-effects.mjs), and the
- *     sidebar tooltips that say how statuses change Physical Defense and movement
+ *   - the Effects tab's buttons (the rows and the sidebar's status notes: actor/effects-panel.mjs)
+ *   - skill hover text for both sheets' skill lists: actor/skill-tooltips.mjs
  *
  * How the sheets that extend this class add their own things:
  *   - DEFAULT_OPTIONS is merged by Foundry down the chain, so a sheet only lists what's new for it.
@@ -27,22 +27,21 @@
 
 import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import AttributeCheckDialog from "../apps/attribute-check-dialog.mjs";
-import { getActionAttackSummary, getDamageTooltip, rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
+import { rollActionAttack, rollActionDamage } from "../helpers/action-roll.mjs";
 import { autoPlacement, placementUpdate } from "../helpers/inventory.mjs";
-import { ammoBoxStatus, fireWithoutRoll, firearmStatus, gunFor } from "../helpers/firearms.mjs";
+import { fireWithoutRoll, gunFor } from "../helpers/firearms.mjs";
 import { GunHandling } from "../helpers/gun-handling.mjs";
-import { openSpendSpiritualityDialog, spiritualityCost, useActionSpirituality } from "../helpers/spirituality.mjs";
-import { STATUS_RULES, activeStatusIds, statusRule } from "../effects/status-effects.mjs";
-import { grantedEffectsDiff, syncGrantedEffects } from "../effects/granted-effects.mjs";
-import { grantedActionUuids, isEffectActive } from "../effects/effect-grants.mjs";
-import { usesLeft } from "../effects/action-expiry.mjs";
-import { toggleButton, useToggleAction } from "../effects/toggle-effects.mjs";
-import { normalizeDamageType } from "../helpers/damage-math.mjs";
+import { openSpendSpiritualityDialog, useActionSpirituality } from "../helpers/spirituality.mjs";
+import { statusRule } from "../effects/status-effects.mjs";
+import { syncGrantedEffects } from "../effects/granted-effects.mjs";
+import { useToggleAction } from "../effects/toggle-effects.mjs";
 import { openSanityCheck } from "../helpers/sanity.mjs";
 import { deleteSkillUpdate, skillRecordUpdate } from "../helpers/skill-data.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
-import { CATEGORY_BONUS_PATTERN, SKILL_BONUS_PATTERN, changeAmount, effectChanges } from "../effects/skill-bonuses.mjs";
-import { skillBonusRowsFor } from "../helpers/check-bonuses.mjs";
+import { bindDropZone, bindEach } from "../helpers/listeners.mjs";
+import { prepareEffectsPanel, prepareStatusNotes } from "./actor/effects-panel.mjs";
+import { DIGESTION_MAX, DIGESTION_MIN, ORDER_FLAG, STACKABLE_TYPES, SectionBuilder, sectionForType, sectionLabel } from "./actor/sections.mjs";
+import { COLLAPSED_FLAG, COLLAPSED_SPELLS_FLAG, FAVORITES_FLAG, groupActions, groupSpellLists, spellListCollapseKey } from "./actor/groups.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -74,401 +73,19 @@ export const ENTRY_ROLLS_PARTIAL = `${PARTS_FOLDER}/entry-rolls.hbs`;
 /** The Favorites star of an action or spell row. Used by both row partials. */
 export const ENTRY_FAVORITE_PARTIAL = `${PARTS_FOLDER}/entry-favorite.hbs`;
 
+/** The sidebar both sheets use as their "sidebar" part. */
+export const SIDEBAR_TEMPLATE = "systems/lotm/templates/actor/parts/sidebar.hbs";
+
 /** Every partial above, for a part's `templates` list. */
 export const SHARED_PARTIALS = [
   DROP_SECTION_PARTIAL, DROP_ENTRY_PARTIAL, SECTION_ENTRY_PARTIAL, ACTION_GROUPS_PARTIAL, HIDDEN_GRANTS_PARTIAL,
   ENTRY_ROLLS_PARTIAL, ENTRY_FAVORITE_PARTIAL,
 ];
 
-/**
- * Hover text for a skill that active effects raise: "Effects: Eagle Eye (+1, at most Advanced), Focus (+1)".
- * Used by the player and NPC sheets' skill lists.
- * @param {{value: number, maxLevel: string, name: string}[]} raises   actor.system.effectSkillRaises[uuid]
- * @param {(level: string) => string} levelLabel
- * @returns {string}
- */
-export function effectRaiseText(raises, levelLabel) {
-  const parts = (raises ?? []).map((raise) => {
-    const detail = raise.maxLevel
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectStepsCapped", { steps: raise.value, level: levelLabel(raise.maxLevel) })
-      : game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectSteps", { steps: raise.value });
-    return `${raise.name} (${detail})`;
-  });
-  return game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedByEffects", { sources: parts.join(", ") });
-}
-
-
-/**
- * Hover text for a skill rolled higher than the player's pick: "Sequence: +1 level(s) · Effects: ... · Rolled at
- * Trained, raised by Sword (Advanced)". Empty when nothing raised it. Used by the player and NPC sheets.
- * @param {object} record   The skill's record (actor.system.skills[key]).
- * @param {(level: string) => string} levelLabel
- * @returns {string}
- */
-export function skillRaiseText(record, levelLabel) {
-  if (!record || record.effectiveLevel === record.ownLevel) return "";
-  const reasons = [];
-  if (record.sequenceSteps > 0) {
-    reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps: record.sequenceSteps }));
-  }
-  if (record.boostedByEffects) reasons.push(effectRaiseText(record.effectRaises, levelLabel));
-  const associated = record.associated;
-  if (associated?.raised) {
-    reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
-      level: levelLabel(associated.level),
-      sources: associated.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
-    }));
-  }
-  return reasons.join(" · ");
-}
-
-
-/**
- * Hover text for a skill's number: "Click to roll", and its bonuses from effects when it has any
- * ("Bonuses: Marksman's Focus +2, Drill (Firearms) +1"). Used by the player and NPC sheets.
- * @param {Actor} actor
- * @param {string} key   The skill's key.
- * @returns {string}
- */
-export function skillRollTooltip(actor, key) {
-  const roll = game.i18n.localize("LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip");
-  const rows = skillBonusRowsFor(actor, key);
-  if (!rows.length) return roll;
-  const signed = (n) => (n < 0 ? `${n}` : `+${n}`);
-  const list = rows.map((row) => `${row.label} ${signed(row.value)}`).join(", ");
-  return `${roll} · ${game.i18n.format("LORD_OF_THE_MYSTERIES.SkillBonuses.Tooltip", { list })}`;
-}
-
-
-/* -------------------------------------------- */
-/*  Drop section configuration                   */
-/* -------------------------------------------- */
-
-/**
- * Every section of the sheet that accepts dropped Items.
- * `types` are Item type keys and must match the keys under "Item" in system.json's documentTypes.
- * `types: null` is the catch-all (inventory): any supported Item type not claimed by another section.
- */
-const DROP_SECTIONS = {
-  skills:    { types: ["skill"] },
-  sequences: { types: ["sequence"] },
-  abilities: { types: ["ability"] },
-  actions:   { types: ["action"] },
-  spells:    { types: ["spell"] },
-  inventory: { types: null },
-};
-
-/**
- * Where the manual order of each section is saved on the actor: { [section]: [entry key, ...] }.
- * Flags need no actor data-model change. Entries missing from a saved order (anything added since)
- * are listed after the ordered ones, and keys whose entry no longer exists are ignored.
- */
-const ORDER_FLAG = "flags.lotm.order";
-
 /** A newly added damage reduction or resistance row (sidebar). */
 const DEFAULT_REDUCTION_TYPE = "physical";
 const DEFAULT_RESISTANCE_TYPE = "fire";
 const DEFAULT_ROW_VALUE = 1;
-
-/** Bounds of a Sequence's digestionAmount */
-const DIGESTION_MIN = 1;
-const DIGESTION_MAX = 20;
-
-/** Item types that cannot be dropped on an actor sheet at all. */
-const UNSUPPORTED_TYPES = ["pathway"];
-
-/**
- * Item types an actor can own more than one copy of (two candles, two revolvers). They skip the
- * duplicate check and are keyed by their own uuid, so two copies of the same compendium Item don't collide.
- */
-const STACKABLE_TYPES = ["gear", "container"];
-
-/**
- * Fields on an Item's system data that hold UUIDs of other Items. Anything found here is
- * resolved and shown in the tab matching the *resolved* Item's type (the `section` is only a
- * fallback for references that no longer resolve).
- * `pick` is for arrays of objects rather than plain UUID strings: the UUID is read from that property.
- */
-const NESTED_FIELDS = [
-  { path: "abilities_gained", section: "abilities" },                       // Sequence / Gear -> Abilities
-  { path: "skill_increase",   section: "skills", pick: "skill_uuid" },      // Sequence -> Skills it raises
-  { path: "trainingBonus",    section: "skills" },                          // Sequence -> Knowledge / Training
-  { path: "spellList.spells", section: "spells" },                          // Ability  -> Spells
-  { path: "actionList",       section: "actions" },                         // Ability / Gear / Active Effect -> Actions
-];
-
-/**
- * Which section an Item type belongs to, or null if it can't be placed on a sheet.
- * @param {string} type
- * @returns {string|null}
- */
-function sectionForType(type) {
-  if (UNSUPPORTED_TYPES.includes(type)) return null;
-  for (const [key, def] of Object.entries(DROP_SECTIONS)) {
-    if (def.types?.includes(type)) return key;
-  }
-  return "inventory";
-}
-
-/** Localization key for a section's title. */
-const sectionLabel = (section) => `LORD_OF_THE_MYSTERIES.Drop.Sections.${section}`;
-
-/**
- * Flatten an Item into the plain object the drop-section partial renders.
- * @param {Item} item
- * @param {{section: string, owned: boolean, key: string, grantedBy?: string[]}} options
- *   `key` identifies the entry in the saved order: the Item's source UUID, so an owned copy and a
- *   reference to the same Item share one key and a position survives re-renders.
- */
-function buildEntry(item, { section, owned, key, grantedBy = [], spellList = "" }) {
-  const system = item.system ?? {};
-  const isAction = item.type === "action";
-  // Actions and spells roll the same way (helpers/action-roll.mjs), so their rows get the same buttons and stats.
-  const isSpell = item.type === "spell";
-  const isRollable = isAction || isSpell;
-  // Actions and spells always show a cost (blank counts as 0); for abilities an unset cost is hidden.
-  const cost = isRollable ? (system.spiritualityCost ?? 0) : (system.spiritualityCost ?? null);
-  const actionType = system.actionType || "";
-  const actionTypeText = actionTypeLabel(actionType);
-  const isSequence = item.type === "sequence";
-  return {
-    key,
-    // What the hide button saves (granted entries on NPCs). Same as `key`, except for actions on gear (see _prepareSections).
-    hideKey: key,
-    uuid: item.uuid,
-    id: owned ? item.id : null,
-    name: item.name,
-    img: item.img,
-    type: item.type,
-    section,
-    owned,
-    nested: !owned,
-    broken: false,
-    // Shown as labeled stats on the row. A cost of 0 is still shown; only an unset cost is hidden.
-    cost,
-    hasCost: cost !== null,
-    actionType,
-    actionTypeLabel: actionTypeText,
-    // Sequences show their digestion amount
-    digestion: isSequence ? (system.digestionAmount ?? DIGESTION_MIN) : null,
-    hasDigestion: isSequence,
-    hasStats: cost !== null || !!actionTypeText || isSequence,
-    // Sequences show "Sequence 9 · <pathway>" and sort by rank.
-    rank: isSequence ? (system.sequence_number ?? null) : null,
-    detail: isSequence ? sequenceDetail(system) : "",
-    grantedBy: [...grantedBy],
-    grantedByLabel: "",
-    // Name of the ability Spell List this entry was found in ("" if none). The Spells tab groups by it.
-    spellList,
-    // Actions and spells: Action Type, Spirituality Cost and Range are always shown. Range is in feet, blank when unset.
-    isAction,
-    isSpell,
-    isRollable,
-    rangeLabel: isRollable && system.range != null
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RangeFeet", { range: system.range })
-      : "",
-    // The attack and damage buttons (actions and spells). They need the actor, so #addActionButtons fills them in later.
-    attack: null,
-    damage: null,
-    spiritButton: null,  // "Spend 2": for a spell with a Spirituality Cost, or an action with one but nothing to roll
-    toggle: null,        // On / Off: for an action with a Toggle effect, like Activate Spirit Vision (effects/toggle-effects.mjs)
-    hasRolls: false,
-    // Guns and ammo (helpers/firearms.mjs). gunId is set on actions that come from a gun's own action list.
-    gunId: "",
-    gunStatus: null,     // action rows: how loaded their gun is
-    ammoButtons: [],     // action rows: Fire / Reload / Chamber / Rotate / Unload buttons ({ use, label, tooltip, gunId, idle })
-    firearm: item.type === "gear" && system.isFirearm ? firearmStatus(item) : null,   // inventory row of a gun
-    ammoBox: item.type === "gear" && system.isAmmo ? ammoBoxStatus(item) : null,     // inventory row of ammo
-    // Spells: the actions this spell grants, shown under it on the Spells tab (filled in by _prepareSections).
-    spellActions: [],
-    // Actions: where they were granted from. spellOnly = only spells grant it, so it stays off the Actions tab.
-    fromSpell: false,
-    fromOther: false,
-    spellOnly: false,
-  };
-}
-
-/**
- * Add an Item's name to an entry's "Granted by" list, unless it's already there or it's the entry itself.
- * @param {object} entry
- * @param {string} name
- */
-function addGrantedBy(entry, name) {
-  if (entry.name !== name && !entry.grantedBy.includes(name)) entry.grantedBy.push(name);
-}
-
-/** The Spell List name an ability starts with (see ability.mjs). An empty list with this name is not shown. */
-const DEFAULT_SPELL_LIST_NAME = "Spells";
-
-/**
- * Whether an ability's Spell List still has the default name (or no name at all).
- * Those lists only appear on the Spells tab once they contain a spell.
- * @param {Item} ability
- * @returns {boolean}
- */
-function hasDefaultSpellListName(ability) {
-  const name = ability.system?.spellList?.name?.trim() ?? "";
-  return !name || name.toLocaleLowerCase() === DEFAULT_SPELL_LIST_NAME.toLocaleLowerCase();
-}
-
-/**
- * The name an ability's Spell List is shown under on the Spells tab.
- * A blank name falls back to the ability's own name, so unnamed lists don't all merge together.
- * @param {Item} ability
- * @returns {string}
- */
-function spellListName(ability) {
-  const name = ability.system?.spellList?.name?.trim();
-  return name || ability.name;
-}
-
-/**
- * Split the Spells section's entries into one group per Spell List name.
- *
- * Lists with the same name (ignoring upper/lower case and extra spaces) become ONE group, even when
- * they come from different abilities. Spells that aren't in any list (dropped straight on the sheet)
- * go in an "Other Spells" group at the bottom. Entries keep the order they already had, so the
- * saved manual order still applies inside each group.
- *
- * @param {object[]} entries      The already-sorted entries of sections.spells.
- * @param {string[]} [listNames]  Spell List names to show even when they have no spells yet.
- * @returns {{key: string, name: string, entries: object[]}[]}
- */
-function groupSpellLists(entries, listNames = []) {
-  const groups = new Map();   // lower-case list name -> group
-  const unlisted = [];
-
-  // Start with an empty group for every named list, so it shows up before any spell is added to it.
-  for (const name of listNames) {
-    const key = name.toLocaleLowerCase();
-    if (!groups.has(key)) groups.set(key, { key, name, entries: [] });
-  }
-
-  for (const entry of entries) {
-    if (!entry.spellList) {
-      unlisted.push(entry);
-      continue;
-    }
-    const key = entry.spellList.toLocaleLowerCase();
-    if (!groups.has(key)) groups.set(key, { key, name: entry.spellList, entries: [] });
-    groups.get(key).entries.push(entry);
-  }
-
-  const lists = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (unlisted.length) {
-    lists.push({ key: "", name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.UnlistedSpells"), entries: unlisted });
-  }
-
-  // Move buttons only move an entry within its own group, so the first / last of each group can't go further.
-  for (const list of lists) {
-    list.entries.forEach((entry, index) => {
-      entry.canMove = list.entries.length > 1;
-      entry.canMoveUp = index > 0;
-      entry.canMoveDown = index < list.entries.length - 1;
-    });
-  }
-
-  return lists;
-}
-
-/* -------------------------------------------- */
-/*  Action sections: Favorites and type sections */
-/* -------------------------------------------- */
-
-/** The type sections for actions, top to bottom. Actions of any other type go in "Other" at the end. */
-const ACTION_GROUP_ORDER = ["attack", "move", "quick", "free", "full"];
-
-/** The actor's favorite actions: entry keys, in the order shown in Favorites. Shared by everyone who sees the sheet. */
-const FAVORITES_FLAG = "flags.lotm.favoriteActions";
-
-/**
- * Which action sections each player has collapsed. Saved on the player's own User, not the actor,
- * so it's different for every player: { [actor id]: [section key, ...] }. Read with game.user.getFlag("lotm", ...).
- */
-const COLLAPSED_FLAG = "collapsedActionGroups";
-
-/** Which Spell Lists each player has collapsed on the Spells tab, saved the same way: { [actor id]: [list key, ...] }. */
-const COLLAPSED_SPELLS_FLAG = "collapsedSpellLists";
-
-/** The key a Spell List is collapsed under. The "Other Spells" group has no name of its own. */
-const spellListCollapseKey = (list) => list.key || "unlisted";
-
-/**
- * Split the Actions section into collapsible groups: Favorites first (when turned on), then one per action type.
- * Favorites can also hold spells (favorited with the star on the Spells tab); they're only listed there and in Favorites.
- *
- * A favorite is shown twice: in Favorites and in its type section (except an action only spells grant,
- * which is only in Favorites; it's also under its spell on the Spells tab). The Favorites copy is a separate object
- * so it can have its own move buttons (its order is the favorites list itself, see #onMoveEntry).
- * Type sections with no actions aren't shown. Entries keep the saved manual order inside each section.
- *
- * @param {object[]} entries        context.sections.actions (already sorted).
- * @param {string[]} favoriteKeys   Entry keys of the favorites, in order (FAVORITES_FLAG).
- * @param {string[]} collapsedKeys  Section keys this player has collapsed (COLLAPSED_FLAG).
- * @param {object}  [options]
- * @param {boolean} [options.favorites=true]  false leaves the Favorites section out (NPC sheet).
- * @param {object[]} [options.spells]         context.sections.spells, so favorited spells can be listed in Favorites.
- * @returns {{key: string, label: string, favorites: boolean, collapsed: boolean, emptyText: string, entries: object[]}[]}
- *   An empty list when the actor has no actions at all.
- */
-function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: showFavorites = true, spells = [] } = {}) {
-  // Nothing to show: no actions, and no favorite spells either.
-  const favoriteSpells = showFavorites ? spells.filter((spell) => favoriteKeys.includes(spell.key)) : [];
-  if (!entries.length && !favoriteSpells.length) return [];
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.ActionGroups.${key}`);
-
-  // Every favorite gets a filled star, wherever it's listed.
-  const favoriteSet = new Set(showFavorites ? favoriteKeys : []);
-  for (const entry of entries) entry.favorite = favoriteSet.has(entry.key);
-
-  // Favorites, in the saved order. Keys of actions and spells the actor no longer has are skipped.
-  const byKey = new Map([...entries, ...favoriteSpells].map((entry) => [entry.key, entry]));
-  const favorites = {
-    key: "favorites",
-    favorites: true,
-    label: localize("Favorites"),
-    emptyText: localize("FavoritesEmpty"),
-    entries: favoriteKeys.filter((key) => byKey.has(key)).map((key) => ({ ...byKey.get(key), favorite: true })),
-  };
-
-  // One section per action type. Actions only spells grant are left out: they're listed under their spell
-  // on the Spells tab, and only come here through Favorites.
-  const byType = new Map();   // type key -> group
-  for (const entry of entries) {
-    if (entry.spellOnly) continue;
-    const type = ACTION_GROUP_ORDER.includes(entry.actionType) ? entry.actionType : "other";
-    if (!byType.has(type)) {
-      byType.set(type, { key: type, favorites: false, label: localize(`Types.${type}`), emptyText: "", entries: [] });
-    }
-    byType.get(type).entries.push(entry);
-  }
-  const typeGroups = [...ACTION_GROUP_ORDER, "other"].filter((type) => byType.has(type)).map((type) => byType.get(type));
-
-  const groups = showFavorites ? [favorites, ...typeGroups] : typeGroups;
-  for (const group of groups) {
-    group.collapsed = collapsedKeys.includes(group.key);
-    // Move buttons only move an entry within its own section (same as the Spells tab).
-    group.entries.forEach((entry, index) => {
-      entry.canMove = group.entries.length > 1;
-      entry.canMoveUp = index > 0;
-      entry.canMoveDown = index < group.entries.length - 1;
-    });
-  }
-  return groups;
-}
-
-/** Display text for an action type key ("attack" -> "Attack"); unknown keys are shown as they are. */
-function actionTypeLabel(key) {
-  if (!key) return "";
-  const langKey = `LORD_OF_THE_MYSTERIES.Action_Type.${key}`;
-  return game.i18n.has(langKey) ? game.i18n.localize(langKey) : key;
-}
-
-/** "Sequence 9 · Pathway" line for a Sequence item's system data. */
-function sequenceDetail(system) {
-  const number = game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.SequenceNumber", { number: system.sequence_number ?? "?" });
-  return system.pathway ? `${number} · ${system.pathway}` : number;
-}
 
 /**
  * Create a blank embedded Item of the given type and open its sheet.
@@ -490,6 +107,13 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
    * @type {boolean}
    */
   static FAVORITES = true;
+
+  /**
+   * Whether the sidebar's Spirituality box can be typed in. Player characters spend it with the Spend button
+   * (and actions' Spirituality Cost), so it's read-only for them; the NPC sheet turns it on.
+   * @type {boolean}
+   */
+  static SPIRITUALITY_EDITABLE = false;
 
   /**
    * Names of every non-default Spell List on the actor's abilities (owned or granted), filled in by
@@ -605,6 +229,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     // Favorites stars on action rows, and the hide buttons on granted rows (read by the shared partials as @root.*).
     context.showFavorites = this.constructor.FAVORITES;
     context.canHideGrants = this.canHideGrants;
+    context.isSpiritualityEditable = this.constructor.SPIRITUALITY_EDITABLE;
 
     // Entries for every drop section: the Items the actor owns plus everything nested inside them.
     // `hidden` is the granted entries this actor has hidden, per section (always empty for player characters).
@@ -653,18 +278,17 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       }
 
       case "sidebar":
-        // Damage reduction rows ("all" or a damage type) and resistance rows (a damage type), with their types
-        // normalized so older rows ("Physical") still show the right choice.
+        // Damage reduction rows ("all" or a damage type) and resistance rows (a damage type).
         context.damageTypeChoices = this._prepareDamageTypes();
         context.reductionTypeChoices = this._prepareDamageTypes(CONFIG.LORD_OF_THE_MYSTERIES.damageReductionTypes);
         context.reductionRows = this._prepareDefenseRows("reductions");
         context.resistanceRows = this._prepareDefenseRows("resistances");
         // Hover text on Physical Defense and Movement when statuses change them.
-        context.statusNotes = this._prepareStatusNotes();
+        context.statusNotes = prepareStatusNotes(this.actor);
         break;
 
       case "effects":
-        context.effectsPanel = await this._prepareEffectsPanel();
+        context.effectsPanel = await prepareEffectsPanel(this.actor);
         break;
     }
 
@@ -711,70 +335,41 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   _onRender(context, options) {
     super._onRender(context, options);
 
-    // Digestion inputs on owned Sequence rows belong to the Sequence item, not the actor,
-    // so they have no `name` (the actor form skips them) and save here instead. The value is
-    // clamped to the schema's bounds so an out-of-range number doesn't fail validation.
-    this.element.querySelectorAll(".drop-entry [data-digestion-input]").forEach(input => {
-      input.addEventListener("change", async ev => {
-        const item = this.actor.items.get(ev.currentTarget.dataset.itemId);
-        if (!item || item.type !== "sequence") return;
-        const raw = Math.floor(Number(ev.currentTarget.value));
-        const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
-        ev.currentTarget.value = value;
-        if (value === item.system.digestionAmount) return;
-        await item.update({ "system.digestionAmount": value });
-      });
+    const root = this.element;
+    // Controls that belong to an Item or a skill record, not the actor, have no `name` (the actor's form skips them)
+    // and save themselves:
+    //   digestion on an owned Sequence's row, clamped to the schema's bounds so an odd number doesn't fail to save
+    bindEach(root, ".drop-entry [data-digestion-input]", "change", (event, input) => this.#onDigestionChange(input));
+    //   skill level dropdowns and analysis boxes (player tabs, Granted Skills box, NPC skill list): only that skill's
+    //   record (#onSkillFieldChange), so the sheet's form never saves skill lists
+    bindEach(root, "[data-skill-field]", "change", (event) => this.#onSkillFieldChange(event));
+    //   inventory controls (quantity, hidden pocket, equipped): the gear or container Item
+    bindEach(root, "[data-item-field]", "change", (event) => this.#onItemFieldChange(event));
+    //   each gear row's location dropdown: Held, Worn, or one of the actor's coats / bags
+    bindEach(root, "[data-gear-location]", "change", (event, select) => {
+      return this.actor.items.get(select.dataset.itemId)?.update(placementUpdate(select.value));
     });
 
-    // Skill level dropdowns and analysis boxes (player tabs, Granted Skills box, NPC skill list). They have no `name`:
-    // each saves only its own skill's record (#onSkillFieldChange), so the sheet's form never saves skill lists.
-    for (const input of this.element.querySelectorAll("[data-skill-field]")) {
-      if (input.dataset.bound) continue;
-      input.dataset.bound = "1";
-      input.addEventListener("change", (event) => this.#onSkillFieldChange(event));
-    }
-
-    // Inventory controls (quantity, hidden pocket, equipped) belong to the gear / container Item, not the actor,
-    // so like the digestion inputs they have no `name` and save here instead. `bound` stops a control that
-    // wasn't re-rendered from getting a second listener.
-    for (const input of this.element.querySelectorAll("[data-item-field]")) {
-      if (input.dataset.bound) continue;
-      input.dataset.bound = "1";
-      input.addEventListener("change", (event) => this.#onItemFieldChange(event));
-    }
-
-    // Each gear row's location dropdown: Held, Worn, or one of the actor's coats / bags.
-    for (const select of this.element.querySelectorAll("[data-gear-location]")) {
-      if (select.dataset.bound) continue;
-      select.dataset.bound = "1";
-      select.addEventListener("change", async (event) => {
-        const item = this.actor.items.get(event.currentTarget.dataset.itemId);
-        await item?.update(placementUpdate(event.currentTarget.value));
-      });
-    }
-
     // Action sections and Spell Lists: when a player opens or closes one, remember it for them (see #saveCollapsed).
-    for (const details of this.element.querySelectorAll("details[data-action-group]")) {
-      if (details.dataset.bound) continue;
-      details.dataset.bound = "1";
-      details.addEventListener("toggle", () => this.#saveCollapsed("actionGroup", COLLAPSED_FLAG));
-    }
-    for (const details of this.element.querySelectorAll("details[data-spell-list]")) {
-      if (details.dataset.bound) continue;
-      details.dataset.bound = "1";
-      details.addEventListener("toggle", () => this.#saveCollapsed("spellList", COLLAPSED_SPELLS_FLAG));
-    }
+    bindEach(root, "details[data-action-group]", "toggle", () => this.#saveCollapsed("actionGroup", COLLAPSED_FLAG));
+    bindEach(root, "details[data-spell-list]", "toggle", () => this.#saveCollapsed("spellList", COLLAPSED_SPELLS_FLAG));
 
-    // Highlight the drop section under the cursor. Purely visual; the drop itself is handled in _onDropDocument.
-    for (const zone of this.element.querySelectorAll(".drop-section")) {
-      if (zone.dataset.dropBound) continue;
-      zone.dataset.dropBound = "1";
-      zone.addEventListener("dragover", () => zone.classList.add("drag-over"));
-      zone.addEventListener("dragleave", (event) => {
-        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-      });
-      zone.addEventListener("drop", () => zone.classList.remove("drag-over"));
-    }
+    // Highlight the drop section under the cursor. The drop itself is handled in _onDropDocument.
+    for (const zone of root.querySelectorAll(".drop-section")) bindDropZone(zone);
+  }
+
+
+  /**
+   * Save a digestion box to its Sequence, clamped to the schema's bounds (the box shows the clamped number).
+   * @param {HTMLInputElement} input   data-item-id = the Sequence.
+   */
+  async #onDigestionChange(input) {
+    const item = this.actor.items.get(input.dataset.itemId);
+    if (!item || item.type !== "sequence") return;
+    const raw = Math.floor(Number(input.value));
+    const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
+    input.value = value;
+    if (value !== item.system.digestionAmount) await item.update({ "system.digestionAmount": value });
   }
 
 
@@ -824,332 +419,14 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
 
   /**
-   * Build the entry list for every drop section.
-   *
-   * 1. Items embedded on the actor go in the section for their type. These are removable.
-   * 2. Every UUID stored inside those Items (NESTED_FIELDS) is resolved and shown in the section for
-   *    the *resolved* Item's type, marked as granted by whichever Item(s) reference it. This repeats
-   *    through the nested Items themselves (Sequence -> Ability -> Spell/Action), so anything at any
-   *    depth shows up in its tab. Nested entries are read-only; remove them from the Item that grants them.
-   *
-   * Each source UUID appears once: an Item the actor owns *and* is granted by something else is shown
-   * once (as owned) with the granting Items listed, and reference loops (A -> B -> A) terminate.
-   *
-   * Active Effects can grant actions too (their system.actionList, effects/effect-grants.mjs). Every active effect
-   * on the actor, or lent to it by one of its Items, is looked inside like an owned Item, so its actions are listed
-   * "Granted by" the effect. Turned off, suppressed (stowed gear) or gone: its actions go away. An action the actor
-   * already has from somewhere else is listed once, with the effect added to its "Granted by".
-   *
-   * Hidden grants (NPCs, see canHideGrants): a granted entry whose hide key is in the actor's hiddenGrants list
-   * goes in `hidden` instead of `sections`, and nothing inside it is looked at, so hiding an ability also hides
-   * its spells and actions (unless something else grants them too). The Item that grants it isn't changed.
-   *   Hide key: the granted Item's uuid, so it's hidden everywhere it would appear on this actor.
-   *             Actions on gear use "<gear item id>#<action uuid>" instead, so each piece of gear hides its own copy.
-   *   An ability is also hidden when another Item grants an ability with the same name (an actor has each ability once).
-   *
+   * The entries of every drop section, and the granted entries this actor has hidden (sheets/actor/sections.mjs).
+   * Also remembers the actor's renamed Spell Lists, for the Spells tab.
    * @returns {Promise<{sections: Record<string, object[]>, hidden: Record<string, object[]>}>}
    */
   async _prepareSections() {
-    const sections = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
-    const hidden = Object.fromEntries(Object.keys(DROP_SECTIONS).map((key) => [key, []]));
-    const bySource = new Map();     // source uuid -> entry already shown
-    const ignored = new Set();      // source uuids of unsupported types
-    const abilityByName = new Map(); // lower-case ability name -> entry: an actor has each ability once
-    const queue = [];
-    const entryByUuid = new Map();  // Item uuid -> its entry, so a spell's actions can be listed under the spell
-    const actionRows = [];          // [entry, action or spell Item] pairs: their roll buttons are filled in at the end
-    this.#namedSpellLists = [];     // non-default Spell List names, shown on the Spells tab even when empty
-
-    // Hidden grants. Empty for actors that can't hide them (player characters).
-    const hiddenKeys = new Set(this.canHideGrants ? this.actor.system.hiddenGrants : []);
-    const hiddenAbilityNames = await this.#hiddenAbilityNames(hiddenKeys);   // lower-case name -> hide key
-    const hiddenByKey = new Map();  // hide key -> its row in `hidden`
-
-    /**
-     * Put a granted entry in the Hidden list for its section (once per hide key).
-     * @param {string} hideKey
-     * @param {Item|null} doc         The granted Item, or null when it no longer exists.
-     * @param {string} parentName     The Item that grants it.
-     * @param {string} fallbackSection
-     */
-    const noteHidden = (hideKey, doc, parentName, fallbackSection) => {
-      const existing = hiddenByKey.get(hideKey);
-      if (existing) {
-        addGrantedBy(existing, parentName);
-        return;
-      }
-      const row = {
-        key: hideKey,
-        uuid: doc?.uuid ?? "",
-        name: doc?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
-        img: doc?.img ?? "icons/svg/hazard.svg",
-        broken: !doc,
-        grantedBy: [parentName],
-        grantedByLabel: "",
-      };
-      hiddenByKey.set(hideKey, row);
-      hidden[(doc && sectionForType(doc.type)) || fallbackSection].push(row);
-    };
-
-    // 1. Owned Items
-    for (const item of this.actor.items) {
-      const section = sectionForType(item.type);
-      if (!section) continue;
-      // Gear and containers can be owned twice from the same source, so they use their own uuid.
-      const source = STACKABLE_TYPES.includes(item.type) ? null : item._stats?.compendiumSource;
-      const key = source ?? item.uuid;
-      const entry = buildEntry(item, { section, owned: true, key });
-      sections[section].push(entry);
-      bySource.set(key, entry);
-      entryByUuid.set(item.uuid, entry);
-      if (entry.isRollable) actionRows.push([entry, item]);
-      if (item.type === "ability") abilityByName.set(item.name.toLocaleLowerCase(), entry);
-      queue.push(item);
-    }
-
-    // 1b. Active effects that grant actions. The queue below reads their system.actionList (NESTED_FIELDS) the
-    // same way it reads an Item's. Their type is "effect", so none of the gear / spell / ability special cases apply.
-    for (const effect of this.actor.allApplicableEffects?.() ?? []) {
-      if (isEffectActive(effect) && grantedActionUuids(effect).length) queue.push(effect);
-    }
-
-    // 2. Nested Items, breadth first
-    while (queue.length) {
-      const parent = queue.shift();
-
-      // Every ability with a renamed Spell List gets a group on the Spells tab, spells or not.
-      if (parent.type === "ability" && !hasDefaultSpellListName(parent)) {
-        this.#namedSpellLists.push(spellListName(parent));
-      }
-
-      // Remember where each action came from. An action from a spell is listed under that spell on the
-      // Spells tab; if only spells grant it, it stays off the Actions tab unless it's a favorite (spellOnly below).
-      const noteGrant = (entry) => {
-        if (entry.section !== "actions") return;
-        if (parent.type !== "spell") {
-          entry.fromOther = true;
-          return;
-        }
-        entry.fromSpell = true;
-        const spellEntry = entryByUuid.get(parent.uuid);
-        if (spellEntry && !spellEntry.spellActions.includes(entry)) spellEntry.spellActions.push(entry);
-      };
-
-      for (const { path, section: fallbackSection, pick } of NESTED_FIELDS) {
-        const raw = foundry.utils.getProperty(parent.system ?? {}, path);
-        if (!Array.isArray(raw)) continue;
-        const uuids = pick ? raw.map((row) => row?.[pick]) : raw;
-
-        // Spells reached through an ability's Spell List remember that list's name, for grouping on the Spells tab.
-        const listName = path === "spellList.spells" ? spellListName(parent) : "";
-
-        for (const uuid of uuids) {
-          if (!uuid || ignored.has(uuid)) continue;
-
-          // Actions on gear are always listed again, even when the actor already has that action
-          // (two revolvers = two "Shoot" actions). Each gear Item's copy gets its own key, so it doesn't merge
-          // with other entries and keeps its own place when moved up / down.
-          const gearAction = parent.type === "gear" && path === "actionList";
-          const key = gearAction ? `${parent.uuid}#${uuid}` : uuid;
-          // The hide key uses the gear's id rather than its uuid: an NPC's token copies share the ids,
-          // but not the uuids, so a gear action hidden on the NPC stays hidden on its tokens.
-          const hideKey = gearAction ? `${parent.id}#${uuid}` : uuid;
-
-          const existing = bySource.get(key);
-          if (existing) {
-            addGrantedBy(existing, parent.name);
-            noteGrant(existing);
-            // An owned spell that is also in a Spell List is shown in that list. A spell in two
-            // differently-named lists stays in the first one found (each spell is shown once).
-            if (listName && !existing.spellList) existing.spellList = listName;
-            continue;
-          }
-
-          // Hidden on this actor: list it under "Hidden", and don't look inside it.
-          if (hiddenKeys.has(hideKey)) {
-            const found = await fromUuid(uuid).catch(() => null);
-            const doc = found?.documentName === "Item" ? found : null;
-            if (doc && !sectionForType(doc.type)) {
-              ignored.add(uuid);
-              continue;
-            }
-            noteHidden(hideKey, doc, parent.name, fallbackSection);
-            continue;
-          }
-
-          const doc = await fromUuid(uuid).catch(() => null);
-
-          if (!doc || doc.documentName !== "Item") {
-            const broken = {
-              key, hideKey, uuid, id: null, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
-              img: "icons/svg/hazard.svg", type: "", section: fallbackSection,
-              owned: false, nested: true, broken: true, cost: null, hasCost: false,
-              actionType: "", actionTypeLabel: "", digestion: null, hasDigestion: false,
-              hasStats: false, rank: null, detail: "",
-              grantedBy: [parent.name], grantedByLabel: "", spellList: listName,
-              spellActions: [], fromSpell: false, fromOther: false, spellOnly: false,
-            };
-            bySource.set(key, broken);
-            sections[fallbackSection].push(broken);
-            noteGrant(broken);
-            continue;
-          }
-
-          const section = sectionForType(doc.type);
-          if (!section) {
-            ignored.add(uuid);
-            continue;
-          }
-
-          // An actor has each ability once. If one with this name is already listed (owned, or granted by
-          // something else, even from a different source), this Item is added to its "Granted by" instead.
-          if (doc.type === "ability") {
-            const lowerName = doc.name.toLocaleLowerCase();
-            const sameName = abilityByName.get(lowerName);
-            if (sameName) {
-              addGrantedBy(sameName, parent.name);
-              bySource.set(uuid, sameName);
-              continue;
-            }
-            // An ability with the same name as a hidden one is hidden too (under the hidden one's key).
-            if (hiddenAbilityNames.has(lowerName)) {
-              noteHidden(hiddenAbilityNames.get(lowerName), doc, parent.name, section);
-              continue;
-            }
-          }
-
-          const entry = buildEntry(doc, { section, owned: false, key, grantedBy: [parent.name], spellList: listName });
-          entry.hideKey = hideKey;
-          // An action from a gun's own list fires / reloads that gun.
-          if (gearAction) entry.gunId = parent.id;
-          bySource.set(key, entry);
-          entryByUuid.set(doc.uuid, entry);
-          sections[section].push(entry);
-          noteGrant(entry);
-          if (entry.isRollable) actionRows.push([entry, doc]);
-          if (doc.type === "ability") abilityByName.set(doc.name.toLocaleLowerCase(), entry);
-          // A gear action is a copy of one that may already be listed, so what's inside it was already handled.
-          if (!gearAction) queue.push(doc);
-        }
-      }
-    }
-
-    // Actions only spells grant (not owned, and not granted by anything else) stay on the Spells tab.
-    // groupActions leaves them out of the Actions tab's type sections; they still show in Favorites.
-    for (const entry of sections.actions) {
-      entry.spellOnly = !entry.owned && entry.fromSpell && !entry.fromOther;
-    }
-
-    // Order each section: the saved manual order first, then anything not in it (new entries land at the
-    // bottom) in the default order: owned before granted, then by Sequence number (lowest = strongest, so
-    // the current Sequence leads) where there is one, then alphabetical.
-    const savedOrder = foundry.utils.getProperty(this.actor, ORDER_FLAG) ?? {};
-    for (const [sectionKey, entries] of Object.entries(sections)) {
-      const saved = Array.isArray(savedOrder[sectionKey]) ? savedOrder[sectionKey] : [];
-      const position = new Map(saved.map((key, index) => [key, index]));
-
-      entries.sort((a, b) => {
-        const pa = position.get(a.key);
-        const pb = position.get(b.key);
-        if (pa !== undefined && pb !== undefined) return pa - pb;
-        if (pa !== undefined) return -1;
-        if (pb !== undefined) return 1;
-
-        if (a.owned !== b.owned) return a.owned ? -1 : 1;
-        if (a.rank != null && b.rank != null && a.rank !== b.rank) return a.rank - b.rank;
-        return a.name.localeCompare(b.name);
-      });
-
-      entries.forEach((entry, index) => {
-        entry.grantedByLabel = entry.grantedBy.join(", ");
-        entry.canMove = entries.length > 1;
-        entry.canMoveUp = index > 0;
-        entry.canMoveDown = index < entries.length - 1;
-      });
-    }
-
-    // Hidden lists: alphabetical.
-    for (const rows of Object.values(hidden)) {
-      rows.sort((a, b) => a.name.localeCompare(b.name));
-      for (const row of rows) row.grantedByLabel = row.grantedBy.join(", ");
-    }
-
-    // Attack and damage buttons on every action row. Promise.all looks up all the actions' skills at once
-    // instead of one after another.
-    await Promise.all(actionRows.map(([entry, action]) => this.#addActionButtons(entry, action)));
-
+    const { sections, hidden, namedSpellLists } = await new SectionBuilder(this.actor, { canHideGrants: this.canHideGrants }).build();
+    this.#namedSpellLists = namedSpellLists;
     return { sections, hidden };
-  }
-
-
-  /**
-   * The names of the hidden abilities, so another ability with the same name can be hidden too.
-   * @param {Set<string>} hiddenKeys
-   * @returns {Promise<Map<string, string>>}  lower-case ability name -> its hide key
-   */
-  async #hiddenAbilityNames(hiddenKeys) {
-    const names = new Map();
-    await Promise.all([...hiddenKeys].map(async (hideKey) => {
-      // Gear action keys are "<gear id>#<action uuid>"; everything else is just the uuid.
-      const doc = await fromUuid(hideKey.split("#").pop()).catch(() => null);
-      if (doc?.documentName === "Item" && doc.type === "ability") names.set(doc.name.toLocaleLowerCase(), hideKey);
-    }));
-    return names;
-  }
-
-
-  /**
-   * Fill in an action row's buttons:
-   *   entry.attack  "Pistol +5" (missing when the action has no skill, or its skill is gone)
-   *   entry.damage  hover text like "1d8+3 Physical" (missing when the action has no damage formula)
-   * @param {object} entry   The row from buildEntry.
-   * @param {Item} action
-   */
-  async #addActionButtons(entry, action) {
-    entry.attack = await getActionAttackSummary(this.actor, action);
-    const damageTooltip = getDamageTooltip(this.actor, action);
-    entry.damage = damageTooltip ? { tooltip: damageTooltip } : null;
-
-    // An action that fires a gun (the gun's Shoot action) shows the gun's rounds ("5/6") and gets the gun's handling
-    // buttons: Reload, Chamber, Rotate, Unload, whichever its feed has (helpers/gun-handling.mjs). Hovering over one
-    // says its Action Type. The rounds are spent through the attack button; a fire action with no attack roll gets a
-    // Fire button instead. (Old Reload / Pull Bolt actions get nothing: that's on the Shoot row now.)
-    entry.ammoButtons = [];
-    if (action.system.ammoUse === "fire") {
-      const gun = gunFor(this.actor, entry.gunId, { quiet: true });
-      entry.gunStatus = gun ? firearmStatus(gun) : null;
-
-      if (!entry.attack) {
-        entry.ammoButtons.push({
-          use: "fire",
-          label: game.i18n.localize("LORD_OF_THE_MYSTERIES.Firearm.Buttons.fire"),
-          tooltip: entry.actionTypeLabel
-            ? game.i18n.format("LORD_OF_THE_MYSTERIES.Firearm.Handling.Tooltip", {
-              name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Firearm.Buttons.fire"), type: entry.actionTypeLabel,
-            })
-            : "",
-          gunId: entry.gunId,
-          idle: false,
-        });
-      }
-      for (const handling of GunHandling.listFor(gun)) entry.ammoButtons.push(handling.toButton());
-    }
-
-    // A Spirituality Cost is spent when the attack is rolled (the checkbox in the roll dialog, helpers/spirituality.mjs).
-    // A "Spend N" button that just spends it is added to:
-    //   - an action with a cost but nothing to roll
-    //   - every spell with a cost, next to its roll button: spells are often cast without an attack roll,
-    //     and every spell can roll (with Occultism by default), so they'd never get the button otherwise.
-    // An action with a Toggle effect (Activate Spirit Vision) gets an On / Off button instead: switching it on spends
-    // the cost (effects/toggle-effects.mjs).
-    entry.toggle = toggleButton(this.actor, action);
-    const cost = spiritualityCost(action);
-    entry.spiritButton = (!entry.toggle && cost > 0 && (!entry.attack || entry.isSpell))
-      ? { label: game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.UseButton", { cost }) }
-      : null;
-
-    entry.hasRolls = !!(entry.attack || entry.damage || entry.ammoButtons.length || entry.gunStatus || entry.spiritButton
-      || entry.toggle);
   }
 
   /* -------------------------------------------- */
@@ -1314,18 +591,12 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
 
   /**
    * The saved damage reduction or resistance rows, for the sidebar: each with its index (for its inputs' names and
-   * its remove button) and its type as a key. Older rows saved "Physical" (the sheet's old choice); showing them as
-   * "physical" means the dropdown picks the right one, and the next save stores the key.
+   * its remove button). Their types are keys ("physical"); the actor's migrateData converts older rows.
    * @param {"reductions"|"resistances"} field
    * @returns {{index: number, damageType: string, value: number, isImmune?: boolean}[]}
    */
   _prepareDefenseRows(field) {
-    const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
-    return (this.actor.system[field] ?? []).map((row, index) => ({
-      ...row,
-      index,
-      damageType: normalizeDamageType(row.damageType, damageTypes) ?? "",
-    }));
+    return (this.actor.system[field] ?? []).map((row, index) => ({ ...row, index, damageType: row.damageType ?? "" }));
   }
 
 
@@ -1710,199 +981,14 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
   /*  Effects tab                                  */
   /* -------------------------------------------- */
 
-  /**
-   * The Effects tab (player and NPC sheets): a toggle for every status, then every effect on the actor, including
-   * the ones its Items lend it (a charm's effect). Each row says where the effect came from, how long it has left,
-   * whether it's switched off or suppressed (gear that's stowed), and has its statuses' buttons (Stand Up).
-   * Copies of granted abilities' passive effects (effects/granted-effects.mjs) say which ability they're from, and
-   * when they're out of date (or some are missing), the list gets a Refresh button.
-   * @returns {Promise<{statuses: object[], effects: object[], grantedOutOfDate: boolean}>}
-   */
-  async _prepareEffectsPanel() {
-    const localize = (key) => game.i18n.localize(key);
-    const active = activeStatusIds(this.actor);
-
-    // Granted-ability copies: which are out of date, and whether any are missing or extra.
-    const granted = await grantedEffectsDiff(this.actor).catch(() => null);
-    const staleIds = new Set((granted?.remove ?? []).map((entry) => entry.id));
-
-    const statuses = Object.values(STATUS_RULES).map((rule) => ({
-      id: rule.id,
-      name: localize(rule.name),
-      img: rule.img,
-      active: active.has(rule.id),
-    }));
-
-    const effects = [];
-    for (const effect of this.actor.allApplicableEffects()) {
-      // Effects on the actor itself, or lent by one of its Items.
-      const owned = effect.parent === this.actor;
-      const rules = effect.statusRules ?? [];
-      // A linked effect another one brought with it (the Bound that comes with Helpless). It follows that effect,
-      // so it has no buttons of its own (see documents/active-effect.mjs).
-      const bringer = effect.impliedByEffect ?? null;
-
-      const details = [];
-      const source = effect.sourceActor?.name;
-      if (source) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Source", { name: source }));
-      const grantedFrom = effect.system?.grantedFrom;
-      if (grantedFrom) {
-        const ability = granted?.names.get(grantedFrom) ?? fromUuidSync(grantedFrom)?.name ?? "?";
-        details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Granted.Via", { ability, name: effect.parent.name }));
-        if (staleIds.has(effect.id)) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Granted.OutOfDate"));
-      } else if (!owned) {
-        details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: effect.parent.name }));
-      }
-      if (bringer) details.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Via", { name: bringer.name }));
-      const grants = await this.#effectGrantsText(effect);
-      if (grants) details.push(grants);
-      details.push(...(await this.#effectUsesText(effect)));
-      if (effect.system?.zone) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Zone.MarkerDetail"));
-      if (effect.disabled) details.push(localize("LORD_OF_THE_MYSTERIES.Effects.Disabled"));
-      else if (effect.isSuppressed) {
-        const stowed = effect.parent?.type === "gear" && effect.parent.system.carry === "stowed";
-        details.push(localize(stowed ? "LORD_OF_THE_MYSTERIES.Effects.SuppressedStowed" : "LORD_OF_THE_MYSTERIES.Effects.Suppressed"));
-      }
-
-      // Time left, only for effects that run out (a duration, or an expiry event like "end of turn").
-      const duration = effect.duration;
-      const finite = duration && (Number.isFinite(duration.value) || duration.expiry);
-
-      effects.push({
-        uuid: effect.uuid,
-        name: effect.name,
-        img: effect.img,
-        disabled: effect.disabled,
-        inactive: effect.disabled || effect.isSuppressed,
-        owned,
-        locked: !!bringer,
-        detail: details.join(" · "),
-        duration: finite ? (duration.label ?? "") : "",
-        // The first of its statuses with a rules page.
-        reference: rules.find((rule) => rule.reference)?.reference ?? null,
-        // Status buttons (Stand Up, ...) only on the actor's own effects, not on ones an Item lends it or linked ones.
-        buttons: (owned && !bringer) ? rules.flatMap((rule) => rule.buttons(effect)) : [],
-      });
-    }
-
-    const grantedOutOfDate = !!(granted && (granted.create.length || granted.remove.length));
-    return { statuses, effects, grantedOutOfDate };
-  }
 
 
-  /**
-   * How many uses an effect has left, for its row on the Effects tab: one line per Action Used row
-   * (effects/action-expiry.mjs), e.g. "Ends after 2 more uses of Smite".
-   * @param {ActiveEffect} effect
-   * @returns {Promise<string[]>}
-   */
-  async #effectUsesText(effect) {
-    const rows = effect.system?.expiryEvents ?? [];
-    if (!rows.length) return [];
-    const anyKey = grantedActionUuids(effect).length ? "AnyGranted" : "AnyAction";
-    return Promise.all(rows.map(async (row) => {
-      const action = row.actionUuid
-        ? ((await fromUuid(row.actionUuid).catch(() => null))?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"))
-        : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Effects.Expiry.${anyKey}`);
-      return game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Expiry.UsesLeft", { count: usesLeft(row), action });
-    }));
-  }
 
 
-  /**
-   * What an effect gives, for its row on the Effects tab: "Grants: Smite, Pistol +1 (at most Advanced)".
-   * Empty when it grants nothing (effects/effect-grants.mjs).
-   * @param {ActiveEffect} effect
-   * @returns {Promise<string>}
-   */
-  async #effectGrantsText(effect) {
-    const actions = grantedActionUuids(effect);
-    const skills = (effect.system?.skillIncreases ?? []).filter((row) => row?.skillUuid && row.value > 0);
-    const bonuses = this.#effectBonusParts(effect);
-    if (!actions.length && !skills.length && !bonuses.length) return "";
-
-    const nameOf = async (uuid) => (await fromUuid(uuid).catch(() => null))?.name
-      ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing");
-    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
-
-    const parts = await Promise.all([
-      ...actions.map(nameOf),
-      ...skills.map(async (row) => {
-        const text = `${await nameOf(row.skillUuid)} +${row.value}`;
-        return row.maxLevel
-          ? `${text} (${game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Config.Grants.AtMost", { level: levelLabel(row.maxLevel) })})`
-          : text;
-      }),
-      ...bonuses,
-    ]);
-    return game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Grants", { list: parts.join(", ") });
-  }
 
 
-  /**
-   * An effect's skill roll bonuses, for its row on the Effects tab: "Pistol +2 to rolls", "Firearms skills +1 to rolls"
-   * (effects/skill-bonuses.mjs). Override changes are left out: they don't add a set amount.
-   * @param {ActiveEffect} effect
-   * @returns {string[]}
-   */
-  #effectBonusParts(effect) {
-    const signed = (n) => (n < 0 ? `${n}` : `+${n}`);
-    const parts = [];
-    for (const change of effectChanges(effect)) {
-      const amount = changeAmount(change);
-      if (!amount) continue;
-      const key = String(change.key ?? "");
-      const skill = key.match(SKILL_BONUS_PATTERN)?.[1];
-      const category = skill ? null : key.match(CATEGORY_BONUS_PATTERN)?.[1];
-      if (skill) {
-        const name = this.actor.system.skillFor?.(skill)?.name || skill;
-        parts.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.SkillBonus", { skill: name, value: signed(amount) }));
-      } else if (category) {
-        const label = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillCategories?.[category] ?? category);
-        parts.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.CategoryBonus", { category: label, value: signed(amount) }));
-      }
-    }
-    return parts;
-  }
 
 
-  /**
-   * Hover text for the sidebar's Physical Defense and Movement, one line per status that changes them,
-   * e.g. "Bound: no Agility, no Dodge". Empty when no status does. The text is HTML (lines joined with <br>).
-   * @returns {{physical: string, movement: string}}
-   */
-  _prepareStatusNotes() {
-    const localize = (key) => game.i18n.localize(key);
-    const { defense, movement } = this.actor.system.statusModifiers ?? {};
-    const portionNote = (portion, half, none) => {
-      if (portion === "half") return localize(half);
-      if (portion === "none") return localize(none);
-      return null;
-    };
-    const line = (id, parts) => {
-      const name = localize(statusRule(id)?.name ?? id);
-      return Handlebars.escapeExpression(`${name}: ${parts.filter(Boolean).join(", ")}`);
-    };
-
-    const physical = (defense?.sources ?? []).map((id) => {
-      const rule = statusRule(id)?.defense ?? {};
-      const modifier = Number(rule.modifier) || 0;
-      return line(id, [
-        portionNote(rule.agility, "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityNone"),
-        portionNote(rule.dodge, "LORD_OF_THE_MYSTERIES.Effects.Notes.DodgeHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.DodgeNone"),
-        modifier ? game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Notes.Modifier", { value: modifier > 0 ? `+${modifier}` : `${modifier}` }) : null,
-      ]);
-    });
-
-    const moves = (movement?.sources ?? []).map((id) => {
-      const rule = statusRule(id)?.movement ?? {};
-      return line(id, [
-        portionNote(rule.agility, "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityHalf", "LORD_OF_THE_MYSTERIES.Effects.Notes.AgilityNone"),
-      ]);
-    });
-
-    return { physical: physical.join("<br>"), movement: moves.join("<br>") };
-  }
 
 
   /**

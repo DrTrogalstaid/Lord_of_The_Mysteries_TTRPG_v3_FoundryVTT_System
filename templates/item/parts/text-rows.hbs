@@ -1,0 +1,25 @@
+{{!-- A list of one-line texts with add / delete buttons: an action's Special Results, an ability's or spell's
+      Sequence Upgrades. Saves to an array field; the buttons are addTextRow / deleteTextRow in sheets/base-item-sheet.mjs.
+      Use: {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.specialResults" rows=specialResults
+              class="special-results" legend="Special Results" placeholder="..." addLabel="Add Special Result"}}
+      rows: [{index, value}] (_textRows in base-item-sheet.mjs). --}}
+<fieldset class="{{class}}">
+  <legend>{{legend}}</legend>
+  <ol class="items-list">
+    {{#each rows as |row|}}
+    <li class="item flexrow">
+      <input type="text" class="blend-input flexlarge"
+            name="{{../field}}.{{row.index}}"
+            value="{{row.value}}" placeholder="{{../placeholder}}" />
+      <div class="item-controls">
+        <a class="item-control" data-action="deleteTextRow" data-field="{{../field}}" data-index="{{row.index}}" title="Delete">
+          <i class="fas fa-trash"></i>
+        </a>
+      </div>
+    </li>
+    {{/each}}
+  </ol>
+  <a class="item-control add-row" data-action="addTextRow" data-field="{{field}}">
+    <i class="fas fa-plus"></i> {{addLabel}}
+  </a>
+</fieldset>

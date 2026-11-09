@@ -19,6 +19,8 @@
  *   - _linkedItemRows()  a list of Item UUIDs looked up for display (name, image, or "missing")
  *   - _dropOnList()      a dropped Item added to one of this Item's UUID lists
  *   - _removeFromList()  one entry taken out of a list field by its position
+ *   - text rows          a list of one-line texts (Special Results, Sequence Upgrades): _textRows() for the
+ *                        context, the TEXT_ROWS_PARTIAL template, and its addTextRow / deleteTextRow buttons
  *   - _traitOptions()    the Traits checkboxes for actions and spells (partial: ACTION_TRAITS_PARTIAL)
  *   - the Effects list   for sheets with `static HAS_EFFECTS = true` (partial: ITEM_EFFECTS_PARTIAL): New Effect,
  *                        Apply, Edit, On/Off, Delete; rows drag out onto tokens, effects dropped on it are copied in.
@@ -36,6 +38,7 @@
  */
 
 import { applyItemEffect, defaultUseFor, effectUse, useData, useLabel } from "../effects/effect-application.mjs";
+import { bindDropZone, bindEach } from "../helpers/listeners.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -56,6 +59,13 @@ export const ACTION_TRAITS_PARTIAL = "systems/lotm/templates/item/parts/action-t
  * in by _prepareContext below). List it in the sheet's PARTS so it's loaded first, like ACTION_TRAITS_PARTIAL.
  */
 export const ITEM_EFFECTS_PARTIAL = "systems/lotm/templates/item/parts/item-effects.hbs";
+
+/**
+ * A list of one-line texts with add / delete buttons (an action's Special Results, Sequence Upgrades).
+ * `{{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.specialResults" rows=specialResults ...}}`,
+ * with rows from _textRows below. List it in the sheet's PARTS so it's loaded first, like ACTION_TRAITS_PARTIAL.
+ */
+export const TEXT_ROWS_PARTIAL = "systems/lotm/templates/item/parts/text-rows.hbs";
 
 /** Name and image shown for a linked Item that can't be found (deleted, or its compendium is gone). */
 const MISSING_NAME = "Unknown Item";
@@ -86,6 +96,9 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
       toggleEffect: LordOfTheMysteriesItemSheetBase.#onToggleEffect,
       editEffect: LordOfTheMysteriesItemSheetBase.#onEditEffect,
       deleteEffect: LordOfTheMysteriesItemSheetBase.#onDeleteEffect,
+      // Text rows (TEXT_ROWS_PARTIAL).
+      addTextRow: LordOfTheMysteriesItemSheetBase.#onAddTextRow,
+      deleteTextRow: LordOfTheMysteriesItemSheetBase.#onDeleteTextRow,
     },
   };
 
@@ -248,6 +261,34 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
     await this.item.update({ [path]: current.filter((_, i) => i !== position) });
   }
 
+
+  /**
+   * The rows of a list of one-line texts (TEXT_ROWS_PARTIAL): each text with its position, for its text box's name
+   * (<field>.<index>) and its delete button.
+   * @param {string} path   The list field, e.g. "system.specialResults".
+   * @returns {{index: number, value: string}[]}
+   */
+  _textRows(path) {
+    return (foundry.utils.getProperty(this.item, path) ?? []).map((value, index) => ({ index, value }));
+  }
+
+
+  /** Add a blank row to a list of texts (data-field = the list, e.g. "system.specialResults"). */
+  static async #onAddTextRow(event, target) {
+    if (!this.isEditable) return;
+    const path = target.dataset.field;
+    const current = foundry.utils.getProperty(this.item.toObject(), path) ?? [];
+    if (!Array.isArray(current)) return;
+    await this.item.update({ [path]: [...current, ""] });
+  }
+
+
+  /** Remove a row from a list of texts (data-field = the list, data-index = the row's position). */
+  static async #onDeleteTextRow(event, target) {
+    if (!this.isEditable) return;
+    await this._removeFromList(target.dataset.field, target.dataset.index);
+  }
+
   /* -------------------------------------------- */
   /*  Effects list (sheets with HAS_EFFECTS)       */
   /* -------------------------------------------- */
@@ -292,33 +333,16 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
   }
 
 
-  /**
-   * Rows drag out (onto a token, an actor, another item); effects dropped on the list are copied onto this item.
-   * The part is redrawn on every render, so these are always fresh elements.
-   */
+  /** Rows drag out (onto a token, an actor, another item); effects dropped on the list are copied onto this item. */
   #bindEffectsList() {
     const list = this.element.querySelector("[data-item-effects]");
     if (!list) return;
 
-    for (const row of list.querySelectorAll("[data-effect-id]")) {
-      row.addEventListener("dragstart", (event) => {
-        const effect = this.item.effects.get(row.dataset.effectId);
-        if (effect) event.dataTransfer.setData("text/plain", JSON.stringify(effect.toDragData()));
-      });
-    }
-
-    if (!this.isEditable) return;
-    list.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      list.classList.add("drag-over");
+    bindEach(list, "[data-effect-id]", "dragstart", (event, row) => {
+      const effect = this.item.effects.get(row.dataset.effectId);
+      if (effect) event.dataTransfer.setData("text/plain", JSON.stringify(effect.toDragData()));
     });
-    list.addEventListener("dragleave", (event) => {
-      if (!list.contains(event.relatedTarget)) list.classList.remove("drag-over");
-    });
-    list.addEventListener("drop", (event) => {
-      list.classList.remove("drag-over");
-      return this.#onDropEffect(event);
-    });
+    if (this.isEditable) bindDropZone(list, (event) => this.#onDropEffect(event));
   }
 
 

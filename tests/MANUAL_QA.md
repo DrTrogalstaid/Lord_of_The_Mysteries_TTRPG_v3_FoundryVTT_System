@@ -971,3 +971,29 @@ Files: `module/helpers/enrichers.mjs`, `module/helpers/action-roll.mjs`, `css/ro
 - [ ] `@Damage[2d6+]` (bad formula) shows crossed out; clicking warns it isn't a valid formula
 - [ ] An outcome table result with `@Damage[1d6]`: the card is posted as the character who made the check
 - [ ] An action's own Roll Damage and Big Success still post the same cards as before
+
+## Code cleanup (shared code, nothing should look or work differently)
+
+Files: `module/helpers/listeners.mjs`, `module/sheets/base-actor-sheet.mjs`, `module/sheets/actor/`,
+`module/sheets/item/character_building/rollable-item-sheet.mjs`, `module/sheets/base-item-sheet.mjs`,
+`templates/actor/parts/sidebar.hbs`, `templates/item/parts/roll-fields.hbs`, `templates/item/parts/text-rows.hbs`,
+`module/apps/spend-dialog.mjs`, `module/helpers/check-chat.mjs`, `module/helpers/inventory.mjs`,
+`module/data/actor/base-actor.mjs`
+
+- [ ] Drag an Item over each drop target: actor sheet sections, the action / spell Skill slot and outcome table slots,
+      an item's Effects list, the effect sheet's "Also ends when" and Grants boxes, gear's ability / action lists. Each
+      highlights while dragged over, clears when you leave or drop, and takes the drop once (no doubled rows)
+- [ ] Change a Sequence's digestion, a granted skill's level, a gear row's location and quantity, then switch tabs and
+      change them again: each change saves once (no doubled updates in the console)
+- [ ] Sidebar on Klein and on the NPC: same layout as before. Klein's Spirituality box is read-only; the NPC's can be
+      typed in. Both Spend buttons (Luck, Spirituality) open the same kind of window and spend
+- [ ] Action sheet and spell sheet: Modifiers, Skill, Attack Roll Macro, Defense Targeted (a "Fires rounds" action
+      says "too fast to dodge" when blank), DC, outcome tables, damage. On the spell sheet Modifiers is now above
+      Skill, like on actions
+- [ ] Special Results (action) and Sequence Upgrades (ability, spell): add a row, type in it, delete it
+- [ ] Klein's Actions tab and the NPC's Main tab: Favorites, action-type sections, collapsing, moving rows; Spells tab
+      groups; Inventory groups and warnings; Effects tab rows and details: all as before
+- [ ] An actor with an old damage reduction row ("Physical" from before the key change) shows Physical in the sidebar,
+      and damage applied to it is reduced
+- [ ] A check card in chat: Roll Outcome, Roll Loss and Burn Luck buttons; Roll Outcome / Roll Loss grey out once used
+- [ ] An effect with a Subtract change to an attribute's check bonus shows as its own "-N" row in the roll window

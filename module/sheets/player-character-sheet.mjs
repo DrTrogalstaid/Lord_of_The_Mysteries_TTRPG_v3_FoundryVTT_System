@@ -7,8 +7,8 @@
  * (with study, learning by doing and granted-skill tabs), languages, rests, money and the biography pages.
  **/
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, skillRaiseText, skillRollTooltip } from "./base-actor-sheet.mjs";
-import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";
+import { skillRaiseText, skillRollTooltip } from "./actor/skill-tooltips.mjs";
 import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
 import { skillRecordUpdate } from "../helpers/skill-data.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
@@ -18,6 +18,7 @@ import { autoPlacement, buildInventoryView } from "../helpers/inventory.mjs";
 import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
 import { openSpendLuckDialog } from "../helpers/luck.mjs";
 import { ownersAndGMs } from "../effects/status-checks.mjs";
+import { bindEach } from "../helpers/listeners.mjs";
 
 /** One row of the Character tab's Granted Skills box (skills a Sequence raises or trains), with the skill controls. */
 const GRANTED_SKILL_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs";
@@ -75,7 +76,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
   /** Pieces of the sheet that can be viewed and reloaded independently */
   static PARTS = {
     header:    { template: "systems/lotm/templates/actor/player-character/parts/header.hbs" },
-    sidebar:   { template: "systems/lotm/templates/actor/player-character/parts/sidebar.hbs" },
+    sidebar:   { template: SIDEBAR_TEMPLATE },
     tabs:      { template: "systems/lotm/templates/actor/player-character/parts/tab-nav.hbs" },  // Doubles as the "Character Info" box header / page-selector shown in the mockup.
     character: { template: "systems/lotm/templates/actor/player-character/character.hbs", templates: [...SHARED_PARTIALS, GRANTED_SKILL_ENTRY_PARTIAL], scrollable: [""] },
     sequences: { template: "systems/lotm/templates/actor/player-character/parts/sequences.hbs", templates: SHARED_PARTIALS, scrollable: [""] },
@@ -527,14 +528,6 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
   }
 
 
-  // Kept as a thin wrapper (rather than removed) so nothing calling
-  // PlayerCharacterSheet._calculateSkillModifier(...) elsewhere breaks; the
-  // real implementation now lives in helpers/skill-modifiers.mjs so
-  // SkillCheckDialog can use it too without importing this class.
-  static _calculateSkillModifier(skillLevel, attributeTotal) {
-    return calculateSkillModifier(skillLevel, attributeTotal);
-  }
-
 
   /** @override */
   _onRender(context, options) {
@@ -542,15 +535,13 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
     // Granted-skill level/analysis inputs belong to an ability item, not the actor,
     // so they have no `name` (the actor form skips them) and save here instead.
-    this.element.querySelectorAll(".granted-skill-row [data-granted-field]").forEach(input => {
-      input.addEventListener("change", async ev => {
-        const { ability, grantedId } = this._grantedSkillTarget(ev.currentTarget);
-        if (!ability) return;
-        const field = ev.currentTarget.dataset.grantedField;
-        const value = field === "analysis" ? Math.max(0, Math.floor(Number(ev.currentTarget.value) || 0)) : ev.currentTarget.value;
-        await ability.update({
-          "system.grantedSkills": updateGrantedSkill(ability.system.grantedSkills, grantedId, { [field]: value })
-        });
+    bindEach(this.element, ".granted-skill-row [data-granted-field]", "change", async (event, input) => {
+      const { ability, grantedId } = this._grantedSkillTarget(input);
+      if (!ability) return;
+      const field = input.dataset.grantedField;
+      const value = field === "analysis" ? Math.max(0, Math.floor(Number(input.value) || 0)) : input.value;
+      await ability.update({
+        "system.grantedSkills": updateGrantedSkill(ability.system.grantedSkills, grantedId, { [field]: value })
       });
     });
 
@@ -558,12 +549,10 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     // (data-skill-field, #onSkillFieldChange in base-actor-sheet.mjs).
 
     // Enter in the custom-skill box adds it instead of submitting the sheet.
-    this.element.querySelectorAll(".granted-skill-custom").forEach(input => {
-      input.addEventListener("keydown", ev => {
-        if (ev.key !== "Enter") return;
-        ev.preventDefault();
-        PlayerCharacterSheet._onAddGrantedCustom.call(this, ev, ev.currentTarget);
-      });
+    bindEach(this.element, ".granted-skill-custom", "keydown", (event, input) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      PlayerCharacterSheet._onAddGrantedCustom.call(this, event, input);
     });
   }
 

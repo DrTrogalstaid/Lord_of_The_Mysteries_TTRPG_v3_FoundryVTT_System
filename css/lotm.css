@@ -1,3 +1,8 @@
+/*
+ * Shared basics for every lotm window: fonts, the flex and grid helper classes, form fields, resource boxes.
+ * Plain CSS, edited directly (it was compiled from SCSS once; that source is gone). The rest of the styles are in
+ * the other files in css/, listed in system.json.
+ */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap");
 /* Global styles */
 .window-app {

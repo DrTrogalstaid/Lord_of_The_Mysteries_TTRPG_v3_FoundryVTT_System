@@ -20,8 +20,7 @@
  * the skill (skillBonusRowsFor below). The actor's data preparation works the rows out (data/actor/base-actor.mjs).
  */
 
-/** The change type that adds (v14's "add"; older effects stored ADD as mode 2). */
-const isAddChange = (change) => change?.type === "add" || change?.mode === 2;
+import { changeAmount, effectChanges } from "../effects/skill-bonuses.mjs";
 
 
 /**
@@ -40,10 +39,10 @@ export function bonusRows(actor, key, restLabel, rowKey = key) {
 
   for (const effect of actor?.allApplicableEffects?.() ?? []) {
     if (!(effect.active ?? !effect.disabled)) continue;
-    const changes = effect.system?.changes ?? effect.changes ?? [];
-    const value = changes
-      .filter((change) => change?.key === path && isAddChange(change))
-      .reduce((sum, change) => sum + (Number(change.value) || 0), 0);
+    // Add and Subtract changes to the field: a penalty (Subtract 2) is a -2 row named after its effect too.
+    const value = effectChanges(effect)
+      .filter((change) => change?.key === path)
+      .reduce((sum, change) => sum + (changeAmount(change) ?? 0), 0);
     if (value) rows.push({ key: `${rowKey}:${effect.id}`, label: effect.name, value, img: effect.img ?? null });
   }
 

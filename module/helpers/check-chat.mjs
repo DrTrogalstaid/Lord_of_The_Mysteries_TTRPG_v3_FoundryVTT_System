@@ -32,90 +32,138 @@ export function registerCheckChatListeners() {
     const source = game.messages.get(message.getFlag("lotm", "sanityLoss")?.sourceId ?? "");
     if (source) ui.chat?.updateMessage?.(source);
   });
+  Hooks.on("renderChatMessageHTML", onRenderMessage);
+}
 
-  Hooks.on("renderChatMessageHTML", (message, html) => {
-    if (!game.user.isGM) html.querySelectorAll(".lotm-gm-only").forEach((element) => element.remove());
 
-    // A drawn table result that is an effect: an Apply button next to it. Before the next step, so it's tied too.
-    addTableEffectButtons(message, html);
+/**
+ * Every chat message as it's drawn: GM-only parts, table effect buttons, outcome links, and on a check's card its
+ * hit / miss results, Big Success and its buttons.
+ * @param {ChatMessage} message
+ * @param {HTMLElement} html
+ */
+function onRenderMessage(message, html) {
+  if (!game.user.isGM) html.querySelectorAll(".lotm-gm-only").forEach((element) => element.remove());
 
-    // An outcome table's result: its @Sanity / @Check / @Effect buttons are for the character who made the check.
-    const outcomeActor = message.getFlag("lotm", "outcome")?.actorUuid;
-    if (outcomeActor) {
-      for (const link of html.querySelectorAll("[data-lotm-enricher]")) link.dataset.actorUuid ||= outcomeActor;
-    }
+  // A drawn table result that is an effect: an Apply button next to it. Before the next step, so it's tied too.
+  addTableEffectButtons(message, html);
 
-    const check = message.getFlag("lotm", "check");
-    const content = html.querySelector(".message-content");
-    if (!check || !content || !message.isContentVisible) return;
+  // An outcome table's result: its @Sanity / @Check / @Effect buttons are for the character who made the check.
+  const outcomeActor = message.getFlag("lotm", "outcome")?.actorUuid;
+  if (outcomeActor) {
+    for (const link of html.querySelectorAll("[data-lotm-enricher]")) link.dataset.actorUuid ||= outcomeActor;
+  }
 
-    // Hit or miss, above the roll (the part that expands to show the dice), so it reads with the card's other text.
-    const attack = message.getFlag("lotm", "attack");
-    if (attack) {
-      const block = document.createElement("div");
-      block.classList.add("lotm", "chat-attack-results");
-      block.innerHTML = attackResultsHTML(attack);
-      const roll = content.querySelector(".dice-roll");
-      if (roll) roll.before(block);
-      else content.prepend(block);
-    }
+  const check = message.getFlag("lotm", "check");
+  const content = html.querySelector(".message-content");
+  if (!check || !content || !message.isContentVisible) return;
 
-    // Big Success: only offered on a natural 20.
-    if (check.natural === 20) {
-      html.querySelector('button[data-lotm-action="damage"]')?.remove();
-      html.querySelector('button[data-lotm-action="bigSuccess"]')?.classList.add("is-natural");
-    }
-    else if (typeof check.natural === "number") {
-      html.querySelector('button[data-lotm-action="bigSuccess"]')?.remove();
-    }
+  const attack = message.getFlag("lotm", "attack");
+  if (attack) addAttackResults(content, attack);
+  showBigSuccess(html, check.natural);
 
-    // Roll Outcome (once per roll).
-    if (canRollOutcome(message)) {
-      const holder = document.createElement("div");
-      holder.classList.add("lotm-outcome-buttons");
-      holder.innerHTML = `<button type="button" class="lotm-roll-outcome" data-tooltip="${escape(game.i18n.localize("LORD_OF_THE_MYSTERIES.Outcome.ButtonHint"))}">`
-        + `<i class="fa-solid fa-table-list"></i> ${game.i18n.localize("LORD_OF_THE_MYSTERIES.Outcome.Button")}</button>`;
-      const button = holder.querySelector("button");
-      if (message.getFlag("lotm", "outcomeRolled")) button.disabled = true;
-      button.addEventListener("click", async (event) => {
-        event.preventDefault();
-        button.disabled = true;
-        const posted = await rollOutcome(message);
-        if (!posted && !message.getFlag("lotm", "outcomeRolled")) button.disabled = false;
-      });
-      content.append(holder);
-    }
+  // Roll Outcome (once per roll).
+  if (canRollOutcome(message)) {
+    const isRolled = () => !!message.getFlag("lotm", "outcomeRolled");
+    appendCardButton(content, {
+      rowClass: "lotm-outcome-buttons", buttonClass: "lotm-roll-outcome", icon: "fa-solid fa-table-list",
+      label: "LORD_OF_THE_MYSTERIES.Outcome.Button", hint: "LORD_OF_THE_MYSTERIES.Outcome.ButtonHint",
+      disabled: isRolled(),
+      onClick: oncePerRoll(() => rollOutcome(message), isRolled),
+    });
+  }
 
-    // Roll Loss on a Sanity check (once per check, like Roll Outcome).
-    if (canRollSanityLoss(message)) {
-      const holder = document.createElement("div");
-      holder.classList.add("lotm-sanity-loss-buttons");
-      holder.innerHTML = `<button type="button" class="lotm-roll-sanity-loss" data-tooltip="${escape(game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.RollLossHint"))}">`
-        + `<i class="fa-solid fa-brain"></i> ${game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.RollLoss")}</button>`;
-      const button = holder.querySelector("button");
-      if (sanityLossMessage(message)) button.disabled = true;
-      button.addEventListener("click", async (event) => {
-        event.preventDefault();
-        button.disabled = true;
-        const posted = await rollSanityLoss(message);
-        if (!posted && !sanityLossMessage(message)) button.disabled = false;
-      });
-      content.append(holder);
-    }
+  // Roll Loss on a Sanity check (once per check, like Roll Outcome).
+  if (canRollSanityLoss(message)) {
+    const isRolled = () => !!sanityLossMessage(message);
+    appendCardButton(content, {
+      rowClass: "lotm-sanity-loss-buttons", buttonClass: "lotm-roll-sanity-loss", icon: "fa-solid fa-brain",
+      label: "LORD_OF_THE_MYSTERIES.Sanity.RollLoss", hint: "LORD_OF_THE_MYSTERIES.Sanity.RollLossHint",
+      disabled: isRolled(),
+      onClick: oncePerRoll(() => rollSanityLoss(message), isRolled),
+    });
+  }
 
-    // Burn Luck.
-    if (luckBurners(message).length) {
-      const holder = document.createElement("div");
-      holder.classList.add("lotm-luck-buttons");
-      holder.innerHTML = `<button type="button" class="lotm-burn-luck" data-tooltip="${escape(game.i18n.localize("LORD_OF_THE_MYSTERIES.Luck.BurnHint"))}">`
-        + `<i class="fa-solid fa-clover"></i> ${game.i18n.localize("LORD_OF_THE_MYSTERIES.Luck.Burn")}</button>`;
-      holder.querySelector("button").addEventListener("click", (event) => {
-        event.preventDefault();
-        openBurnLuckDialog(message);
-      });
-      content.append(holder);
-    }
+  // Burn Luck.
+  if (luckBurners(message).length) {
+    appendCardButton(content, {
+      rowClass: "lotm-luck-buttons", buttonClass: "lotm-burn-luck", icon: "fa-solid fa-clover",
+      label: "LORD_OF_THE_MYSTERIES.Luck.Burn", hint: "LORD_OF_THE_MYSTERIES.Luck.BurnHint",
+      onClick: () => openBurnLuckDialog(message),
+    });
+  }
+}
+
+
+/**
+ * Hit or miss, above the roll (the part that expands to show the dice), so it reads with the card's other text.
+ * @param {HTMLElement} content   The message's .message-content.
+ * @param {object} attack         flags.lotm.attack
+ */
+function addAttackResults(content, attack) {
+  const block = document.createElement("div");
+  block.classList.add("lotm", "chat-attack-results");
+  block.innerHTML = attackResultsHTML(attack);
+  const roll = content.querySelector(".dice-roll");
+  if (roll) roll.before(block);
+  else content.prepend(block);
+}
+
+
+/**
+ * Big Success is only offered on a natural 20: there it replaces the damage button; on any other natural roll it's
+ * taken away. (Messages from before natural rolls were saved keep both.)
+ * @param {HTMLElement} html
+ * @param {number|undefined} natural   The d20's natural roll.
+ */
+function showBigSuccess(html, natural) {
+  if (natural === 20) {
+    html.querySelector('button[data-lotm-action="damage"]')?.remove();
+    html.querySelector('button[data-lotm-action="bigSuccess"]')?.classList.add("is-natural");
+  }
+  else if (typeof natural === "number") {
+    html.querySelector('button[data-lotm-action="bigSuccess"]')?.remove();
+  }
+}
+
+
+/**
+ * A button on its own row at the bottom of a check's card (Roll Outcome, Roll Loss, Burn Luck).
+ * @param {HTMLElement} content   The message's .message-content.
+ * @param {object} options
+ * @param {string} options.rowClass, options.buttonClass, options.icon   CSS classes (icon: Font Awesome).
+ * @param {string} options.label, options.hint   Lang keys for its text and its hover text.
+ * @param {boolean} [options.disabled]
+ * @param {(button: HTMLButtonElement) => any} options.onClick
+ */
+function appendCardButton(content, { rowClass, buttonClass, icon, label, hint, disabled = false, onClick }) {
+  const holder = document.createElement("div");
+  holder.classList.add(rowClass);
+  holder.innerHTML = `<button type="button" class="${buttonClass}" data-tooltip="${escape(game.i18n.localize(hint))}">`
+    + `<i class="${icon}"></i> ${game.i18n.localize(label)}</button>`;
+  const button = holder.querySelector("button");
+  if (disabled) button.disabled = true;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    onClick(button);
   });
+  content.append(holder);
+}
+
+
+/**
+ * A click handler for a button that can be used once per roll: greyed out while it runs, and back on if nothing
+ * was posted (cancelled) and it hasn't been done since.
+ * @param {() => Promise<any>} run    Does it; returns something truthy when it posted.
+ * @param {() => boolean} isDone      Whether it has been done for this roll.
+ * @returns {(button: HTMLButtonElement) => Promise<void>}
+ */
+function oncePerRoll(run, isDone) {
+  return async (button) => {
+    button.disabled = true;
+    const posted = await run();
+    if (!posted && !isDone()) button.disabled = false;
+  };
 }
 
 

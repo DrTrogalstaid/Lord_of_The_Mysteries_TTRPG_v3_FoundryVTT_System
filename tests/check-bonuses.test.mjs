@@ -50,9 +50,9 @@ test("a bonus from something other than an Add change: one more row makes up the
     [["Spirit Vision", 2], ["Inspiration check bonus", 3]]);
 });
 
-test("older effects that store Add as mode 2 count too; nothing at all gives no rows", () => {
-  const klein = actor({ ins: 2 }, [effect("sv", "Spirit Vision", [{ key: "system.attributes.ins.checkBonus", value: "2", mode: 2 }])]);
-  assert.equal(checkBonusRows(klein, "ins")[0].value, 2);
+test("a Subtract change is a negative row named after its effect; nothing at all gives no rows", () => {
+  const klein = actor({ ins: -2 }, [effect("fog", "Fog", [{ key: "system.attributes.ins.checkBonus", value: "2", type: "subtract" }])]);
+  assert.deepEqual(checkBonusRows(klein, "ins").map((row) => [row.label, row.value]), [["Fog", -2]]);
   assert.deepEqual(checkBonusRows(actor({}, []), "ins"), []);
   assert.deepEqual(checkBonusRows(null, "ins"), []);
 });

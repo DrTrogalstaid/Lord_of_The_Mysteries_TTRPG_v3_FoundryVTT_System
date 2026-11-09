@@ -204,6 +204,16 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             source.reductions = source.damage_resistance;
         }
 
+        // Damage reduction and resistance rows hold a damage type key ("physical"). Older rows saved the sheet's old
+        // choice ("Physical") or the full language key; they're read as the key (helpers/damage-math.mjs), and saved
+        // that way the next time the actor is.
+        const damageTypes = globalThis.CONFIG?.LORD_OF_THE_MYSTERIES?.damageTypes ?? {};
+        for (const field of ["reductions", "resistances"]) {
+            for (const row of Array.isArray(source[field]) ? source[field] : []) {
+                if (row?.damageType) row.damageType = normalizeDamageType(row.damageType, damageTypes);
+            }
+        }
+
         // Skills saved per attribute (system.skills.agi = [{ skill, level, analysis, study }, ...]): the lists move to
         // legacySkills word for word, so system.skills only has records keyed by skill. Nothing is converted here:
         // that needs the skill registry, which isn't ready this early. Data preparation reads legacySkills too, and the
@@ -343,12 +353,52 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
 
     /**
-     * Prepare the derived data on the actor sheet
-     * @override 
-    */
+     * Everything worked out from the saved data and the actor's Items and effects, in this order (each step uses the
+     * ones before it):
+     *   skill levels -> learning and Education growth -> attributes -> carrying and armor -> statuses -> resources
+     *   -> movement -> skill totals -> defenses -> damage reduction -> per-Sequence calculations (last)
+     * Everything set here is display / roll data only, not in the schema.
+     * @override
+     */
     prepareDerivedData() {
         const sequences = this.parent?.items.filter(i => i.type === "sequence") ?? [];
+        const effects = this._activeEffects();
 
+        this._prepareSkillLevels(sequences, effects);
+        this._prepareLearning();
+        this._prepareAttributes(sequences);
+        this._prepareCarrying();
+
+        // Statuses (Loss of Balance, Bound, Disadvantage, ...): what they do to movement and Physical Defense.
+        // Each status's settings are in effects/status-effects.mjs, the math in effects/status-math.mjs.
+        // Agility itself isn't changed, so Agility checks are unaffected; only movement and defense use these.
+        // Display only, not in the schema: { defense: {agility, dodge, modifier, sources}, movement: {agility, sources} }.
+        this.statusModifiers = combineStatusRules(activeStatusRules(this.parent));
+
+        // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
+        this._prepareResources();
+        this._prepareMovement();
+
+        // Every skill's total, now that the attributes are final (after armor and carrying), and its bonuses from
+        // effects. Before defenses: Dodge's goes into Dodge defense.
+        this._prepareSkillTotals(effects);
+
+        this._prepareDefenseValues();
+        this._prepareDamageReduction();
+
+        // NOTE: THIS NEEDS TO BE CALLED LAST
+        this._prepareSequenceCalculations(sequences);
+    }
+
+
+    /**
+     * Every skill's levels: what Sequences and effects raise, and the player's pick, the learned level and the rolled
+     * level of each (helpers/skill-records.mjs). They don't depend on attributes, so they come first: Education
+     * growth needs them.
+     * @param {Item[]} sequences   The actor's Sequences.
+     * @param {ActiveEffect[]} effects   Its active effects.
+     */
+    _prepareSkillLevels(sequences, effects) {
         // Sequence skill increases: how many levels each owned Sequence raises a skill (its skill_increase rows).
         // Like attribute_gain, it's worked out fresh every time, so removing the Sequence takes the raise away,
         // and the player's own pick in the skill dropdown is never changed.
@@ -367,7 +417,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Active Effects' skill increases (effects/effect-grants.mjs): +levels while the effect is active, each capped at
         // its own "at most" level. Display only, not in the schema: { [skill key]: [{ value, maxLevel, name, effectId }] }.
         // They're temporary, so Education growth below and studying go by the level without them (learnLevel).
-        const effects = this._activeEffects();
         this.effectSkillRaises = collectSkillRaises(effects, skillKeyFor);
 
         // Sequence Knowledge and Training bonus: skills in a Sequence's trainingBonus list study one schedule
@@ -390,7 +439,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         };
         const levels = computeSkillLevels(this.skills, { infoOf: (key) => this.skills[key], ...this._skillContext });
         for (const [key, result] of levels) Object.assign(this.skills[key], result);
+    }
 
+
+    /** Learning progress by skill key, and Education growth from the skills learned to Mastery and above. */
+    _prepareLearning() {
         // Learning progress by skill key. Entries saved before skill keys have the skill's UUID instead; they're
         // read the same until the skill migration saves them with keys. Display only: { [skill key]: entry }.
         this.learningByKey = {};
@@ -410,7 +463,15 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             skillLevels.set(record.key, { own: record.ownLevel, raised: raiseLevel(record.ownLevel, record.sequenceSteps) });
         }
         this.educationGrowth = educationGrowth(learning, skillLevels);
+    }
 
+
+    /**
+     * Attribute totals (with Sequence gains and Education growth), whether the actor is a Beyonder, and the Strength
+     * damage bonus.
+     * @param {Item[]} sequences
+     */
+    _prepareAttributes(sequences) {
         // Attribute Bonus Calculation
         // Including sequence gains so resource calculations are correct.
         for (const [key, attr] of Object.entries(this.attributes)) {
@@ -437,7 +498,14 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         const strength = this.attributes.str.total;
         const strengthRow = strengthDamageBonusTable.findLast((r) => strength >= r.strength) ?? strengthDamageBonusTable[0];
         this.damageBonus = strengthRow.bonus;
+    }
 
+
+    /**
+     * What the actor carries (helpers/inventory.mjs) and what that does to Agility: the carrying penalty and the worn
+     * armor's penalty. Before movement and defenses, because the Agility penalties lower both.
+     */
+    _prepareCarrying() {
         // Inventory: slots carried, and -1 Agility per slot over the Strength limit (see helpers/inventory.mjs).
         // This has to happen before movement and defenses, because the Agility penalty lowers both.
         // Only agi.total is lowered; agi.base (what the player types in) is never touched.
@@ -449,33 +517,18 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         const armor = this.carrying.armor;
         this.attributes.agi.corruption -= armor.agilityPenalty;
         this.attributes.agi.total -= armor.agilityPenalty;
+    }
 
-        // Statuses (Loss of Balance, Bound, Disadvantage, ...): what they do to movement and Physical Defense.
-        // Each status's settings are in effects/status-effects.mjs, the math in effects/status-math.mjs.
-        // Agility itself isn't changed, so Agility checks are unaffected; only movement and defense use these.
-        // Display only, not in the schema: { defense: {agility, dodge, modifier, sources}, movement: {agility, sources} }.
-        this.statusModifiers = combineStatusRules(activeStatusRules(this.parent));
 
-        // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
-        this._prepareResources();
-
+    /** Movement in feet (Strength + Agility in meters, after armor and statuses, x3). */
+    _prepareMovement() {
+        const armor = this.carrying.armor;
         // Movement in meters (Strength + Agility), halved (rounded up) or stopped by armor that's too heavy,
         // then x3 for feet. The armor rule rounds in meters, so it's applied before the conversion.
         //TODO: Change the multiplication here to depend on the system's distance unit.
         // Loss of Balance halves the Agility used here (rounded up).
         const meters = this.attributes.str.total + movementAgility(this.attributes.agi.total, this.statusModifiers.movement);
         this.movement = armoredMovement(meters, armor.movement) * 3;
-
-        // Every skill's total, now that the attributes are final (after armor and carrying), and its bonuses from
-        // effects. Before defenses: Dodge's goes into Dodge defense.
-        this._prepareSkillTotals(effects);
-
-        this._prepareDefenseValues();
-        this._prepareDamageReduction();
-
-        // NOTE: THIS NEEDS TO BE CALLED LAST
-        this._prepareSequenceCalculations(sequences);
-
     }
 
 
@@ -648,14 +701,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      */
     _prepareDamageReduction() {
         const damageTypes = CONFIG.LORD_OF_THE_MYSTERIES.damageTypes;
-        // Rows should hold a key ("physical"); older rows may hold the sheet's old choice ("Physical") or the full
-        // language key, so they're normalized (helpers/damage-math.mjs). Every total uses the lower-case key, the same
-        // as armor and damage rolls (helpers/action-roll.mjs), so applying damage can look each type up directly.
-        const keyOf = (type) => normalizeDamageType(type, damageTypes);
-
+        // Every total uses the damage type's key (old rows are converted by migrateData), the same as armor and damage
+        // rolls (helpers/action-roll.mjs), so applying damage can look each type up directly.
         const reduction = { all: 0 };
         for (const row of this.reductions ?? []) {
-            const key = keyOf(row.damageType);
+            const key = row.damageType;
             if (!key) continue;
             reduction[key] = (reduction[key] ?? 0) + (row.value ?? 0);
         }
@@ -676,7 +726,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         const resistance = {};
         const immunities = new Set();
         for (const row of this.resistances ?? []) {
-            const key = keyOf(row.damageType);
+            const key = row.damageType;
             if (!key) continue;
             if (row.isImmune) immunities.add(key);
             else resistance[key] = (resistance[key] ?? 0) + (row.value ?? 0);

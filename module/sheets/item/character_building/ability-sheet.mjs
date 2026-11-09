@@ -1,4 +1,4 @@
-import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
+import { LordOfTheMysteriesItemSheetBase, ITEM_HEADER_PART, ITEM_EFFECTS_PARTIAL, TEXT_ROWS_PARTIAL } from "../../base-item-sheet.mjs";
 
 /**
  * The lists an Item can be dropped on, keyed by the [data-drop-zone] they're shown in (ability.hbs).
@@ -38,8 +38,6 @@ export class LordOfTheMysteriesAbilitySheet extends LordOfTheMysteriesItemSheetB
     },
     dragDrop: [{ dragSelector: null, dropSelector: ".sheet-body" }],
     actions: {
-      addSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onAddSequenceUpgrade,
-      deleteSequenceUpgrade: LordOfTheMysteriesAbilitySheet.#onDeleteSequenceUpgrade,
       deleteSpell: LordOfTheMysteriesAbilitySheet.#onDeleteSpell,
       deleteAction: LordOfTheMysteriesAbilitySheet.#onDeleteAction,
       deleteSkillOption: LordOfTheMysteriesAbilitySheet.#onDeleteSkillOption,
@@ -58,7 +56,7 @@ export class LordOfTheMysteriesAbilitySheet extends LordOfTheMysteriesItemSheetB
   /** @override */
   static PARTS = {
     header: ITEM_HEADER_PART,
-    form: { template: "systems/lotm/templates/item/character_building/ability.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
+    form: { template: "systems/lotm/templates/item/character_building/ability.hbs", templates: [TEXT_ROWS_PARTIAL, ITEM_EFFECTS_PARTIAL] },
   };
 
   /* -------------------------------------------- */
@@ -72,11 +70,7 @@ export class LordOfTheMysteriesAbilitySheet extends LordOfTheMysteriesItemSheetB
     context.enrichedDescription = await this._enrich(this.item.system.description);
     context.enrichedSpecial = await this._enrich(this.item.system.special);
 
-    // Sequence Upgrade rows just need their array index for input naming.
-    context.higherSequenceUpgrades = (context.system.higherSequenceUpgrades ?? []).map((value, index) => ({
-      index,
-      value,
-    }));
+    context.higherSequenceUpgrades = this._textRows("system.higherSequenceUpgrades");
 
     // The lists of linked Items, looked up for their name and image.
     context.spellListSpells = await this._linkedItemRows(context.system.spellList?.spells);
@@ -112,17 +106,6 @@ export class LordOfTheMysteriesAbilitySheet extends LordOfTheMysteriesItemSheetB
   /* -------------------------------------------- */
   /*  Actions                                      */
   /* -------------------------------------------- */
-
-  /** Add a blank Sequence Upgrade row. */
-  static async #onAddSequenceUpgrade(event, target) {
-    const current = this.item.system.higherSequenceUpgrades ?? [];
-    await this.item.update({ "system.higherSequenceUpgrades": [...current, ""] });
-  }
-
-  /** Remove a Sequence Upgrade row (data-index = its position). */
-  static async #onDeleteSequenceUpgrade(event, target) {
-    await this._removeFromList("system.higherSequenceUpgrades", target.dataset.index);
-  }
 
   /** Remove a Spell List entry. */
   static async #onDeleteSpell(event, target) {

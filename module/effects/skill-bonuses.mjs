@@ -52,24 +52,24 @@ export function categoryBonusChangeKey(category) {
 
 
 /**
- * An effect's changes (v14 keeps them in system.changes; older data had them on the effect itself).
+ * An effect's changes (system.changes; Foundry v14 moves older effects' changes there when they're loaded).
  * @param {ActiveEffect|object} effect
  * @returns {object[]}
  */
 export function effectChanges(effect) {
-  const changes = effect?.system?.changes ?? effect?.changes ?? [];
+  const changes = effect?.system?.changes;
   return Array.isArray(changes) ? changes : [];
 }
 
 
 /**
  * How much a change adds: its value for Add, minus its value for Subtract, null for anything else (Override...).
- * Older effects stored Add as mode 2.
- * @param {{type?: string, mode?: number, value?: any}} change
+ * (Foundry v14 turns older effects' numeric modes into these types when they're loaded.)
+ * @param {{type?: string, value?: any}} change
  * @returns {number|null}
  */
 export function changeAmount(change) {
-  const type = change?.type ?? (change?.mode === 2 ? "add" : null);
+  const type = change?.type;
   const value = Number(change?.value);
   if (!Number.isFinite(value)) return null;
   if (type === "add") return value;

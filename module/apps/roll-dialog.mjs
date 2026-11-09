@@ -64,7 +64,7 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
   /** @override */
   static DEFAULT_OPTIONS = {
     tag: "form",
-    // "skill-check-dialog" keeps the existing dialog styles (src/scss/components/_skill-check-dialog.scss) on every roll dialog.
+    // "skill-check-dialog" keeps the existing dialog styles (css/lotm.css, css/roll-dialog.css) on every roll dialog.
     classes: ["lotm", "roll-dialog", "skill-check-dialog"],
     window: {
       icon: "fa-solid fa-dice-d20",

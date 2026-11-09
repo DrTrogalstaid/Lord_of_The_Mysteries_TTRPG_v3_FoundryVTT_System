@@ -27,10 +27,9 @@ test("change keys", () => {
 });
 
 
-test("change amounts: Add, Subtract, old mode 2; nothing for Override", () => {
+test("change amounts: Add, Subtract; nothing for Override", () => {
   assert.equal(changeAmount({ type: "add", value: "2" }), 2);
   assert.equal(changeAmount({ type: "subtract", value: 1 }), -1);
-  assert.equal(changeAmount({ mode: 2, value: 3 }), 3);
   assert.equal(changeAmount({ type: "override", value: 5 }), null);
   assert.equal(changeAmount({ type: "add", value: "abc" }), null);
 });
