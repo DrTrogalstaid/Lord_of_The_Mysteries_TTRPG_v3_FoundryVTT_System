@@ -1,8 +1,10 @@
 /**
- * The "how much, and what for" window the sidebar's Spend buttons open (Luck and Spirituality).
- * Its text comes from the resource's own lang section: LORD_OF_THE_MYSTERIES.<section>.Current, Amount, Reason,
- * ReasonPlaceholder, SpendTitle, Spend and InvalidAmount.
+ * The "how much, and what for" window the sidebar's Spend buttons open (Luck and Spirituality;
+ * templates/dialogs/spend.hbs). Its text comes from the resource's own lang section:
+ * LORD_OF_THE_MYSTERIES.<section>.Current, Amount, Reason, ReasonPlaceholder, SpendTitle, Spend and InvalidAmount.
  */
+
+import { renderTemplateSync } from "../helpers/render.mjs";
 
 /**
  * Ask how much of a resource to spend, and optionally what for.
@@ -16,21 +18,10 @@
  */
 export async function promptSpend({ section, icon, value, max }) {
   const key = (name) => `LORD_OF_THE_MYSTERIES.${section}.${name}`;
-  const localize = (name) => game.i18n.localize(key(name));
-  const escape = (text) => Handlebars.escapeExpression(text ?? "");
-
-  const content = `
-    <div class="lotm spend-dialog">
-      <p>${game.i18n.format(key("Current"), { value, max })}</p>
-      <div class="form-group">
-        <label>${localize("Amount")}</label>
-        <input type="number" name="amount" value="1" min="1" max="${value}" step="1" autofocus>
-      </div>
-      <div class="form-group">
-        <label>${localize("Reason")}</label>
-        <input type="text" name="reason" placeholder="${escape(localize("ReasonPlaceholder"))}">
-      </div>
-    </div>`;
+  const content = renderTemplateSync("systems/lotm/templates/dialogs/spend.hbs", {
+    value, max,
+    current: key("Current"), amountLabel: key("Amount"), reasonLabel: key("Reason"), reasonPlaceholder: key("ReasonPlaceholder"),
+  });
 
   // Closing the window gives null (rejectClose: false), so nothing is spent.
   const input = await foundry.applications.api.DialogV2.prompt({
@@ -49,7 +40,7 @@ export async function promptSpend({ section, icon, value, max }) {
   if (!input) return null;
 
   if (!Number.isFinite(input.amount) || input.amount < 1) {
-    ui.notifications.warn(localize("InvalidAmount"));
+    ui.notifications.warn(game.i18n.localize(key("InvalidAmount")));
     return null;
   }
   return input;

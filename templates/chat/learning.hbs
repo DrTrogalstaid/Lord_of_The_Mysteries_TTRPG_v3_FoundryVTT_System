@@ -1,0 +1,7 @@
+{{!-- The chat message for logged study or a recorded success (apps/study-dialog.mjs).
+      lines: [{ key, data, strong }]: lang text with its values, in bold when `strong`. --}}
+<div class="lotm chat-study">
+  {{#each lines as |line|}}
+    <p>{{#if line.strong}}<strong>{{lotmLang line.key line.data}}</strong>{{else}}{{lotmLang line.key line.data}}{{/if}}</p>
+  {{/each}}
+</div>

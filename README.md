@@ -1,89 +1,94 @@
-# LordOfTheMysteries System
+# Lord of the Mysteries for Foundry VTT
 
-![Foundry v11](https://img.shields.io/badge/foundry-v11-green)
+![Foundry v14](https://img.shields.io/badge/foundry-v14-green)
 
-This system is a lotm system that you can use as a starting point for building your own custom systems. It's similar to Simple World-building, but has examples of creating attributes in code rather than dynamically through the UI.
+A game system for playing the Lord of the Mysteries tabletop RPG in [Foundry VTT](https://foundryvtt.com). It has
+character and NPC sheets, and the rules worked into rolls and chat cards:
 
-## Usage
+- **Skills and attributes**: skill and attribute checks with a roll window for modifiers, skill levels, learning
+  by study or by doing, Education growth, skills granted by Sequences and abilities.
+- **Pathways**: Sequences, abilities, actions and spells, and promotion (the potion check, its Sanity loss, the
+  ritual, and losing control).
+- **Combat**: attack rolls against a target's defenses (hit / miss on the card), damage with types and damage
+  reduction, firearms (magazines, cylinders, barrels, reloading and special rounds), and Big Success / Big Failure.
+- **Statuses**: Bound, Blind, Dying, Bleeding, Fear, Semi-Out-of-Control and the others, each with its rules:
+  start-of-turn cards, checks to end them, and warnings before an action they stop.
+- **Sanity, Luck and Spirituality**: Sanity checks and losses, Burning Luck to change a roll after the fact, and
+  Spirituality costs on actions and spells.
+- **Inventory**: gear, containers, worn armor and money.
+- **Effects**: effects that actions and spells give to their targets, areas on the scene, and Spirit Vision.
+- **Compendiums**: skills, Sequences, abilities, actions, spells and rituals, containers and gear, effects, roll
+  tables, and the rules.
 
-There are two ways to get started: using the LordOfTheMysteries system generator command or manually renaming and updating files.
+## Requirements
 
-Regardless of which method you choose, think carefully about your system's name. Your system's package name when submitted to Foundry must be formatted like `alphanumeric-lowercase`, and it must be unique. Check the Foundry systems package list for conflicts before committing to a name!
+Foundry VTT version 14 (verified on 14.369).
 
-> **Data Models**
->
-> If you would like to use DataModel classes instead of the older template.json configuration, you'll need to use the `npm run generate` command described below and choose to enable them when asked. DataModels are currently an optional feature, and are only availabe in the generator CLI due to that.
+## Installing
 
-### Generator
+There's no release link yet, so the system is installed by hand:
 
-This system includes a generator CLI in `package.json`. To use it, you must have [node.js](https://nodejs.org) installed, and it's recommended that you install node 20 or later.
+1. Download or clone this repository into Foundry's `Data/systems/` folder, in a folder named `lotm` (the system's id
+   in `system.json`; Foundry won't find it under another name).
+2. Restart Foundry, then create a world with **Lord Of The Mysteries** as its game system.
 
-> **Python Generator**
-> 
-> If you would rather use Python than node, there’s an excellent Python-based generator created by Cussa at https://github.com/Cussa/fvtt-lotm-initializator. Give it a shot!
+To update, replace the folder's files with the new ones and reload the world. Restart Foundry instead when
+`system.json` changed (a new compendium, document type or region behavior).
 
-Once you have npm installed, you can run the following in your terminal or command prompt:
+## Where things are
 
-```bash
-npm install
-npm run generate
-```
+There's no build step: the files are loaded as they are, so edit them and reload the world.
 
-Your terminal should prompt you to name your system. Read the instructions carefully, the letter case and special characters in each question matter for correct system generation.
+| Folder | What's in it |
+|---|---|
+| `module/lotm.mjs` | The entry point: registers the data models, sheets, settings and hooks |
+| `module/data/` | Data models: what each actor, item, effect and region behavior saves |
+| `module/documents/` | The system's Actor, Item, ActiveEffect and Combat classes |
+| `module/sheets/` | Actor and item sheets |
+| `module/apps/` | Roll windows (skill, attribute, action, Sanity, promotion) and other dialogs |
+| `module/helpers/` | Rules and chat cards: rolls, damage, firearms, Sanity, Luck, Spirituality, promotion, money, skills |
+| `module/effects/` | Statuses (`effects/rules/` has one file per status) and effects given by actions and spells |
+| `module/canvas/` | Spirit Vision and other things drawn on the scene |
+| `module/macros/` | Maintenance macros for the GM (see `tests/MANUAL_QA.md`) |
+| `templates/` | Handlebars templates: sheets, roll windows, chat cards (`chat/`) and dialogs (`dialogs/`) |
+| `css/` | Styles |
+| `lang/en.json` | All the text the system shows |
+| `packs/` | Compendiums |
+| `tests/` | Unit tests, and the manual QA checklist |
+| `docs/` | Notes on how some features work |
 
-Once the generator completes, it will output your system to `build/<your-system-name>`, where `<your-system-name>` is the package name you supplied during the prompt.
+### Chat cards and dialogs
 
-Copy this directory over to your Foundry systems directory and start coding!
+Chat cards and dialog contents are Handlebars templates in `templates/chat/` and `templates/dialogs/`, like the
+sheets. A template escapes what it shows, so names typed by players can't break a card. `module/helpers/render.mjs`
+explains how to render one; a new template also goes in the `CARD_TEMPLATES` list in `module/helpers/templates.mjs`,
+so it's loaded when the world starts.
 
-### Manual Replacement
+### Text
 
-Before installing this system, you should rename any files that have `lotm` in their filename to use whatever machine-safe name your system needs, such as `adnd2e` if you were building a system for 2nd edition Advanced Dungeons & Dragons. In addition, you should search through the files for `lotm` and `LordOfTheMysteries` and do the same for those, replacing them with appropriate names for your system.
-
-The `name` property in your `system.json` file is your system's package name. This need to be formatted `alphanumeric-lowercase`, and it must also match the foldername you use for your system.
-
-### Vue 3 LordOfTheMysteries
-
-**NOTE: The Vue 3 version is currently outdated and considered an advanced usage of Foundry due to it being a custom renderer. Only try it out if you _really_ like Vue and are feeling dangerous!**
-
-Alternatively, there's another build of this system that supports using Vue 3 components (ES module build target) for character sheet templates.
-
-Head over to the [Vue3LordOfTheMysteries System](https://gitlab.com/asacolips-projects/foundry-mods/vue3lotm) repo if you're interested in using Vue!
-
-### Getting Help
-
-Check out the [Official Foundry VTT Discord](https://discord.gg/foundryvtt)! The #system-development channel has helpful pins and is a good place to ask questions about any part of the foundry application.
-
-For more static references, the [Knowledge Base](https://foundryvtt.com/kb/) and [API Documentation](https://foundryvtt.com/api/) provide different levels of detail. For the most detail, you can find the client side code in your foundry installation location. Classes are documented in individual files under `resources/app/client` and `resources/app/common`, and the code is collated into a single file at `resources/app/public/scripts/foundry.js`.
-
-#### Tutorial
-
-For much more information on how to use this system as a starting point for making your own, see the [full tutorial on the Foundry Wiki](https://foundryvtt.wiki/en/development/guides/SD-tutorial)!
-
-Note: Tutorial may be out of date, so look out for the Foundry compatibility badge at the top of each page.
-
-## Sheet Layout
-
-This system includes a handful of helper CSS classes to help you lay out your sheets if you're not comfortable diving into CSS fully. Those are:
-
-- `flexcol`: Included by Foundry itself, this lays out the child elements of whatever element you place this on vertically.
-- `flexrow`: Included by Foundry itself, this lays out the child elements of whatever element you place this on horizontally.
-- `flex-center`: When used on something that's using flexrow or flexcol, this will center the items and text.
-- `flex-between`: When used on something that's using flexrow or flexcol, this will attempt to place space between the items. Similar to "justify" in word processors.
-- `flex-group-center`: Add a border, padding, and center all items.
-- `flex-group-left`: Add a border, padding, and left align all items.
-- `flex-group-right`: Add a border, padding, and right align all items.
-- `grid`: When combined with the `grid-Ncol` classes, this will lay out child elements in a grid.
-- `grid-Ncol`: Replace `N` with any number from 1-12, such as `grid-3col`. When combined with `grid`, this will layout child elements in a grid with a number of columns equal to the number specified.
+Every piece of text is in `lang/en.json`. For a file that uses many keys from one section, `langSection` in
+`module/helpers/lang.mjs` saves writing the section's name each time.
 
 ## Styles
 
 The styles are plain CSS in `css/`, edited directly (no build step). `system.json` lists them under `styles`:
-`lotm.css` has the shared basics (window, flex and grid helpers, form fields); the others are one file per part of the
-system (actor sheets, item sheets, drop sections, inventory, NPC sheet, roll dialogs, effects).
+`lotm.css` has the shared basics (window, layout helpers such as `flexrow` and `grid-3col`, form fields); the others
+are one file per part of the system (actor sheets, item sheets, drop sections, inventory, NPC sheet, roll dialogs,
+effects).
 
 ## Tests
 
-`npm test` runs the unit tests in `tests/` with Node (no install needed). `tests/MANUAL_QA.md` lists what to check by
-hand in Foundry.
+Unit tests check the rules that don't need Foundry running (skill formulas, status math, damage, money, chat card
+text). They need [Node.js](https://nodejs.org) 22 or later. In the system's folder:
 
-![image](http://mattsmith.in/images/lotm.png)
+```bash
+npm install   # once: installs Handlebars, which the chat card tests render their templates with
+npm test
+```
+
+`tests/MANUAL_QA.md` is the checklist for what has to be checked by hand in Foundry: sheets, dialogs, chat cards,
+tokens and scenes.
+
+## License
+
+See `LICENSE.txt`. The system started from Asacolips' Foundry system template (MIT).

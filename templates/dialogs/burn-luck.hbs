@@ -1,0 +1,30 @@
+{{!-- The Burn Luck dialog on a roll's card (helpers/luck.mjs openBurnLuckDialog). With more than one creature that
+      can burn Luck on the roll, a dropdown; each option carries the direction it usually burns (data-sign). --}}
+<div class="lotm burn-luck-dialog">
+  <p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.DialogHint" title=title total=total}}</p>
+  {{#if hasChoice}}
+    <div class="form-group">
+      <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Whose"}}</label>
+      <select name="actor">
+        {{#each burners as |burner|}}
+          <option value="{{burner.uuid}}" data-sign="{{burner.sign}}">{{burner.name}} ({{lotmLang "LORD_OF_THE_MYSTERIES.Luck.LuckLeft" value=burner.luck}})</option>
+        {{/each}}
+      </select>
+    </div>
+  {{else}}
+    <p>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.BurnerLine" name=burners.0.name value=burners.0.luck}}</p>
+    <input type="hidden" name="actor" value="{{burners.0.uuid}}">
+  {{/if}}
+  <div class="form-group">
+    <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Amount"}}</label>
+    <input type="number" name="amount" value="1" min="1" step="1" autofocus>
+  </div>
+  <div class="form-group">
+    <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Direction"}}</label>
+    <select name="sign">
+      <option value="1" {{#if adds}}selected{{/if}}>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Add"}}</option>
+      <option value="-1" {{#unless adds}}selected{{/unless}}>{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Subtract"}}</option>
+    </select>
+  </div>
+  <p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Luck.NaturalHint"}}</p>
+</div>

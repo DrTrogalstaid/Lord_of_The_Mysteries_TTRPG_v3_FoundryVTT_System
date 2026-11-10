@@ -1,5 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+// Real Handlebars and the system's templates: the chat lines these tests read are rendered from them.
+import "./support/templates.mjs";
 
 /*
  * Toggled effects (effects/toggle-effects.mjs): an action like Activate Spirit Vision switches its effect on and off.
@@ -27,7 +29,6 @@ const fill = (text, data) => text.replace(/\{(\w+)\}/g, (match, key) => (key in 
 const warnings = [];
 const chat = [];
 
-globalThis.Handlebars = { escapeExpression: (text) => String(text ?? "").replace(/</g, "&lt;").replace(/>/g, "&gt;") };
 globalThis.CONFIG = {
   LORD_OF_THE_MYSTERIES: {
     effectApplicationModes: { targets: "Targets", self: "Self", area: "Area", zone: "Zone", toggle: "Toggle" },

@@ -1,0 +1,7 @@
+{{!-- A long rest (sheets/player-character-sheet.mjs): who rested, then what came back. lines: [{ key, data }]. --}}
+<div class="lotm chat-rest">
+  <p class="chat-rest-title"><i class="fa-solid fa-bed"></i> {{lotmLang "LORD_OF_THE_MYSTERIES.Recovery.LongRestTitle" name=name}}</p>
+  <ul>
+    {{#each lines as |line|}}<li>{{lotmLang line.key line.data}}</li>{{/each}}
+  </ul>
+</div>

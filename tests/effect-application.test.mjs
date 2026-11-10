@@ -1,5 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+// Real Handlebars and the system's templates: the chat lines these tests read are rendered from them.
+import "./support/templates.mjs";
 
 /*
  * Handing out effects stored on items (effects/effect-application.mjs).
@@ -21,9 +23,6 @@ const warnings = [];
 const chat = [];
 const queries = [];
 
-globalThis.Handlebars = {
-  escapeExpression: (text) => String(text ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
-};
 globalThis.CONFIG = {
   LORD_OF_THE_MYSTERIES: {
     effectApplicationModes: {

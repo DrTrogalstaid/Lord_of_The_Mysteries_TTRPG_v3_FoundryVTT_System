@@ -1,14 +1,17 @@
 {
   "name": "lotm",
   "version": "2.0.0",
-  "description": "Tests for the LordOfTheMysteries system",
+  "description": "Lord of the Mysteries Foundry VTT system",
   "scripts": {
     "test": "node --test \"tests/*.test.mjs\""
   },
   "browserslist": [
     "last 3 versions"
   ],
-  "author": "Asacolips",
+  "author": "DrTrog",
   "license": "MIT",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "handlebars": "^4.7.10"
+  }
 }

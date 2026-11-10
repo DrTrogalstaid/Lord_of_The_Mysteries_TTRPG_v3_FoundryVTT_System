@@ -22,6 +22,8 @@
  */
 
 import { askGM, createEffectsOn, deleteEffectsOn, effectCopyData, giveEffect } from "./effect-application.mjs";
+import { postEffectLine } from "./effect-chat.mjs";
+import { renderTemplateSync } from "../helpers/render.mjs";
 
 /** The region behavior type for zones (registered in lotm.mjs; listed under RegionBehavior in system.json). */
 export const ZONE_BEHAVIOR_TYPE = "lotm.applyEffect";
@@ -32,9 +34,7 @@ const DEFAULT_CONE_ANGLE = 53.13;
 const CREATE_ZONE_QUERY = "lotm.createZone";
 const DELETE_ZONE_QUERY = "lotm.deleteZone";
 
-const localize = (key) => game.i18n.localize(key);
 const format = (key, data) => game.i18n.format(key, data);
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
 
 /* -------------------------------------------- */
@@ -171,19 +171,18 @@ async function chooseAndGive(effect, caster, preview) {
  * @returns {Promise<TokenDocument[]|null>}  The ticked ones, or null when cancelled.
  */
 async function chooseTokens(effect, tokens, caster) {
-  const rows = tokens.map((token) => {
-    const isCaster = token.actor?.uuid === caster.uuid || token.actorId === caster.id;
-    return `<label class="lotm-area-token">
-        <input type="checkbox" name="token" value="${escape(token.uuid)}" ${isCaster ? "" : "checked"}>
-        <img src="${escape(token.texture?.src ?? token.actor?.img)}" alt="" width="28" height="28">
-        <span>${escape(token.name)}${isCaster ? ` <em>(${escape(localize("LORD_OF_THE_MYSTERIES.Effects.Area.You"))})</em>` : ""}</span>
-      </label>`;
-  }).join("");
+  const content = renderTemplateSync("systems/lotm/templates/dialogs/area-tokens.hbs", {
+    tokens: tokens.map((token) => ({
+      uuid: token.uuid,
+      img: token.texture?.src ?? token.actor?.img,
+      name: token.name,
+      isCaster: token.actor?.uuid === caster.uuid || token.actorId === caster.id,
+    })),
+  });
 
   const uuids = await foundry.applications.api.DialogV2.wait({
     window: { title: format("LORD_OF_THE_MYSTERIES.Effects.Area.ChooseTitle", { name: effect.name }) },
-    content: `<p>${escape(localize("LORD_OF_THE_MYSTERIES.Effects.Area.ChooseIntro"))}</p>
-      <div class="lotm-area-tokens">${rows}</div>`,
+    content,
     buttons: [
       {
         action: "apply",
@@ -239,10 +238,11 @@ export async function createZone(effect, { caster }) {
   // The marker on the caster: the zone lasts as long as it does.
   await createEffectsOn(caster, [zoneMarkerData(effect, regionUuid)]);
 
-  const text = format("LORD_OF_THE_MYSTERIES.Effects.Zone.Chat", { name: escape(caster.name), effect: escape(effect.name) });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker({ actor: caster }),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
+    img: effect.img,
+    key: "LORD_OF_THE_MYSTERIES.Effects.Zone.Chat",
+    data: { name: caster.name, effect: effect.name },
   });
   return [];
 }

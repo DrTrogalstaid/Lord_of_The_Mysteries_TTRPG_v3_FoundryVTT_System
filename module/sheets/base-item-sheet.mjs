@@ -39,6 +39,7 @@
 
 import { applyItemEffect, defaultUseFor, effectUse, useData, useLabel } from "../effects/effect-application.mjs";
 import { bindDropZone, bindEach } from "../helpers/listeners.mjs";
+import { paragraphsHTML } from "../helpers/render.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -428,7 +429,7 @@ export class LordOfTheMysteriesItemSheetBase extends HandlebarsApplicationMixin(
     if (!event.shiftKey) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
         window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
-        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(effect.name) })}</p>`,
+        content: paragraphsHTML({ key: "LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", data: { name: effect.name } }),
         rejectClose: false,
         modal: true,
       });

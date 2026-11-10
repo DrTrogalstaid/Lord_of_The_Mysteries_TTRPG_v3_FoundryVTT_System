@@ -5,6 +5,8 @@
  * The entries come from sections.mjs.
  */
 
+import { langSection } from "../../helpers/lang.mjs";
+
 /* -------------------------------------------- */
 /*  Spell Lists                                  */
 /* -------------------------------------------- */
@@ -102,7 +104,7 @@ export function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: 
   // Nothing to show: no actions, and no favorite spells either.
   const favoriteSpells = showFavorites ? spells.filter((spell) => favoriteKeys.includes(spell.key)) : [];
   if (!entries.length && !favoriteSpells.length) return [];
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.ActionGroups.${key}`);
+  const groupText = langSection("LORD_OF_THE_MYSTERIES.ActionGroups");
 
   // Every favorite gets a filled star, wherever it's listed.
   const favoriteSet = new Set(showFavorites ? favoriteKeys : []);
@@ -113,8 +115,8 @@ export function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: 
   const favorites = {
     key: "favorites",
     favorites: true,
-    label: localize("Favorites"),
-    emptyText: localize("FavoritesEmpty"),
+    label: groupText("Favorites"),
+    emptyText: groupText("FavoritesEmpty"),
     entries: favoriteKeys.filter((key) => byKey.has(key)).map((key) => ({ ...byKey.get(key), favorite: true })),
   };
 
@@ -125,7 +127,7 @@ export function groupActions(entries, favoriteKeys, collapsedKeys, { favorites: 
     if (entry.spellOnly) continue;
     const type = ACTION_GROUP_ORDER.includes(entry.actionType) ? entry.actionType : "other";
     if (!byType.has(type)) {
-      byType.set(type, { key: type, favorites: false, label: localize(`Types.${type}`), emptyText: "", entries: [] });
+      byType.set(type, { key: type, favorites: false, label: groupText(`Types.${type}`), emptyText: "", entries: [] });
     }
     byType.get(type).entries.push(entry);
   }

@@ -1,0 +1,22 @@
+{{!-- The start-of-turn card: what each status needs this turn, with a button per roll (effects/turn-start.mjs).
+      rows: [{ img, name, text, statusId, effectUuid, buttons: [{ check, label }] }]; text is the status rule's HTML. --}}
+<div class="lotm chat-turn-start">
+  <p class="chat-turn-start-title">{{lotmLang "LORD_OF_THE_MYSTERIES.Status.TurnStart.Title" name=name}}</p>
+  <ul class="turn-start-list">
+    {{#each rows as |row|}}
+      <li class="turn-start-status">
+        <img src="{{row.img}}" alt="" />
+        <div>
+          <strong>{{row.name}}</strong> {{lotmHTML row.text}}
+          {{#if row.buttons.length}}
+            <div class="turn-start-buttons">
+              {{#each row.buttons as |button|}}
+                <button type="button" data-lotm-turn-check="{{button.check}}" data-status-id="{{row.statusId}}" data-effect-uuid="{{row.effectUuid}}">{{button.label}}</button>
+              {{/each}}
+            </div>
+          {{/if}}
+        </div>
+      </li>
+    {{/each}}
+  </ul>
+</div>

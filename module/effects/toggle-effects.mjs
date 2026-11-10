@@ -19,6 +19,7 @@
  */
 
 import { createEffectsOn, deleteEffectsOn, effectCopyData, effectUse } from "./effect-application.mjs";
+import { postEffectLine } from "./effect-chat.mjs";
 import { confirmStatusRestrictions, postUsedDespite } from "./status-restrictions.mjs";
 import { currentSpirituality, spendSpirituality, spiritualityCost, spiritualityNote } from "../helpers/spirituality.mjs";
 import { recordActionUse } from "./action-expiry.mjs";
@@ -26,7 +27,6 @@ import { recordActionUse } from "./action-expiry.mjs";
 /** The effect Use (system.application.mode) for effects that are switched on and off. */
 export const TOGGLE_USE = "toggle";
 
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
 
 /* -------------------------------------------- */
@@ -186,11 +186,11 @@ export async function payUpkeep(actor) {
  * @param {ActiveEffect} effect
  */
 async function postRanOut(actor, effect) {
-  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Toggle.RanOut", { name: escape(actor.name), effect: escape(effect.name) });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24">`
-      + `<span>${text}</span></div>`,
+    img: effect.img,
+    key: "LORD_OF_THE_MYSTERIES.Effects.Toggle.RanOut",
+    data: { name: actor.name, effect: effect.name },
   });
 }
 
@@ -204,11 +204,12 @@ async function postRanOut(actor, effect) {
  */
 async function postSwitched(actor, named, isOn, extra = "") {
   const key = isOn ? "LORD_OF_THE_MYSTERIES.Effects.Toggle.ChatOn" : "LORD_OF_THE_MYSTERIES.Effects.Toggle.ChatOff";
-  const text = game.i18n.format(key, { name: escape(actor.name), effect: escape(named.name) });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(named.img)}" alt="" width="24" height="24">`
-      + `<span>${text}</span></div>${extra}`,
+    img: named.img,
+    key,
+    data: { name: actor.name, effect: named.name },
+    extra,
   });
 }
 

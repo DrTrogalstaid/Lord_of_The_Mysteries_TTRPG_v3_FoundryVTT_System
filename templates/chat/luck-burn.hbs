@@ -1,0 +1,23 @@
+{{!-- Luck burned on a roll: what the roll comes to now, and what changed (helpers/luck.mjs burnLuck).
+      lines, one of:
+        { key, data }                          lang text ("New total: 17")
+        { result: { labelKey, labelData, now, word, was } }   "DC 15: Success (was Failure)"
+        { target: { name, hit, word, was, defense } }         "Goblin: Hit (was Miss)", the defense for the GM only
+        { html }                               HTML already built (a Sanity loss that changed, helpers/sanity.mjs) --}}
+<div class="lotm chat-luck-burn">
+  <p class="chat-luck-title"><i class="fa-solid fa-clover"></i> {{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Burned" name=name amount=amount change=change roller=roller title=title}}</p>
+  {{#each lines as |line|}}
+    <div class="chat-luck-line">
+      {{#if line.key}}
+        {{lotmLang line.key line.data}}
+      {{else if line.result}}
+        <span class="roll-dc-result {{#if line.result.now}}success{{else}}failure{{/if}}">{{lotmLang line.result.labelKey line.result.labelData}}: {{line.result.word}}</span>{{#if line.result.was}} {{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Was" result=line.result.was}}{{/if}}
+      {{else if line.target}}
+        <span class="{{#if line.target.hit}}is-hit{{else}}is-miss{{/if}}">{{line.target.name}}: <strong>{{line.target.word}}</strong>{{#if line.target.was}} {{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Was" result=line.target.was}}{{/if}}</span>
+        <span class="lotm-gm-only">({{line.target.defense}})</span>
+      {{else}}
+        {{lotmHTML line.html}}
+      {{/if}}
+    </div>
+  {{/each}}
+</div>

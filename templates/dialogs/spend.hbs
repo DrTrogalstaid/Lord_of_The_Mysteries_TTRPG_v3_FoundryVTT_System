@@ -1,0 +1,13 @@
+{{!-- How much of a resource to spend, and what for (apps/spend-dialog.mjs): Luck or Spirituality. Its text comes from
+      the resource's lang section (section: "LORD_OF_THE_MYSTERIES.Luck"). --}}
+<div class="lotm spend-dialog">
+  <p>{{lotmLang current value=value max=max}}</p>
+  <div class="form-group">
+    <label>{{lotmLang amountLabel}}</label>
+    <input type="number" name="amount" value="1" min="1" max="{{value}}" step="1" autofocus>
+  </div>
+  <div class="form-group">
+    <label>{{lotmLang reasonLabel}}</label>
+    <input type="text" name="reason" placeholder="{{localize reasonPlaceholder}}">
+  </div>
+</div>

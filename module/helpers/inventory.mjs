@@ -305,7 +305,10 @@ export function buildInventoryView(entries, actor) {
   }
 
   // Worn clothing first, then carried bags, then anything not equipped (left behind).
-  const groupRank = (group) => (group.leftBehind ? 2 : (group.category === "clothing" ? 0 : 1));
+  const groupRank = (group) => {
+    if (group.leftBehind) return 2;
+    return group.category === "clothing" ? 0 : 1;
+  };
   containerGroups.sort((a, b) => groupRank(a) - groupRank(b));
 
   // The choices in each gear row's location dropdown.
@@ -409,13 +412,17 @@ function gearControls(item, info, carrying, groupById) {
   const system = item.system;
   const size = ITEM_SIZES[system.size] ?? ITEM_SIZES.smallMedium;
   const onBody = info.place === "held" || info.place === "worn";
+  // The location dropdown's value: held / worn, a container's id, or "" for loose.
+  let location = system.containerId;
+  if (onBody) location = info.place;
+  else if (info.place === "loose") location = "";
   return {
     quantity: system.quantity,
     sizeLabel: localize(size.label),
     slotsLabel: formatSlots(system.units),
     hidden: system.hidden,
     canHide: info.place === "stowed" || info.place === "leftBehind",
-    location: onBody ? info.place : (info.place === "loose" ? "" : system.containerId),
+    location,
     locationLabel: onBody
       ? localize(CARRY_MODES[info.place].label)
       : (groupById[system.containerId]?.name ?? localize("LORD_OF_THE_MYSTERIES.Inventory.NotStowed")),

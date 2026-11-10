@@ -1,6 +1,7 @@
 import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
 import { promptSpend } from "../apps/spend-dialog.mjs";
+import { langHTML, renderTemplateSync } from "./render.mjs";
 
 /**
  * Spending Spirituality.
@@ -62,16 +63,16 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
   const result = { amount, before: value, after };
 
   if (chat) {
-    const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.Chat", {
-      name: Handlebars.escapeExpression(actor.name),
-      amount,
-      reason: reason
-        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.ChatReason", { reason: Handlebars.escapeExpression(reason) })
-        : "",
-    });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="lotm chat-spirituality"><i class="fa-solid fa-sparkles"></i> ${text}</div>`,
+      content: renderTemplateSync("systems/lotm/templates/chat/spirituality.hbs", {
+        key: "LORD_OF_THE_MYSTERIES.Spirituality.Chat",
+        data: {
+          name: actor.name,
+          amount,
+          reason: reason ? langHTML("LORD_OF_THE_MYSTERIES.Spirituality.ChatReason", { reason }) : "",
+        },
+      }),
     });
   }
   return result;
@@ -84,8 +85,9 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
  */
 export function spiritualityNote(spent) {
   if (!spent) return "";
-  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.RollNote", { amount: spent.amount });
-  return `<div class="lotm chat-spirituality"><i class="fa-solid fa-sparkles"></i> ${text}</div>`;
+  return renderTemplateSync("systems/lotm/templates/chat/spirituality.hbs", {
+    key: "LORD_OF_THE_MYSTERIES.Spirituality.RollNote", data: { amount: spent.amount },
+  });
 }
 
 /**

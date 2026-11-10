@@ -1,5 +1,6 @@
 import StatusRule from "../status-rule.mjs";
 import { rollStatusCheck, statusChat } from "../status-checks.mjs";
+import { langHTML } from "../../helpers/render.mjs";
 
 /** The Will check at the start of each turn; failing it is a 0/1 sanity check. */
 const WILL_DC = 10;
@@ -37,11 +38,11 @@ export default class SemiOutOfControlRule extends StatusRule {
   turnStart(actor, effect) {
     const left = Number(effect.system?.roundsLeft) || 0;
     const rounds = left > 0
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Status.TurnStart.SemiRoundsLeft", { rounds: left })
-      : game.i18n.localize("LORD_OF_THE_MYSTERIES.Status.TurnStart.SemiLastRound");
+      ? langHTML("LORD_OF_THE_MYSTERIES.Status.TurnStart.SemiRoundsLeft", { rounds: left })
+      : langHTML("LORD_OF_THE_MYSTERIES.Status.TurnStart.SemiLastRound");
     return {
       text: this.text("LORD_OF_THE_MYSTERIES.Status.TurnStart.SemiOutOfControl", actor, effect, {
-        dc: WILL_DC, tendency: Handlebars.escapeExpression(this.tendency(effect)), rounds,
+        dc: WILL_DC, tendency: this.tendency(effect), rounds,
       }),
       buttons: [{ check: "will", label: game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Buttons.RollWill", { dc: WILL_DC }) }],
     };
@@ -96,7 +97,7 @@ export default class SemiOutOfControlRule extends StatusRule {
     }
     if (check === "resist") {
       const line = success ? "LORD_OF_THE_MYSTERIES.Status.Results.ResistedMadness" : "LORD_OF_THE_MYSTERIES.Status.Results.GaveInToMadness";
-      await statusChat(actor, this.text(line, actor, effect, { tendency: Handlebars.escapeExpression(this.tendency(effect)) }));
+      await statusChat(actor, this.text(line, actor, effect, { tendency: this.tendency(effect) }));
       return true;
     }
     return false;

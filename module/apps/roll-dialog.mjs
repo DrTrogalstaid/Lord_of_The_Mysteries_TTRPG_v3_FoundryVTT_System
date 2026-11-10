@@ -5,6 +5,13 @@ import { currentSpirituality, spendSpirituality, spiritualityNote } from "../hel
 import { statusRollExtras, targetedActors } from "../effects/status-rolls.mjs";
 import { checkBonusRows } from "../helpers/check-bonuses.mjs";
 import { checkSucceeds, defenseValue, effectiveDefenseTarget, isAttackHit, isMissingDefenseTarget, naturalD20 } from "../helpers/check-results.mjs";
+import { langHTML, renderTemplateSync } from "../helpers/render.mjs";
+
+/** Big Success on a natural 20, Big Failure on a natural 1 (templates/chat/check-result.hbs). */
+const NATURAL_RESULTS = {
+  20: { css: "big-success", icon: "fa-star", label: "LORD_OF_THE_MYSTERIES.RollDialog.BigSuccess" },
+  1: { css: "big-failure", icon: "fa-skull", label: "LORD_OF_THE_MYSTERIES.RollDialog.BigFailure" },
+};
 
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
@@ -317,7 +324,13 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     const result = await this._resultFor(roll);
     await postRoll(roll, {
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      flavor: this._flavor() + result.html + this.#statusNotesHTML() + spiritualityNote(spent) + (this.chat.footer ?? ""),
+      flavor: renderTemplateSync("systems/lotm/templates/chat/check-flavor.hbs", {
+        title: this._flavor(),
+        result: result.html,
+        statusNotes: this.statusNotes,
+        spirituality: spiritualityNote(spent),
+        footer: this.chat.footer,
+      }),
       flags: foundry.utils.mergeObject(foundry.utils.deepClone(this.chat.flags ?? {}), result.flags ?? {}, { inplace: false }),
     }, this.messageMode);
 
@@ -347,12 +360,11 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     };
     if (this.outcome) check.outcome = this.outcome;
 
-    let html = "";
+    const shown = { natural: NATURAL_RESULTS[natural] ?? null };
     if (this.dc !== null) {
       check.success = checkSucceeds({ total: roll.total, natural, dc: this.dc });
-      html += LotmRollDialog.dcResultHTML(this.dc, check.success);
+      shown.result = { key: "LORD_OF_THE_MYSTERIES.RollDialog.DCResult", data: { dc: this.dc }, success: check.success };
     }
-    html += LotmRollDialog.naturalHTML(natural);
 
     // Outcome tables: drawn by the Roll Outcome button, by the result against the DC (helpers/outcome-tables.mjs).
     const successTable = this.action?.system?.successTable ?? null;
@@ -363,12 +375,8 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     const attack = this.#attackFor(roll, natural);
     if (attack) lotm.attack = attack;
     // Tokens targeted, but nothing to check them against: tell the GM why there's no Hit / Miss.
-    else if (isMissingDefenseTarget(this.action?.system, game.user?.targets?.size ?? 0)) {
-      html += `<p class="lotm-gm-only hint">${game.i18n.format("LORD_OF_THE_MYSTERIES.Attack.NoDefenseTarget", {
-        name: Handlebars.escapeExpression(this.action.name),
-      })}</p>`;
-    }
-    return { html, flags: { lotm } };
+    else if (isMissingDefenseTarget(this.action?.system, game.user?.targets?.size ?? 0)) shown.noDefenseFor = this.action.name;
+    return { html: LotmRollDialog.resultHTML(shown), flags: { lotm } };
   }
 
   /**
@@ -398,28 +406,31 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
   }
 
   /**
-   * " DC 15: Success" (or Failure) for a chat card.
-   * @param {number} dc
-   * @param {boolean} success
+   * How a check came out, for its chat card (templates/chat/check-result.hbs).
+   * @param {object} shown
+   * @param {{key: string, data: object, success: boolean}} [shown.result]   " DC 15: Success": a lang line whose
+   *                                    {result} is filled in with Success or Failure.
+   * @param {{css: string, icon: string, label: string}} [shown.natural]    Big Success / Big Failure (NATURAL_RESULTS).
+   * @param {string} [shown.noDefenseFor]   An action's name: tokens were targeted, but it has no Defense Targeted.
    * @returns {string}
    */
-  static dcResultHTML(dc, success) {
-    const result = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
-    return ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
-      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DCResult", { dc, result })}</span>`;
+  static resultHTML({ result = null, natural = null, noDefenseFor = "" } = {}) {
+    const word = result && langHTML(`LORD_OF_THE_MYSTERIES.RollDialog.${result.success ? "Success" : "Failure"}`);
+    return renderTemplateSync("systems/lotm/templates/chat/check-result.hbs", {
+      result: result && { ...result, data: { ...result.data, result: word } },
+      natural,
+      noDefenseFor,
+    });
   }
 
   /**
-   * "Big Success" on a natural 20, "Big Failure" on a natural 1, nothing otherwise.
-   * @param {number|null} natural
-   * @returns {string}
+   * "Bloodbath: Physique Check": what a check is for (plain text) in front of its title (HTML).
+   * @param {string} reason
+   * @param {string} title
+   * @returns {string}  HTML
    */
-  static naturalHTML(natural) {
-    if (natural !== 20 && natural !== 1) return "";
-    const isSuccess = natural === 20;
-    const label = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${isSuccess ? "BigSuccess" : "BigFailure"}`);
-    return `<div class="lotm roll-natural ${isSuccess ? "big-success" : "big-failure"}">`
-      + `<i class="fa-solid ${isSuccess ? "fa-star" : "fa-skull"}"></i> ${label}</div>`;
+  static withReason(reason, title) {
+    return reason ? `${Handlebars.escapeExpression(reason)}: ${title}` : title;
   }
 
   /**
@@ -431,12 +442,6 @@ export default class LotmRollDialog extends HandlebarsApplicationMixin(Applicati
     const div = document.createElement("div");
     div.innerHTML = html ?? "";
     return div.textContent.trim();
-  }
-
-  /** The status notes for the chat card, or "" when there are none. */
-  #statusNotesHTML() {
-    if (!this.statusNotes.length) return "";
-    return `<div class="lotm roll-status-notes">${this.statusNotes.map((note) => `<p>${note}</p>`).join("")}</div>`;
   }
 
   static async #onSubmit(event, form, formData) {

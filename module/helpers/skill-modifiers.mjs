@@ -1,8 +1,6 @@
 /**
  * The flat bonus/penalty a proficiency level adds on top of an attribute's total.
- * Pulled out of PlayerCharacterSheet (which used to own this as a private static
- * method) so it can be shared with SkillCheckDialog without the two modules
- * importing each other.
+ * Used by the character sheet and the skill check dialog.
  * @param {string} skillLevel     One of CONFIG.LORD_OF_THE_MYSTERIES.skillLevels' keys.
  * @param {number} attributeTotal The linked attribute's total. Pass 0 to isolate
  *                                just the level's own bonus (used by the roll

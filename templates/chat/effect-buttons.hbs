@@ -1,0 +1,7 @@
+{{!-- An action's or spell's attack card: an Apply (or On / Off) button for each effect it hands out
+      (effects/effect-application.mjs effectButtonsHTML). buttons: [{ id, img, labelKey, name, hint }] --}}
+<div class="lotm-effect-buttons">
+  {{#each buttons as |button|}}
+    <button type="button" class="lotm-apply-effect" data-lotm-apply-effect="{{button.id}}" data-tooltip="{{button.hint}}"><img src="{{button.img}}" alt="" width="16" height="16"> {{lotmLang button.labelKey name=button.name}}</button>
+  {{/each}}
+</div>

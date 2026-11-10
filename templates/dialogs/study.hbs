@@ -1,0 +1,26 @@
+{{!-- The Study dialog: log weeks of lessons or research (openStudyDialog in apps/study-dialog.mjs).
+      The preview line at the bottom is filled in by the dialog as the form changes. --}}
+<p class="study-current">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Current" level=level next=next percent=percent}}</p>
+<div class="form-group">
+  <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Weeks"}}</label>
+  <div class="form-fields"><input type="number" name="weeks" value="1" min="1" step="1" autofocus></div>
+</div>
+<div class="form-group">
+  <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Schedule"}}</label>
+  <div class="form-fields">
+    <select name="schedule">
+      {{#each schedules as |schedule|}}
+        <option value="{{schedule.key}}" {{#if schedule.selected}}selected{{/if}}>{{lotmLang schedule.label}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.ScheduleHint"}}</p>
+</div>
+<div class="form-group">
+  <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.SelfStudy"}}</label>
+  <div class="form-fields"><input type="checkbox" name="selfStudy"></div>
+  <p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.SelfStudyHint"}}</p>
+</div>
+{{#if boost}}<p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.InspirationBoost" inspiration=inspiration steps=boost}}</p>{{/if}}
+{{#if extraSteps}}<p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.SequenceBoost" steps=extraSteps}}</p>{{/if}}
+<p class="study-preview"></p>

@@ -1,0 +1,21 @@
+{{!-- A special bullet was fired: its spells, each with a Cast button, or why it didn't go off
+      (helpers/firearms.mjs activateBullets). spells: [{ name, uuid, cost, hasCost, paid }] --}}
+<div class="lotm chat-bullet">
+  <header>
+    {{#if img}}<img src="{{img}}" width="28" height="28" alt="">{{/if}}
+    <span>{{lotmLang "LORD_OF_THE_MYSTERIES.Firearm.Bullet.Fired" round=round gun=gun}}</span>
+  </header>
+  <ul class="bullet-spells">
+    {{#each spells as |spell|}}
+      {{#if spell.paid}}
+        <li class="bullet-spell">
+          <span>{{spell.name}}</span>
+          {{#if spell.hasCost}}<span class="bullet-cost">{{localize "LORD_OF_THE_MYSTERIES.Firearm.Bullet.Cost" cost=spell.cost}}</span>{{/if}}
+          <button type="button" data-lotm-bullet-spell="{{spell.uuid}}"><i class="fa-solid fa-wand-sparkles"></i> {{localize "LORD_OF_THE_MYSTERIES.Firearm.Bullet.Cast" name=spell.name}}</button>
+        </li>
+      {{else}}
+        <li class="bullet-spell failed"><span>{{spell.name}}</span> <em>{{localize "LORD_OF_THE_MYSTERIES.Firearm.Bullet.NotEnough" cost=spell.cost}}</em></li>
+      {{/if}}
+    {{/each}}
+  </ul>
+</div>

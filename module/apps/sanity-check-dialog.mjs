@@ -1,6 +1,7 @@
 import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
 import { signedTerm } from "../helpers/skill-check-formula.mjs";
 import { naturalD20, sanityCheckSucceeds } from "../helpers/check-results.mjs";
+import { formatHTML } from "../helpers/render.mjs";
 
 /**
  * SanityCheckDialog
@@ -119,11 +120,9 @@ export default class SanityCheckDialog extends LotmRollDialog {
 
   /** "Saw the Wraith: Sanity Check (1/1d3)" @override */
   _flavor() {
-    const check = game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.Flavor", {
-      success: Handlebars.escapeExpression(this.lossSuccess || "0"),
-      failure: Handlebars.escapeExpression(this.lossFailure || "0"),
-    });
-    return this.reason ? `${Handlebars.escapeExpression(this.reason)}: ${check}` : check;
+    return LotmRollDialog.withReason(this.reason, formatHTML("LORD_OF_THE_MYSTERIES.Sanity.Flavor", {
+      success: this.lossSuccess || "0", failure: this.lossFailure || "0",
+    }));
   }
 
   /**
@@ -135,13 +134,11 @@ export default class SanityCheckDialog extends LotmRollDialog {
     const sanity = this.sanity;
     const success = sanityCheckSucceeds({ total: roll.total, natural, sanity });
 
-    const resultLabel = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
-    let html = ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
-      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.Result", { sanity, result: resultLabel })}</span>`;
-    if (natural === 20) {
-      html += `<div class="lotm roll-natural big-failure"><i class="fa-solid fa-skull"></i> `
-        + `${game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.BigFailure")}</div>`;
-    }
+    const html = LotmRollDialog.resultHTML({
+      result: { key: "LORD_OF_THE_MYSTERIES.Sanity.Result", data: { sanity }, success },
+      // A natural 20 on a sanity check is a Big Failure: the most Sanity is lost.
+      natural: natural === 20 ? { css: "big-failure", icon: "fa-skull", label: "LORD_OF_THE_MYSTERIES.Sanity.BigFailure" } : null,
+    });
 
     const check = {
       actorUuid: this.actor.uuid,

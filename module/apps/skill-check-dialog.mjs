@@ -4,6 +4,7 @@ import { buildSkillCheckFormula, computeSkillCheckTotal, signedTerm } from "../h
 import { spiritualityCost } from "../helpers/spirituality.mjs";
 import { skillBonusRowsFor } from "../helpers/check-bonuses.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
+import { formatHTML, langHTML } from "../helpers/render.mjs";
 
 /**
  * SkillCheckDialog
@@ -241,23 +242,20 @@ export default class SkillCheckDialog extends LotmRollDialog {
         const attributeChanged = this.attributeKey !== this.defaultAttribute;
         const defaultAttrLabel = game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.attributes[this.defaultAttribute]);
         const checkFlavor = attributeChanged
-            ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.FlavorOverride", {
+            ? langHTML("LORD_OF_THE_MYSTERIES.SkillCheck.FlavorOverride", {
                   skill: this.skillEntry.name,
                   attribute: game.i18n.localize(attr),
                   defaultAttribute: defaultAttrLabel
               })
-            : game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.Flavor", {
+            : langHTML("LORD_OF_THE_MYSTERIES.SkillCheck.Flavor", {
                   skill: this.skillEntry.name,
                   attribute: game.i18n.localize(attr)
               });
 
         // Rolling an action: put its name in front, e.g. "Shoot: Pistol check (Agility)".
         return this.action
-            ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillCheck.ActionFlavor", {
-                  action: Handlebars.escapeExpression(this.action.name),
-                  check: checkFlavor
-              })
-            : checkFlavor;
+            ? formatHTML("LORD_OF_THE_MYSTERIES.SkillCheck.ActionFlavor", { action: this.action.name, check: checkFlavor })
+            : checkFlavor.toString();
     }
 
     /** @override */

@@ -21,6 +21,7 @@
 import { isSkillUuid, legacySkillKey } from "./skill-keys.mjs";
 import { EMPTY_SKILL_RECORD, mergeLegacySkills, migrateSkillData } from "./skill-records.mjs";
 import { skillInfo, skillKeyFor, whenSkillRegistryReady } from "./skill-registry.mjs";
+import { langSection } from "./lang.mjs";
 
 
 /* -------------------------------------------- */
@@ -262,9 +263,9 @@ export async function migrateWorldSkillData({ apply = true, quiet = false } = {}
  * @param {{apply: boolean, quiet: boolean}} options
  */
 function reportMigration(results, { apply, quiet }) {
-  const L = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.SkillKeys.Migration.${key}`, data ?? {});
+  const migrationText = langSection("LORD_OF_THE_MYSTERIES.SkillKeys.Migration");
   if (!results.length) {
-    if (!quiet) ui.notifications?.info(L("NothingToDo"));
+    if (!quiet) ui.notifications?.info(migrationText("NothingToDo"));
     return;
   }
 
@@ -286,9 +287,9 @@ function reportMigration(results, { apply, quiet }) {
 
   const failed = results.filter((r) => ["problems", "mismatch", "error"].includes(r.status)).length;
   const done = results.length - failed;
-  if (!apply) ui.notifications?.info(L("DryRun", { count: results.length }));
-  else if (done) ui.notifications?.info(L("Done", { count: done }));
-  if (failed) ui.notifications?.warn(L("Failed", { count: failed }), { permanent: true });
+  if (!apply) ui.notifications?.info(migrationText("DryRun", { count: results.length }));
+  else if (done) ui.notifications?.info(migrationText("Done", { count: done }));
+  if (failed) ui.notifications?.warn(migrationText("Failed", { count: failed }), { permanent: true });
 }
 
 

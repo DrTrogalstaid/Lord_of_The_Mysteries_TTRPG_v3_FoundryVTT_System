@@ -1,10 +1,55 @@
 /**
- * Define a set of template paths to pre-load
- * Pre-loaded templates are compiled and cached for fast access when rendering
+ * Chat card and dialog templates (helpers/render.mjs). Loaded when the world starts, so renderTemplateSync can use
+ * them right away.
+ */
+export const CARD_TEMPLATES = [
+  "systems/lotm/templates/chat/learning.hbs",
+  "systems/lotm/templates/dialogs/study.hbs",
+  "systems/lotm/templates/dialogs/learning-success.hbs",
+  "systems/lotm/templates/dialogs/gun-choice.hbs",
+  "systems/lotm/templates/dialogs/gun-load.hbs",
+  "systems/lotm/templates/chat/bullet.hbs",
+  "systems/lotm/templates/chat/ammo.hbs",
+  "systems/lotm/templates/chat/damage-buttons.hbs",
+  "systems/lotm/templates/chat/apply-buttons.hbs",
+  "systems/lotm/templates/chat/damage-roll.hbs",
+  "systems/lotm/templates/chat/damage-taken.hbs",
+  "systems/lotm/templates/chat/luck-spent.hbs",
+  "systems/lotm/templates/chat/luck-burn.hbs",
+  "systems/lotm/templates/chat/luck-note.hbs",
+  "systems/lotm/templates/dialogs/burn-luck.hbs",
+  "systems/lotm/templates/chat/turn-start.hbs",
+  "systems/lotm/templates/dialogs/money.hbs",
+  "systems/lotm/templates/chat/money-log.hbs",
+  "systems/lotm/templates/chat/effect-line.hbs",
+  "systems/lotm/templates/chat/effect-buttons.hbs",
+  "systems/lotm/templates/dialogs/area-tokens.hbs",
+  "systems/lotm/templates/chat/rolled-value.hbs",
+  "systems/lotm/templates/chat/paragraphs.hbs",
+  "systems/lotm/templates/chat/sanity-loss.hbs",
+  "systems/lotm/templates/chat/promotion.hbs",
+  "systems/lotm/templates/chat/check-result.hbs",
+  "systems/lotm/templates/chat/check-flavor.hbs",
+  "systems/lotm/templates/chat/spirituality.hbs",
+  "systems/lotm/templates/chat/attack-results.hbs",
+  "systems/lotm/templates/chat/card-button.hbs",
+  "systems/lotm/templates/dialogs/status-restrictions.hbs",
+  "systems/lotm/templates/chat/used-despite.hbs",
+  "systems/lotm/templates/chat/item-note.hbs",
+  "systems/lotm/templates/dialogs/spend.hbs",
+  "systems/lotm/templates/chat/long-rest.hbs",
+  "systems/lotm/templates/chat/item-card.hbs",
+];
+
+/**
+ * Load the templates that are used as partials or rendered without waiting (Foundry compiles and caches them, and
+ * registers each as a partial under its path).
  * @return {Promise}
  */
 export const preloadHandlebarsTemplates = async function () {
   return foundry.applications.handlebars.loadTemplates([
+    ...CARD_TEMPLATES,
+
     // Actor partials.
     'systems/lotm/templates/actor/player-character/character.hbs',
     'systems/lotm/templates/actor/player-character/parts/biography.hbs',

@@ -22,6 +22,7 @@ import { registerSpiritVision } from './canvas/spirit-vision.mjs';
 
 // Import helper/utility classes and constants.
 import { preloadHandlebarsTemplates } from './helpers/templates.mjs';
+import { registerRenderHelpers } from './helpers/render.mjs';
 import { LORD_OF_THE_MYSTERIES } from './helpers/config.mjs';
 import * as INVENTORY_RULES from './helpers/inventory-config.mjs';
 import { registerCurrencySettings } from './helpers/currency.mjs';
@@ -271,10 +272,8 @@ Hooks.once('init', function () {
 /*  Handlebars Helpers                          */
 /* -------------------------------------------- */
 
-// If you need to add Handlebars helpers, here is a useful example:
-Handlebars.registerHelper('toLowerCase', function (str) {
-  return str.toLowerCase();
-});
+// {{lotmLang}} and {{lotmHTML}}, for the chat card and dialog templates (helpers/render.mjs).
+registerRenderHelpers();
 
 /* -------------------------------------------- */
 /*  Ready Hook                                  */

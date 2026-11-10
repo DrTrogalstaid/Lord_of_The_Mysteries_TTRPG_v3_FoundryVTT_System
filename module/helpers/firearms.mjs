@@ -28,24 +28,28 @@ import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-re
 import { spendSpirituality, spiritualityCost } from "./spirituality.mjs";
 import { BarrelFeed, CylinderFeed, GunFeed, MagazineFeed, isSpecialRound, roundFromAmmo, sameKind } from "./gun-feed.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
+import { renderTemplateSync } from "./render.mjs";
+import { langSection } from "./lang.mjs";
 
-const L = "LORD_OF_THE_MYSTERIES.Firearm";
-
-/** Translate a key under LORD_OF_THE_MYSTERIES.Firearm, filling in {placeholders} when data is given. */
-const t = (key, data) => (data ? game.i18n.format(`${L}.${key}`, data) : game.i18n.localize(`${L}.${key}`));
+const FIREARM = "LORD_OF_THE_MYSTERIES.Firearm";
+const firearmText = langSection(FIREARM);
 
 /** Show a yellow warning and return null, so callers can write `return warn(...)`. */
 function warn(key, data) {
-  ui.notifications.warn(t(key, data));
+  ui.notifications.warn(firearmText(key, data));
   return null;
 }
 
-const esc = (text) => Handlebars.escapeExpression(text ?? "");
+const DIALOGS = "systems/lotm/templates/dialogs";
+
+/** Lines of text as an HTML tooltip (data-tooltip): each escaped, one per line. */
+const tooltipHTML = (lines) => lines.map((line) => Handlebars.escapeExpression(line)).join("<br>");
+const CHAT = "systems/lotm/templates/chat";
 
 /** The choices for an action's "Uses ammo" dropdown (system.ammoUse in action.mjs). */
 export const AMMO_USES = {
-  none: `${L}.AmmoUse.none`,
-  fire: `${L}.AmmoUse.fire`,
+  none: `${FIREARM}.AmmoUse.none`,
+  fire: `${FIREARM}.AmmoUse.fire`,
 };
 
 /**
@@ -54,17 +58,17 @@ export const AMMO_USES = {
  * their Action Type onto their gun and takes them off its action list.
  */
 export const OLD_AMMO_USES = {
-  reload: `${L}.AmmoUse.reload`,
-  chamber: `${L}.AmmoUse.chamber`,
-  rotate: `${L}.AmmoUse.rotate`,
-  unload: `${L}.AmmoUse.unload`,
+  reload: `${FIREARM}.AmmoUse.reload`,
+  chamber: `${FIREARM}.AmmoUse.chamber`,
+  rotate: `${FIREARM}.AmmoUse.rotate`,
+  unload: `${FIREARM}.AmmoUse.unload`,
 };
 
 /** The choices for a gun's Feed dropdown (helpers/gun-feed.mjs). */
 export const FEEDS = {
-  magazine: `${L}.Feed.magazine`,
-  cylinder: `${L}.Feed.cylinder`,
-  barrels: `${L}.Feed.barrels`,
+  magazine: `${FIREARM}.Feed.magazine`,
+  cylinder: `${FIREARM}.Feed.cylinder`,
+  barrels: `${FIREARM}.Feed.barrels`,
 };
 
 
@@ -148,11 +152,11 @@ export function feedOf(gun) {
 }
 
 /** A round's name for chat and the sheets ("Round" when it has none). */
-const roundName = (round) => round?.name || t("Round");
+const roundName = (round) => round?.name || firearmText("Round");
 
 /** "Silver bullet ×2, Lead round ×3" (or "Empty"). */
 function describeRounds(rounds) {
-  if (!rounds.length) return t("Empty");
+  if (!rounds.length) return firearmText("Empty");
   const counts = new Map();   // name -> how many
   for (const round of rounds) {
     const name = roundName(round);
@@ -163,9 +167,9 @@ function describeRounds(rounds) {
 
 /** "Chamber", "Chamber 3", "Barrel 2", or "3" (a magazine's place from the top). */
 function positionLabel(feed, slot) {
-  if (slot.isChamber) return t("Chamber");
-  if (feed instanceof CylinderFeed) return t("ChamberN", { n: slot.position });
-  if (feed instanceof BarrelFeed) return t("BarrelN", { n: slot.position });
+  if (slot.isChamber) return firearmText("Chamber");
+  if (feed instanceof CylinderFeed) return firearmText("ChamberN", { n: slot.position });
+  if (feed instanceof BarrelFeed) return firearmText("BarrelN", { n: slot.position });
   return String(slot.position);
 }
 
@@ -185,19 +189,19 @@ export function firearmStatus(gun) {
   const next = feed.next;
 
   const contents = describeRounds(isMagazine ? feed.magazine : loadedRounds);
-  const chamberName = hasChamber && feed.chamber ? roundName(feed.chamber) : t("Empty");
+  const chamberName = hasChamber && feed.chamber ? roundName(feed.chamber) : firearmText("Empty");
   // What fires next. A chambered gun with an empty chamber won't fire, even with a full magazine;
   // a revolver with an empty chamber under the hammer clicks.
   let nextName;
   if (next) nextName = roundName(next);
-  else if (hasChamber && feed.magazine.length) nextName = t("NeedsChambering");
-  else if (feed instanceof CylinderFeed && loadedRounds.length) nextName = t("EmptyChamber");
-  else nextName = t("Empty");
+  else if (hasChamber && feed.magazine.length) nextName = firearmText("NeedsChambering");
+  else if (feed instanceof CylinderFeed && loadedRounds.length) nextName = firearmText("EmptyChamber");
+  else nextName = firearmText("Empty");
 
   const loaded = isMagazine ? feed.magazine.length : loadedRounds.length;
   const rounds = order.map((slot) => ({
     label: positionLabel(feed, slot),
-    name: slot.round ? roundName(slot.round) : t("EmptySlot"),
+    name: slot.round ? roundName(slot.round) : firearmText("EmptySlot"),
     img: slot.round?.img || "",
     special: isSpecialRound(slot.round),
     empty: !slot.round,
@@ -205,7 +209,7 @@ export function firearmStatus(gun) {
   }));
 
   const mark = (round) => `${round.name}${round.special ? " ✦" : ""}`;
-  const lines = [`${t("Loaded")}: ${loaded}/${feed.capacity}`];
+  const lines = [`${firearmText("Loaded")}: ${loaded}/${feed.capacity}`];
   for (const round of rounds) lines.push(`${round.next ? "▶ " : ""}${round.label}: ${mark(round)}`);
 
   return {
@@ -221,7 +225,7 @@ export function firearmStatus(gun) {
     nextName,
     rounds,
     // The tooltip is HTML, so the names in it are escaped.
-    tooltip: lines.map(esc).join("<br>"),
+    tooltip: tooltipHTML(lines),
   };
 }
 
@@ -230,15 +234,15 @@ export function ammoBoxStatus(box) {
   const total = ammoTotal(box);
   const { perBox, caliber } = box.system.ammo;
   const lines = [];
-  if (caliber) lines.push(`${t("Caliber")}: ${caliber}`);
+  if (caliber) lines.push(`${firearmText("Caliber")}: ${caliber}`);
   if (perBox > 1 && total > 0) {
-    lines.push(t("BoxTooltip", { boxes: box.system.quantity, open: total - (box.system.quantity - 1) * perBox, perBox }));
+    lines.push(firearmText("BoxTooltip", { boxes: box.system.quantity, open: total - (box.system.quantity - 1) * perBox, perBox }));
   }
   return {
     total,
     empty: total === 0,
-    label: t("Rounds", { n: total }),
-    tooltip: lines.map(esc).join("<br>"),
+    label: firearmText("Rounds", { n: total }),
+    tooltip: tooltipHTML(lines),
   };
 }
 
@@ -289,17 +293,20 @@ export async function prepareShot(actor, gun, amount = 1) {
  * @returns {Promise<number[]|null>}  0-based barrel positions, or null when cancelled.
  */
 async function chooseBarrels(gun, feed, amount) {
-  const options = feed.loadedPositions.map((i, n) => {
-    const round = feed.barrels[i];
-    const special = isSpecialRound(round) ? " ✦" : "";
-    return `<label class="lotm-gun-choice"><input type="${amount === 1 ? "radio" : "checkbox"}" name="barrel" value="${i}" ${n < amount ? "checked" : ""}>
-      ${esc(t("BarrelN", { n: i + 1 }))}: ${esc(roundName(round))}${special}</label>`;
-  }).join("");
+  const content = renderTemplateSync(`${DIALOGS}/gun-choice.hbs`, {
+    intro: firearmText("ChooseBarrel", { n: amount }),
+    inputType: amount === 1 ? "radio" : "checkbox",
+    inputName: "barrel",
+    choices: feed.loadedPositions.map((i, n) => ({
+      value: i, checked: n < amount, label: firearmText("BarrelN", { n: i + 1 }),
+      name: roundName(feed.barrels[i]), special: isSpecialRound(feed.barrels[i]),
+    })),
+  });
   const chosen = await foundry.applications.api.DialogV2.prompt({
-    window: { title: t("ChooseBarrelTitle", { gun: gun.name }) },
-    content: `<p>${esc(t("ChooseBarrel", { n: amount }))}</p><div class="lotm-gun-choices">${options}</div>`,
+    window: { title: firearmText("ChooseBarrelTitle", { gun: gun.name }) },
+    content,
     ok: {
-      label: t("Buttons.fire"),
+      label: firearmText("Buttons.fire"),
       callback: (event, button) => [...button.form.querySelectorAll("input[name=barrel]:checked")].map((input) => Number(input.value)),
     },
     rejectClose: false,
@@ -323,7 +330,7 @@ export async function fireGun(actor, gun, { amount = 1, positions, chat = false 
   const { fired } = feed.fire(amount, { positions });
   if (!fired.length) return warn("Warnings.Empty", { gun: gun.name });
   await gun.update(feed.toUpdate());
-  if (chat) await postChat(actor, gun, t("Chat.fire", { n: fired.length, gun: gun.name, rounds: describeRounds(fired) }));
+  if (chat) await postChat(actor, gun, firearmText("Chat.fire", { n: fired.length, gun: gun.name, rounds: describeRounds(fired) }));
   await activateBullets(actor, gun, fired);
   return fired;
 }
@@ -373,32 +380,16 @@ export async function activateBullets(actor, gun, fired) {
       const cost = spiritualityCost(spell);
       const paid = cost > 0 ? await spendSpirituality(actor, cost, { reason: spell.name, chat: false }) : { amount: 0 };
       if (paid) active.push(spell.uuid);
-      rows.push(bulletSpellRow(spell, cost, !!paid));
+      // Its cost and Cast button, or why it didn't go off (not enough Spirituality).
+      rows.push({ name: spell.name, uuid: spell.uuid, cost, hasCost: cost > 0, paid: !!paid });
     }
 
-    const title = t("Bullet.Fired", { round: esc(roundName(round)), gun: esc(gun.name) });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="lotm chat-bullet">
-          <header>${round.img ? `<img src="${esc(round.img)}" width="28" height="28" alt="">` : ""}<span>${title}</span></header>
-          <ul class="bullet-spells">${rows.join("")}</ul>
-        </div>`,
+      content: renderTemplateSync(`${CHAT}/bullet.hbs`, { img: round.img, round: roundName(round), gun: gun.name, spells: rows }),
       flags: { lotm: { actorUuid: actor.uuid, bulletSpells: active, bulletCast: [] } },
     });
   }
-}
-
-
-/** One spell's line on a special bullet's card: its cost and Cast button, or why it didn't go off. */
-function bulletSpellRow(spell, cost, paid) {
-  const name = esc(spell.name);
-  const costText = cost > 0 ? ` <span class="bullet-cost">${esc(t("Bullet.Cost", { cost }))}</span>` : "";
-  if (!paid) {
-    return `<li class="bullet-spell failed"><span>${name}</span> <em>${esc(t("Bullet.NotEnough", { cost }))}</em></li>`;
-  }
-  return `<li class="bullet-spell"><span>${name}</span>${costText}
-      <button type="button" data-lotm-bullet-spell="${esc(spell.uuid)}"><i class="fa-solid fa-wand-sparkles"></i> ${esc(t("Bullet.Cast", { name: spell.name }))}</button>
-    </li>`;
 }
 
 
@@ -422,7 +413,7 @@ export async function reloadGun(actor, gun, { amount = 0, fast = false } = {}) {
   if (feed.room <= 0 && !canLoadChamber) return warn("Warnings.Full", { gun: gun.name });
 
   const boxes = ammoFor(actor, gun);
-  if (!boxes.length) return warn("Warnings.NoAmmo", { gun: gun.name, caliber: caliber || t("AnyCaliber") });
+  if (!boxes.length) return warn("Warnings.NoAmmo", { gun: gun.name, caliber: caliber || firearmText("AnyCaliber") });
 
   // The most this use can load: what fits, or the action's rounds per use.
   const most = amount > 0 ? Math.min(amount, feed.room) : feed.room;
@@ -434,7 +425,7 @@ export async function reloadGun(actor, gun, { amount = 0, fast = false } = {}) {
   const { box, intoChamber } = choice;
   const wanted = intoChamber ? 1 : Math.min(choice.count, most);
   const count = Math.min(wanted, ammoTotal(box));
-  if (count <= 0) return warn(feed.room <= 0 ? "Warnings.Full" : "Warnings.NoAmmo", { gun: gun.name, caliber: caliber || t("AnyCaliber") });
+  if (count <= 0) return warn(feed.room <= 0 ? "Warnings.Full" : "Warnings.NoAmmo", { gun: gun.name, caliber: caliber || firearmText("AnyCaliber") });
 
   const round = roundFromAmmo(box);
   const loaded = feed.load(Array.from({ length: count }, () => round), { intoChamber });
@@ -447,8 +438,8 @@ export async function reloadGun(actor, gun, { amount = 0, fast = false } = {}) {
   ]);
 
   const text = intoChamber
-    ? t("Chat.loadChamber", { ammo: box.name, gun: gun.name })
-    : t("Chat.reload", { n: loaded, ammo: box.name, gun: gun.name, loaded: feed.loadedCount, capacity: feed.capacity });
+    ? firearmText("Chat.loadChamber", { ammo: box.name, gun: gun.name })
+    : firearmText("Chat.reload", { n: loaded, ammo: box.name, gun: gun.name, loaded: feed.loadedCount, capacity: feed.capacity });
   await postChat(actor, gun, text);
   return loaded;
 }
@@ -459,42 +450,27 @@ export async function reloadGun(actor, gun, { amount = 0, fast = false } = {}) {
  * @returns {Promise<{box: Item, count: number, intoChamber: boolean}|null>}
  */
 async function chooseLoad(gun, feed, boxes, most, canLoadChamber) {
-  const options = boxes.map((box) => {
-    const special = box.system.abilities_gained?.length ? " ✦" : "";
-    return `<option value="${box.id}">${esc(box.name)}${special} (${esc(t("Rounds", { n: ammoTotal(box) }))})</option>`;
-  }).join("");
   const orderHint = {
     magazine: "LoadHint.magazine",
     cylinder: "LoadHint.cylinder",
     barrels: "LoadHint.barrels",
   }[feed.type] ?? "LoadHint.magazine";
-  const start = Math.max(1, Math.min(most, ammoTotal(boxes[0])));
-  const chamberRow = canLoadChamber
-    ? `<div class="form-group">
-        <label>${esc(t("LoadChamber"))}</label>
-        <div class="form-fields"><input type="checkbox" name="intoChamber" ${most <= 0 ? "checked disabled" : ""}></div>
-        <p class="hint">${esc(t("LoadChamberHint"))}</p>
-      </div>`
-    : "";
-  const amountRow = most > 0
-    ? `<div class="form-group">
-        <label>${esc(t("LoadAmount"))}</label>
-        <div class="form-fields"><input type="number" name="count" value="${start}" min="1" max="${most}" step="1"></div>
-        <p class="hint">${esc(t("LoadAmountHint", { n: most }))}</p>
-      </div>`
-    : "";
+  const content = renderTemplateSync(`${DIALOGS}/gun-load.hbs`, {
+    boxes: boxes.map((box) => ({ id: box.id, name: box.name, special: !!box.system.abilities_gained?.length, rounds: ammoTotal(box) })),
+    // How many: only when more rounds fit (otherwise only the chamber can be loaded, so that box is ticked and locked).
+    hasAmount: most > 0,
+    most,
+    start: Math.max(1, Math.min(most, ammoTotal(boxes[0]))),
+    canLoadChamber,
+    chamberOnly: most <= 0,
+    orderHint: `${FIREARM}.${orderHint}`,
+  });
 
   const result = await foundry.applications.api.DialogV2.prompt({
-    window: { title: t("PickAmmoTitle", { gun: gun.name }) },
-    content: `<div class="form-group">
-        <label>${esc(t("PickAmmo"))}</label>
-        <div class="form-fields"><select name="ammo">${options}</select></div>
-      </div>
-      ${amountRow}
-      ${chamberRow}
-      <p class="hint">${esc(t(orderHint))}</p>`,
+    window: { title: firearmText("PickAmmoTitle", { gun: gun.name }) },
+    content,
     ok: {
-      label: t("Buttons.reload"),
+      label: firearmText("Buttons.reload"),
       callback: (event, button) => {
         const form = button.form.elements;
         return {
@@ -521,7 +497,7 @@ export async function chamberRound(actor, gun) {
   if (!round) return warn("Warnings.NothingToChamber", { gun: gun.name });
 
   await gun.update(feed.toUpdate());
-  await postChat(actor, gun, t("Chat.chamber", { gun: gun.name, round: roundName(round) }));
+  await postChat(actor, gun, firearmText("Chat.chamber", { gun: gun.name, round: roundName(round) }));
   return round;
 }
 
@@ -534,16 +510,20 @@ export async function rotateCylinder(actor, gun) {
   const feed = feedOf(gun);
   if (!(feed instanceof CylinderFeed) || !feed.size) return warn("Warnings.NoCylinder", { gun: gun.name });
 
-  const rows = feed.cylinder.map((round, i) => {
-    const name = round ? `${esc(roundName(round))}${isSpecialRound(round) ? " ✦" : ""}` : `<em>${esc(t("EmptySlot"))}</em>`;
-    return `<label class="lotm-gun-choice"><input type="radio" name="chamber" value="${i}" ${i === feed.index ? "checked" : ""}>
-      ${esc(t("ChamberN", { n: i + 1 }))}: ${name}</label>`;
-  }).join("");
+  const content = renderTemplateSync(`${DIALOGS}/gun-choice.hbs`, {
+    intro: firearmText("RotateIntro"),
+    inputType: "radio",
+    inputName: "chamber",
+    choices: feed.cylinder.map((round, i) => ({
+      value: i, checked: i === feed.index, label: firearmText("ChamberN", { n: i + 1 }),
+      name: round ? roundName(round) : firearmText("EmptySlot"), special: !!round && isSpecialRound(round), empty: !round,
+    })),
+  });
   const chosen = await foundry.applications.api.DialogV2.prompt({
-    window: { title: t("RotateTitle", { gun: gun.name }) },
-    content: `<p>${esc(t("RotateIntro"))}</p><div class="lotm-gun-choices">${rows}</div>`,
+    window: { title: firearmText("RotateTitle", { gun: gun.name }) },
+    content,
     ok: {
-      label: t("Buttons.rotate"),
+      label: firearmText("Buttons.rotate"),
       callback: (event, button) => Number(button.form.querySelector("input[name=chamber]:checked")?.value),
     },
     rejectClose: false,
@@ -553,7 +533,7 @@ export async function rotateCylinder(actor, gun) {
   feed.rotateTo(chosen);
   await gun.update(feed.toUpdate());
   const round = feed.cylinder[feed.index];
-  await postChat(actor, gun, t("Chat.rotate", { gun: gun.name, n: feed.index + 1, round: round ? roundName(round) : t("EmptySlot") }));
+  await postChat(actor, gun, firearmText("Chat.rotate", { gun: gun.name, n: feed.index + 1, round: round ? roundName(round) : firearmText("EmptySlot") }));
   return feed.index + 1;
 }
 
@@ -584,7 +564,7 @@ export async function unloadGun(actor, gun) {
   await actor.updateEmbeddedDocuments("Item", updates);
   if (loose.length) await actor.createEmbeddedDocuments("Item", looseStacks(actor, gun, loose));
 
-  await postChat(actor, gun, t("Chat.unload", { n: rounds.length, gun: gun.name }));
+  await postChat(actor, gun, firearmText("Chat.unload", { n: rounds.length, gun: gun.name }));
   return rounds.length;
 }
 
@@ -608,7 +588,7 @@ function looseStacks(actor, gun, rounds) {
 
   return stacks.map(({ round, count }) => {
     const data = {
-      name: round.name || t("LooseRounds"),
+      name: round.name || firearmText("LooseRounds"),
       img: round.img || "icons/svg/item-bag.svg",
       type: "gear",
       system: {
@@ -660,9 +640,6 @@ export async function fireWithoutRoll(actor, action, gunId) {
 async function postChat(actor, gun, text) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="lotm chat-ammo">
-        <img src="${esc(gun.img)}" width="28" height="28" alt="">
-        <span>${esc(text)}</span>
-      </div>`,
+    content: renderTemplateSync(`${CHAT}/ammo.hbs`, { img: gun.img, text }),
   });
 }

@@ -15,7 +15,7 @@ dialogs, chat cards, tokens and scenes.
 
 - [ ] Copy the changed files into the system folder. If `system.json` changed (a new compendium, document type or
       region behavior), restart Foundry; otherwise reloading the world is enough
-- [ ] Run `npm test` in the system folder: every test passes
+- [ ] Run `npm test` in the system folder: every test passes (the first time, run `npm install` first)
 - [ ] A test world with:
   - Klein: a player character with skills at a few levels (not only Untrained), a Sequence that grants abilities and
     skills, a gun with a Shoot action, a spell, an action with a Spirituality Cost, and a coat or bag

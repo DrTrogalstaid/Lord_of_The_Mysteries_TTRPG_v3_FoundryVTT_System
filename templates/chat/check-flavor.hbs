@@ -1,0 +1,7 @@
+{{!-- A check's chat card, above the dice (apps/roll-dialog.mjs roll): its title, how it came out, the statuses'
+      notes, the Spirituality it spent, and the action's buttons (damage, effects). Every part is already HTML. --}}
+{{lotmHTML title}}{{lotmHTML result}}
+{{#if statusNotes.length}}
+<div class="lotm roll-status-notes">{{#each statusNotes as |note|}}<p>{{lotmHTML note}}</p>{{/each}}</div>
+{{/if}}
+{{lotmHTML spirituality}}{{lotmHTML footer}}

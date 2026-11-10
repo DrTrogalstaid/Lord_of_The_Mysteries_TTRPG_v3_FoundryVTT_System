@@ -20,6 +20,7 @@
  * The plain math at the top has no `game` / `CONFIG` access (tests/promotion.test.mjs).
  */
 
+import { langHTML, renderTemplateSync, safeHTML } from "./render.mjs";
 import { rolledValueHTML } from "./sanity.mjs";
 
 /** The promotion check adds this to the d20; a repeated potion of your current Sequence adds REPEATED_BASE instead. */
@@ -32,6 +33,16 @@ export const RITUAL_PROTECTION = 5;
 /** Total Sanity lost at which a promotion goes semi-out-of-control, and out of control. */
 export const SEMI_LOSS = 3;
 export const LOST_LOSS = 5;
+
+
+/** The characteristic's spiritual imprint (promotionModifiers' inputs.imprint). Anything else: 0. */
+const IMPRINT_MODIFIERS = { similar: -2, opposite: 4 };
+
+/** The moon during the ritual (promotionModifiers' inputs.moon). Anything else: 0. */
+const MOON_MODIFIERS = { full: -2, blood: -4 };
+
+/** A table's number for a key, or 0 when the key isn't in it. */
+const tableValue = (table, key) => (Object.hasOwn(table, key) ? table[key] : 0);
 
 
 /**
@@ -53,10 +64,10 @@ export function promotionModifiers(inputs = {}) {
     { key: "Digestion", value: -Math.max(0, Number(inputs.digestion) || 0) },
     { key: "Auxiliary", value: -Math.max(0, Number(inputs.auxiliary) || 0) },
     { key: "Raw", value: inputs.isRaw ? 5 : 0 },
-    { key: "Imprint", value: inputs.imprint === "similar" ? -2 : inputs.imprint === "opposite" ? 4 : 0 },
+    { key: "Imprint", value: tableValue(IMPRINT_MODIFIERS, inputs.imprint) },
     { key: "Undigested", value: Math.max(0, Number(inputs.undigested) || 0) },
     { key: "Helper", value: inputs.isHelped ? -(2 + Math.max(0, Number(inputs.helperSequences) || 0)) : 0 },
-    { key: "Moon", value: inputs.moon === "full" ? -2 : inputs.moon === "blood" ? -4 : 0 },
+    { key: "Moon", value: tableValue(MOON_MODIFIERS, inputs.moon) },
     { key: "Animal", value: inputs.isAnimal ? 4 : 0 },
   ];
   return rows.filter((row) => row.value);
@@ -101,8 +112,20 @@ export function promotionStage(totalLoss) {
 /*  Foundry from here on                         */
 /* -------------------------------------------- */
 
-const t = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Promotion.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Promotion.${key}`));
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
+/**
+ * How each promotion stage shows on its card: its colour, and the button for the next step (its data-lotm-promotion
+ * is a PROMOTION_STEPS key). A stage not listed shows as a failure with no button.
+ */
+const STAGE_LOOKS = {
+  pendingLoss: { css: "warning", button: { step: "rollLoss", label: "LORD_OF_THE_MYSTERIES.Promotion.Buttons.rollLoss" } },
+  pendingExtraLoss: { css: "warning", button: { step: "rollExtraLoss", label: "LORD_OF_THE_MYSTERIES.Promotion.Buttons.rollLoss" } },
+  semi: { css: "warning", button: { step: "semiWill", label: "LORD_OF_THE_MYSTERIES.Promotion.Buttons.semiWill" } },
+  lost: { css: "failure", button: { step: "lostWill", label: "LORD_OF_THE_MYSTERIES.Promotion.Buttons.lostWill" } },
+  promoted: { css: "success" },
+  failedPromotion: { css: "failure" },
+  outOfControl: { css: "failure" },
+  died: { css: "failure" },
+};
 
 
 /**
@@ -121,24 +144,20 @@ export function registerPromotionHooks() {
 
 
 /**
- * The HTML for what a promotion stage means, and its next button.
+ * A promotion card's HTML: what was just rolled (line), what the stage means, and its next button.
  * @param {string} stage   promotionStage(...), or "failedPromotion" / "outOfControl" / "died".
- * @param {object} data    { name, sequence } for the text.
+ * @param {object} data
+ * @param {string} data.name       The actor's name.
+ * @param {string} data.sequence   The Sequence's name.
+ * @param {{key: string, data?: object}} [data.line]   A lang line above the stage (a value that's already HTML, a
+ *                                                     rolled number, goes in as safeHTML).
  * @returns {string}
  */
-export function stageHTML(stage, { name = "", sequence = "" } = {}) {
-  const text = t(`Stages.${stage}`, { name: escape(name), sequence: escape(sequence) });
-  const button = {
-    pendingLoss: { step: "rollLoss", label: t("Buttons.rollLoss") },
-    pendingExtraLoss: { step: "rollExtraLoss", label: t("Buttons.rollLoss") },
-    semi: { step: "semiWill", label: t("Buttons.semiWill") },
-    lost: { step: "lostWill", label: t("Buttons.lostWill") },
-  }[stage];
-  const css = stage === "promoted" ? "success"
-    : (["semi", "pendingLoss", "pendingExtraLoss"].includes(stage) ? "warning" : "failure");
-  return `<div class="lotm promotion-stage ${css}"><p>${text}</p>${button
-    ? `<div class="promotion-buttons"><button type="button" data-lotm-promotion="${button.step}">${button.label}</button></div>`
-    : ""}</div>`;
+export function promotionCardHTML(stage, { name = "", sequence = "", line = null } = {}) {
+  const look = Object.hasOwn(STAGE_LOOKS, stage) ? STAGE_LOOKS[stage] : { css: "failure" };
+  return renderTemplateSync("systems/lotm/templates/chat/promotion.hbs", {
+    ...look, line, name, sequence, stageKey: `LORD_OF_THE_MYSTERIES.Promotion.Stages.${stage}`,
+  });
 }
 
 
@@ -155,16 +174,14 @@ export async function finishPromotion(actor) {
  * Post a promotion card for the next step (a stage and its button), with the promotion's data carried along.
  * @param {Actor} actor
  * @param {object} promotion   flags.lotm.promotion of the card before, with the new stage and total loss.
- * @param {string} body        HTML above the stage.
+ * @param {{key: string, data?: object}|null} line   What was rolled, above the stage (see promotionCardHTML).
  * @param {ChatMessage} source The card before: the new card is seen by the same people.
  * @returns {Promise<ChatMessage>}
  */
-async function postStage(actor, promotion, body, source) {
+async function postStage(actor, promotion, line, source) {
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="lotm chat-promotion">${body}${stageHTML(promotion.stage, {
-      name: actor.name, sequence: promotion.sequenceName,
-    })}</div>`,
+    content: promotionCardHTML(promotion.stage, { name: actor.name, sequence: promotion.sequenceName, line }),
     whisper: [...(source?.whisper ?? [])],
     blind: !!source?.blind,
     flags: { lotm: { promotion: { ...promotion, used: [] } } },
@@ -189,6 +206,18 @@ function registerPromotionChatListeners() {
 
 
 /**
+ * What each button on a promotion card does (its data-lotm-promotion). Each takes (actor, promotion, message) and
+ * resolves false when its roll window was closed.
+ */
+const PROMOTION_STEPS = {
+  rollLoss,
+  rollExtraLoss,
+  semiWill,
+  lostWill,
+};
+
+
+/**
  * A button on a promotion card.
  * @param {MouseEvent} event
  * @param {ChatMessage} message
@@ -203,12 +232,11 @@ async function onPromotionButton(event, message, button) {
   if (!actor.isOwner) return ui.notifications.warn(game.i18n.localize("LORD_OF_THE_MYSTERIES.Status.TurnStart.NotOwner"));
   if ((promotion.used ?? []).includes(step)) return;
 
+  const run = Object.hasOwn(PROMOTION_STEPS, step) ? PROMOTION_STEPS[step] : null;
+  if (!run) return;
+
   button.disabled = true;
-  const done = step === "rollLoss" ? await rollLoss(actor, promotion, message)
-    : step === "rollExtraLoss" ? await rollExtraLoss(actor, promotion, message)
-    : step === "semiWill" ? await semiWill(actor, promotion, message)
-    : step === "lostWill" ? await lostWill(actor, promotion, message)
-    : false;
+  const done = await run(actor, promotion, message);
   if (!done) {
     button.disabled = false;   // the roll window was closed
     return;
@@ -219,6 +247,12 @@ async function onPromotionButton(event, message, button) {
 }
 
 
+/** The Will checks' reason: "Promotion to Sequence 8: Clown". Plain text. */
+function promotionReason(promotion) {
+  return game.i18n.format("LORD_OF_THE_MYSTERIES.Promotion.Reason", { sequence: promotion.sequenceName });
+}
+
+
 /**
  * Semi-out-of-control: Will (DC 15). Pass: promoted. Fail: a 1/1d2 sanity check with the promotion's modifiers;
  * at 5 total loss it's out of control / death, otherwise Will again.
@@ -226,14 +260,14 @@ async function onPromotionButton(event, message, button) {
  */
 async function semiWill(actor, promotion, message) {
   const { rollStatusCheck } = await import("../effects/status-checks.mjs");
-  const result = await rollStatusCheck(actor, { attribute: "wil", dc: 15, reason: t("Reason", { sequence: promotion.sequenceName }),
+  const result = await rollStatusCheck(actor, { attribute: "wil", dc: 15, reason: promotionReason(promotion),
     // No Burning Luck on promotion checks (helpers/luck.mjs).
     outcome: { type: "promotion" } });
   if (!result) return false;
 
   if (result.success) {
     await finishPromotion(actor);
-    await postStage(actor, { ...promotion, stage: "promoted" }, "", message);
+    await postStage(actor, { ...promotion, stage: "promoted" }, null, message);
     return true;
   }
 
@@ -242,11 +276,11 @@ async function semiWill(actor, promotion, message) {
   const sanity = Number(actor.system.resources.rp.value) || 0;
   const check = await new Roll(`1d20 + ${Number(promotion.modifierTotal) || 0}`).evaluate();
   const passed = check.total <= sanity;
-  const body = `<p>${t("ExtraCheck", {
-    roll: rolledValueHTML(check), sanity,
-    result: game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${passed ? "Success" : "Failure"}`),
-  })}</p>`;
-  await postStage(actor, { ...promotion, stage: "pendingExtraLoss", extraPassed: passed }, body, message);
+  const line = { key: "LORD_OF_THE_MYSTERIES.Promotion.ExtraCheck", data: {
+    roll: safeHTML(rolledValueHTML(check)), sanity,
+    result: langHTML(`LORD_OF_THE_MYSTERIES.RollDialog.${passed ? "Success" : "Failure"}`),
+  } };
+  await postStage(actor, { ...promotion, stage: "pendingExtraLoss", extraPassed: passed }, line, message);
   return true;
 }
 
@@ -268,12 +302,14 @@ async function rollLoss(actor, promotion, message) {
   const stage = promotionStage(result.loss);
   if (stage === "promoted") await finishPromotion(actor);
 
-  const body = `<p>${t("Loss", {
-    roll: rolledValueHTML(lossRoll),
-    ritual: t(promotion.hasRitual ? "WithRitual" : "WithoutRitual", { protection: result.protection, doubled: result.doubled }),
+  const line = { key: "LORD_OF_THE_MYSTERIES.Promotion.Loss", data: {
+    roll: safeHTML(rolledValueHTML(lossRoll)),
+    ritual: langHTML(`LORD_OF_THE_MYSTERIES.Promotion.${promotion.hasRitual ? "WithRitual" : "WithoutRitual"}`, {
+      protection: result.protection, doubled: result.doubled,
+    }),
     loss: result.loss, before, after,
-  })}</p>`;
-  await postStage(actor, { ...promotion, stage, totalLoss: result.loss }, body, message);
+  } };
+  await postStage(actor, { ...promotion, stage, totalLoss: result.loss }, line, message);
   return true;
 }
 
@@ -291,8 +327,9 @@ async function rollExtraLoss(actor, promotion, message) {
   const totalLoss = (Number(promotion.totalLoss) || 0) + lossRoll.total;
   const stage = totalLoss >= LOST_LOSS ? "lost" : "semi";
 
-  const body = `<p>${t("ExtraLoss", { loss: rolledValueHTML(lossRoll), before, after, total: totalLoss })}</p>`;
-  await postStage(actor, { ...promotion, stage, totalLoss }, body, message);
+  const line = { key: "LORD_OF_THE_MYSTERIES.Promotion.ExtraLoss",
+    data: { loss: safeHTML(rolledValueHTML(lossRoll)), before, after, total: totalLoss } };
+  await postStage(actor, { ...promotion, stage, totalLoss }, line, message);
   return true;
 }
 
@@ -304,20 +341,19 @@ async function rollExtraLoss(actor, promotion, message) {
  */
 async function lostWill(actor, promotion, message) {
   const { rollStatusCheck } = await import("../effects/status-checks.mjs");
-  const result = await rollStatusCheck(actor, { attribute: "wil", dc: 20, reason: t("Reason", { sequence: promotion.sequenceName }),
+  const result = await rollStatusCheck(actor, { attribute: "wil", dc: 20, reason: promotionReason(promotion),
     // No Burning Luck on promotion checks (helpers/luck.mjs).
     outcome: { type: "promotion" } });
   if (!result) return false;
 
   if (result.success) {
-    await postStage(actor, { ...promotion, stage: "failedPromotion" }, "", message);
+    await postStage(actor, { ...promotion, stage: "failedPromotion" }, null, message);
     return true;
   }
   const fate = await new Roll("1d2").evaluate();
   const stage = fate.total === 1 ? "outOfControl" : "died";
   if (stage === "outOfControl") await actor.toggleStatusEffect("outOfControl", { active: true, overlay: true });
   else await actor.toggleStatusEffect("dead", { active: true, overlay: true });
-  const body = `<p>${t("Fate", { roll: rolledValueHTML(fate) })}</p>`;
-  await postStage(actor, { ...promotion, stage }, body, message);
+  await postStage(actor, { ...promotion, stage }, { key: "LORD_OF_THE_MYSTERIES.Promotion.Fate", data: { roll: safeHTML(rolledValueHTML(fate)) } }, message);
   return true;
 }

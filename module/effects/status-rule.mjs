@@ -36,6 +36,7 @@
  */
 
 import { statusChat } from "./status-checks.mjs";
+import { formatHTML } from "../helpers/render.mjs";
 
 /** The journal in the LOTM Rules compendium that has one page per status. */
 export const STATUS_JOURNAL = "Compendium.lotm.rules_compendium.JournalEntry.xVlBNlTOMkhLtx6h";
@@ -283,17 +284,16 @@ export default class StatusRule {
 
   /**
    * A language string with {name} (the creature) and {source} (who the effect is about, or "its source") filled in,
-   * both escaped, ready to put in chat HTML.
+   * ready to put in chat HTML: every value is escaped (formatHTML, helpers/render.mjs).
    * @param {string} key
    * @param {Actor} actor
    * @param {ActiveEffect} [effect]
-   * @param {object} [extra]   More values for the string.
-   * @returns {string}
+   * @param {object} [extra]   More values for the string. One that's already HTML goes in as langHTML / safeHTML.
+   * @returns {string}  HTML
    */
   text(key, actor, effect = null, extra = {}) {
-    const escape = Handlebars.escapeExpression;
     const source = effect?.sourceActor?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Status.TheSource");
-    return game.i18n.format(key, { name: escape(actor?.name ?? ""), source: escape(source), ...extra });
+    return formatHTML(key, { name: actor?.name ?? "", source, ...extra });
   }
 
 

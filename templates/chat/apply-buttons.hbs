@@ -1,0 +1,5 @@
+{{!-- Under a damage roll: apply it to the selected tokens as damage, or as healing (helpers/action-roll.mjs). --}}
+<div class="lotm-apply-buttons">
+  <button type="button" class="lotm-apply" data-lotm-apply="damage" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Action.ApplyHint"}}"><i class="fa-solid fa-heart-crack"></i> {{lotmLang "LORD_OF_THE_MYSTERIES.Action.ApplyDamage" amount=amount}}</button>
+  <button type="button" class="lotm-apply" data-lotm-apply="heal" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Action.ApplyHint"}}"><i class="fa-solid fa-heart"></i> {{lotmLang "LORD_OF_THE_MYSTERIES.Action.ApplyHeal" amount=amount}}</button>
+</div>

@@ -8,6 +8,7 @@ import { fireGun, gunFor, prepareShot } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
+import { renderTemplateSync } from "./render.mjs";
 import { bigSuccessDamage, reduceHit, splitBigSuccess } from "./damage-math.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
 
@@ -558,7 +559,7 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
   // How much of it is each damage type (see damageByType).
   let parts = damageByType(roll, defaultType);
   let amount = roll.total;
-  let note = "";
+  let bigSuccessNote = null;
   if (bigSuccess) {
     // Below the minimum: each type is raised (splitBigSuccess), so damage reduction and resistance still see each type.
     const maximums = await maximumByType(formula, rollData, defaultType);
@@ -569,27 +570,28 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
       amount = result.minimum;
     }
     const key = result.isRaised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
-    note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, minimum: result.minimum })}</div>`;
+    bigSuccessNote = { key, rolled: roll.total, minimum: result.minimum };
   }
 
   // The types' names for the title ("Shoot: Damage (Fire, Cold)").
   const typeNames = parts.map((part) => part.label).filter(Boolean);
-  const typeText = typeNames.length ? ` (${Handlebars.escapeExpression(typeNames.join(", "))})` : "";
-  const flavorKey = !title
-    ? "LORD_OF_THE_MYSTERIES.Action.PlainDamageFlavor"
-    : (bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor");
-  const flavor = game.i18n.format(flavorKey, { action: Handlebars.escapeExpression(title), type: typeText });
-  // More than one type: "5 Fire · 3 Cold" under the title.
+  let flavorKey = "LORD_OF_THE_MYSTERIES.Action.DamageFlavor";
+  if (!title) flavorKey = "LORD_OF_THE_MYSTERIES.Action.PlainDamageFlavor";
+  else if (bigSuccess) flavorKey = "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor";
   const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
-  const breakdown = parts.length > 1
-    ? `<div class="lotm chat-damage-types">${parts.map((part) =>
-        `<span class="chat-damage-type" data-damage-type="${Handlebars.escapeExpression(part.type)}">${part.amount} ${Handlebars.escapeExpression(part.label || untyped)}</span>`
-      ).join(" · ")}</div>`
-    : "";
+  const flavor = renderTemplateSync("systems/lotm/templates/chat/damage-roll.hbs", {
+    flavorKey,
+    title,
+    typeText: typeNames.length ? ` (${typeNames.join(", ")})` : "",
+    // More than one type: "5 Fire · 3 Cold" under the title.
+    parts: parts.length > 1 ? parts.map((part) => ({ type: part.type, amount: part.amount, label: part.label || untyped })) : null,
+    bigSuccess: bigSuccessNote,
+    amount,
+  });
 
   return postRoll(roll, {
     speaker: ChatMessage.getSpeaker(actor ? { actor } : {}),
-    flavor: flavor + breakdown + note + applyButtonsHTML(amount),
+    flavor,
     flags: { lotm: { ...flags, ...(actor ? { actorUuid: actor.uuid } : {}), damage: {
       amount,
       bigSuccess,
@@ -609,28 +611,7 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
  * @returns {string}
  */
 export function damageButtonHTML() {
-  const damage = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.RollDamage");
-  const big = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccess");
-  const bigHint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccessHint"));
-  return `<div class="lotm-damage-buttons">
-    <button type="button" class="lotm-roll-damage" data-lotm-action="damage">${damage}</button>
-    <button type="button" class="lotm-roll-damage big-success" data-lotm-action="bigSuccess" data-tooltip="${bigHint}">${big}</button>
-  </div>`;
-}
-
-/**
- * HTML for the buttons under a damage roll: apply it to the selected tokens as damage, or as healing.
- * @param {number} amount
- * @returns {string}
- */
-function applyButtonsHTML(amount) {
-  const hint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.ApplyHint"));
-  const damage = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyDamage", { amount });
-  const heal = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyHeal", { amount });
-  return `<div class="lotm-apply-buttons">
-    <button type="button" class="lotm-apply" data-lotm-apply="damage" data-tooltip="${hint}"><i class="fa-solid fa-heart-crack"></i> ${damage}</button>
-    <button type="button" class="lotm-apply" data-lotm-apply="heal" data-tooltip="${hint}"><i class="fa-solid fa-heart"></i> ${heal}</button>
-  </div>`;
+  return renderTemplateSync("systems/lotm/templates/chat/damage-buttons.hbs");
 }
 
 /**
@@ -753,41 +734,18 @@ export async function applyDamageFromMessage(message, kind, { ignoreReduction = 
  * @returns {Promise<ChatMessage>}
  */
 async function postDamageTaken(token, result, source, { ignoreReduction = false } = {}) {
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Action.DamageTaken.${key}`);
-  const escape = Handlebars.escapeExpression;
   const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
   const minus = (n) => (n ? `−${n}` : "0");
-
-  const rows = result.parts.map((part) => `
-      <tr data-damage-type="${escape(part.type)}">
-        <td>${escape(part.label || untyped)}</td>
-        <td>${part.amount}</td>
-        <td>${minus(part.reduction)}</td>
-        <td><strong>${part.taken}</strong></td>
-      </tr>`).join("");
-  // With more than one type, a total row at the bottom.
-  const totals = result.parts.length > 1 ? `
-      <tr class="chat-damage-total">
-        <td>${localize("Total")}</td>
-        <td>${result.incoming}</td>
-        <td>${minus(result.reduced)}</td>
-        <td><strong>${result.total}</strong></td>
-      </tr>` : "";
-
-  const title = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamageTaken.Title", {
-    name: escape(token.name), amount: result.total,
+  const content = renderTemplateSync("systems/lotm/templates/chat/damage-taken.hbs", {
+    name: token.name,
+    total: result.total,
+    parts: result.parts.map((part) => ({
+      type: part.type, label: part.label || untyped, amount: part.amount, reduced: minus(part.reduction), taken: part.taken,
+    })),
+    // With more than one type, a total row at the bottom.
+    totals: result.parts.length > 1 ? { incoming: result.incoming, reduced: minus(result.reduced), total: result.total } : null,
+    ignoreReduction,
   });
-  const content = `<div class="lotm chat-damage-taken">
-    <p class="chat-damage-title">${title}</p>
-    <table class="chat-damage-table">
-      <thead><tr>
-        <th>${localize("Type")}</th><th>${localize("Incoming")}</th><th>${localize("Reduced")}</th><th>${localize("Taken")}</th>
-      </tr></thead>
-      <tbody>${rows}${totals}
-      </tbody>
-    </table>
-    ${ignoreReduction ? `<p class="chat-damage-ignored">${localize("Ignored")}</p>` : ""}
-  </div>`;
 
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ token: token.document, actor: token.actor }),

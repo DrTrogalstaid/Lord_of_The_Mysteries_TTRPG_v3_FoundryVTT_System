@@ -18,6 +18,7 @@
 
 import { statusRule } from "./status-effects.mjs";
 import { ownersAndGMs } from "./status-checks.mjs";
+import { renderTemplateSync } from "../helpers/render.mjs";
 
 /**
  * Post the start-of-turn card for a creature, if any of its statuses need something this turn.
@@ -29,7 +30,6 @@ import { ownersAndGMs } from "./status-checks.mjs";
 export async function postTurnStartCard(actor, { token = null } = {}) {
   if (!actor || actor.statuses?.has("dead")) return null;
 
-  const escape = Handlebars.escapeExpression;
   const rows = [];
   for (const effect of actor.allApplicableEffects()) {
     if (!effect.active) continue;
@@ -38,30 +38,17 @@ export async function postTurnStartCard(actor, { token = null } = {}) {
       const rule = statusRule(id);
       const section = rule?.turnStart(actor, effect);
       if (!section) continue;
-
-      const buttons = (section.buttons ?? []).map((button) => `
-        <button type="button" data-lotm-turn-check="${escape(button.check)}" data-status-id="${escape(rule.id)}"
-                data-effect-uuid="${escape(effect.uuid)}">${escape(button.label)}</button>`).join("");
-      rows.push(`
-      <li class="turn-start-status">
-        <img src="${escape(rule.img)}" alt="" />
-        <div>
-          <strong>${escape(effect.name)}</strong> ${section.text}
-          ${buttons ? `<div class="turn-start-buttons">${buttons}</div>` : ""}
-        </div>
-      </li>`);
+      rows.push({
+        img: rule.img, name: effect.name, text: section.text, statusId: rule.id, effectUuid: effect.uuid,
+        buttons: (section.buttons ?? []).map((button) => ({ check: button.check, label: button.label })),
+      });
     }
   }
   if (!rows.length) return null;
 
-  const title = game.i18n.format("LORD_OF_THE_MYSTERIES.Status.TurnStart.Title", { name: escape(token?.name ?? actor.name) });
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor, token }),
-    content: `<div class="lotm chat-turn-start">
-      <p class="chat-turn-start-title">${title}</p>
-      <ul class="turn-start-list">${rows.join("")}
-      </ul>
-    </div>`,
+    content: renderTemplateSync("systems/lotm/templates/chat/turn-start.hbs", { name: token?.name ?? actor.name, rows }),
     whisper: ownersAndGMs(actor),
     flags: { lotm: { turnStart: { actorUuid: actor.uuid } } },
   });

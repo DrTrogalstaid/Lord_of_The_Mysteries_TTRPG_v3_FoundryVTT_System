@@ -23,7 +23,16 @@ import { canRollOutcome, rollOutcome } from "./outcome-tables.mjs";
 import { canRollSanityLoss, rollSanityLoss, sanityLossMessage } from "./sanity.mjs";
 import { addTableEffectButtons } from "./enrichers.mjs";
 
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
+/** Foundry's renderTemplate: the chat log is drawn while the world is still loading, maybe before the templates are. */
+const { renderTemplate } = foundry.applications.handlebars;
+
+/** How each target of an attack shows: Hit, Miss, or Unknown (it had no defense to check against). */
+const HIT_LOOKS = {
+  hit: { css: "is-hit", word: "LORD_OF_THE_MYSTERIES.Attack.Hit" },
+  miss: { css: "is-miss", word: "LORD_OF_THE_MYSTERIES.Attack.Miss" },
+  unknown: { css: "", word: "LORD_OF_THE_MYSTERIES.Attack.Unknown" },
+};
+const isKnown = (value) => value !== null && value !== undefined;
 
 
 export function registerCheckChatListeners() {
@@ -58,14 +67,35 @@ function onRenderMessage(message, html) {
   const content = html.querySelector(".message-content");
   if (!check || !content || !message.isContentVisible) return;
 
-  const attack = message.getFlag("lotm", "attack");
-  if (attack) addAttackResults(content, attack);
   showBigSuccess(html, check.natural);
+  addCheckCardParts(message, content);
+}
+
+
+/**
+ * A check card's hit / miss results and its buttons, drawn from templates (in order, once each is ready).
+ * @param {ChatMessage} message
+ * @param {HTMLElement} content   The message's .message-content.
+ */
+async function addCheckCardParts(message, content) {
+  const attack = message.getFlag("lotm", "attack");
+  if (attack) await addAttackResults(content, attack);
+  for (const button of cardButtons(message)) await appendCardButton(content, button);
+}
+
+
+/**
+ * The buttons at the bottom of a check's card that this user can use. See appendCardButton.
+ * @param {ChatMessage} message
+ * @returns {object[]}
+ */
+function cardButtons(message) {
+  const buttons = [];
 
   // Roll Outcome (once per roll).
   if (canRollOutcome(message)) {
     const isRolled = () => !!message.getFlag("lotm", "outcomeRolled");
-    appendCardButton(content, {
+    buttons.push({
       rowClass: "lotm-outcome-buttons", buttonClass: "lotm-roll-outcome", icon: "fa-solid fa-table-list",
       label: "LORD_OF_THE_MYSTERIES.Outcome.Button", hint: "LORD_OF_THE_MYSTERIES.Outcome.ButtonHint",
       disabled: isRolled(),
@@ -76,7 +106,7 @@ function onRenderMessage(message, html) {
   // Roll Loss on a Sanity check (once per check, like Roll Outcome).
   if (canRollSanityLoss(message)) {
     const isRolled = () => !!sanityLossMessage(message);
-    appendCardButton(content, {
+    buttons.push({
       rowClass: "lotm-sanity-loss-buttons", buttonClass: "lotm-roll-sanity-loss", icon: "fa-solid fa-brain",
       label: "LORD_OF_THE_MYSTERIES.Sanity.RollLoss", hint: "LORD_OF_THE_MYSTERIES.Sanity.RollLossHint",
       disabled: isRolled(),
@@ -86,12 +116,13 @@ function onRenderMessage(message, html) {
 
   // Burn Luck.
   if (luckBurners(message).length) {
-    appendCardButton(content, {
+    buttons.push({
       rowClass: "lotm-luck-buttons", buttonClass: "lotm-burn-luck", icon: "fa-solid fa-clover",
       label: "LORD_OF_THE_MYSTERIES.Luck.Burn", hint: "LORD_OF_THE_MYSTERIES.Luck.BurnHint",
       onClick: () => openBurnLuckDialog(message),
     });
   }
+  return buttons;
 }
 
 
@@ -100,10 +131,10 @@ function onRenderMessage(message, html) {
  * @param {HTMLElement} content   The message's .message-content.
  * @param {object} attack         flags.lotm.attack
  */
-function addAttackResults(content, attack) {
+async function addAttackResults(content, attack) {
   const block = document.createElement("div");
   block.classList.add("lotm", "chat-attack-results");
-  block.innerHTML = attackResultsHTML(attack);
+  block.innerHTML = await renderTemplate("systems/lotm/templates/chat/attack-results.hbs", attackResultsData(attack));
   const roll = content.querySelector(".dice-roll");
   if (roll) roll.before(block);
   else content.prepend(block);
@@ -136,11 +167,10 @@ function showBigSuccess(html, natural) {
  * @param {boolean} [options.disabled]
  * @param {(button: HTMLButtonElement) => any} options.onClick
  */
-function appendCardButton(content, { rowClass, buttonClass, icon, label, hint, disabled = false, onClick }) {
+async function appendCardButton(content, { rowClass, buttonClass, icon, label, hint, disabled = false, onClick }) {
   const holder = document.createElement("div");
   holder.classList.add(rowClass);
-  holder.innerHTML = `<button type="button" class="${buttonClass}" data-tooltip="${escape(game.i18n.localize(hint))}">`
-    + `<i class="${icon}"></i> ${game.i18n.localize(label)}</button>`;
+  holder.innerHTML = await renderTemplate("systems/lotm/templates/chat/card-button.hbs", { buttonClass, icon, label, hint });
   const button = holder.querySelector("button");
   if (disabled) button.disabled = true;
   button.addEventListener("click", (event) => {
@@ -168,30 +198,30 @@ function oncePerRoll(run, isDone) {
 
 
 /**
- * The hit check's list: "vs. Physical Defense", then one row per target.
- * @param {{defenseTarget: string, targets: object[]}} attack
- * @returns {string}  HTML.
+ * What templates/chat/attack-results.hbs shows: the defense checked, and each target's Hit or Miss. Only the GM gets
+ * the defense numbers.
+ * @param {{defenseTarget: string, targets: object[]}} attack   flags.lotm.attack
+ * @returns {object}
  */
-function attackResultsHTML(attack) {
+function attackResultsData(attack) {
   const defenseKey = CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets?.[attack.defenseTarget];
-  const against = game.i18n.format("LORD_OF_THE_MYSTERIES.Attack.Against", {
-    defense: escape(defenseKey ? game.i18n.localize(defenseKey) : attack.defenseTarget),
-  });
-  if (!attack.targets?.length) {
-    return `<p class="attack-against">${against}</p><p class="hint">${game.i18n.localize("LORD_OF_THE_MYSTERIES.Attack.NoTargets")}</p>`;
-  }
+  return {
+    defense: defenseKey ? game.i18n.localize(defenseKey) : attack.defenseTarget,
+    targets: (attack.targets ?? []).map((target) => ({
+      ...hitLook(target.hit),
+      name: target.name,
+      defense: target.defense,
+      showDefense: game.user.isGM && isKnown(target.defense),
+    })),
+  };
+}
 
-  const rows = attack.targets.map((target) => {
-    const known = target.hit !== null && target.hit !== undefined;
-    const css = known ? (target.hit ? "is-hit" : "is-miss") : "";
-    const word = known
-      ? game.i18n.localize(`LORD_OF_THE_MYSTERIES.Attack.${target.hit ? "Hit" : "Miss"}`)
-      : game.i18n.localize("LORD_OF_THE_MYSTERIES.Attack.Unknown");
-    const defense = (game.user.isGM && target.defense !== null && target.defense !== undefined)
-      ? ` <span class="attack-defense" data-tooltip="${escape(game.i18n.localize("LORD_OF_THE_MYSTERIES.Attack.DefenseHint"))}">(${target.defense})</span>`
-      : "";
-    return `<li class="${css}"><span class="attack-target">${escape(target.name)}</span>`
-      + `<span class="attack-result">${word}${defense}</span></li>`;
-  }).join("");
-  return `<p class="attack-against">${against}</p><ul class="attack-targets">${rows}</ul>`;
+
+/**
+ * @param {boolean|null} hit   A target's hit check: null when it had no defense to check against.
+ * @returns {{css: string, word: string}}  A HIT_LOOKS entry.
+ */
+function hitLook(hit) {
+  if (!isKnown(hit)) return HIT_LOOKS.unknown;
+  return hit ? HIT_LOOKS.hit : HIT_LOOKS.miss;
 }

@@ -25,9 +25,11 @@
 
 import { checkSucceeds, isAttackHit, sanityCheckSucceeds, totalWithLuck } from "./check-results.mjs";
 import { promptSpend } from "../apps/spend-dialog.mjs";
+import { renderTemplateSync } from "./render.mjs";
+import { langSection } from "./lang.mjs";
 
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
-const t = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Luck.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Luck.${key}`));
+const LUCK = "LORD_OF_THE_MYSTERIES.Luck";
+const luckText = langSection(LUCK);
 
 
 /**
@@ -55,7 +57,7 @@ export async function spendLuck(actor, amount, { reason = "", chat = true } = {}
   if (!actor || amount <= 0) return null;
   const { value } = currentLuck(actor);
   if (amount > value) {
-    ui.notifications.warn(t("NotEnough", { name: actor.name, value, cost: amount }));
+    ui.notifications.warn(luckText("NotEnough", { name: actor.name, value, cost: amount }));
     return null;
   }
   const after = value - amount;
@@ -63,9 +65,7 @@ export async function spendLuck(actor, amount, { reason = "", chat = true } = {}
   if (chat) {
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="lotm chat-luck"><i class="fa-solid fa-clover"></i> ${t("Spent", {
-        name: escape(actor.name), amount, reason: reason ? t("SpentReason", { reason: escape(reason) }) : "",
-      })}</div>`,
+      content: renderTemplateSync("systems/lotm/templates/chat/luck-spent.hbs", { name: actor.name, amount, reason }),
     });
   }
   return { amount, before: value, after };
@@ -81,7 +81,7 @@ export async function spendLuck(actor, amount, { reason = "", chat = true } = {}
 export async function openSpendLuckDialog(actor) {
   const { value, max } = currentLuck(actor);
   if (value <= 0) {
-    ui.notifications.warn(t("NoneLeft", { name: actor.name }));
+    ui.notifications.warn(luckText("NoneLeft", { name: actor.name }));
     return null;
   }
   const input = await promptSpend({ section: "Luck", icon: "fa-solid fa-clover", value, max });
@@ -144,39 +144,22 @@ export function luckBurners(message) {
 export async function openBurnLuckDialog(message) {
   const burners = luckBurners(message).filter(({ actor }) => currentLuck(actor).value > 0);
   if (!burners.length) {
-    ui.notifications.warn(t("NoBurners"));
+    ui.notifications.warn(luckText("NoBurners"));
     return null;
   }
   const check = message.getFlag("lotm", "check");
   const defaultSign = (role) => ((role === "roller" && check.kind !== "sanity") ? 1 : -1);
 
-  const actorField = burners.length > 1
-    ? `<div class="form-group">
-        <label>${t("Whose")}</label>
-        <select name="actor">${burners.map(({ actor, role }) =>
-          `<option value="${escape(actor.uuid)}" data-sign="${defaultSign(role)}">${escape(actor.name)} (${t("LuckLeft", { value: currentLuck(actor).value })})</option>`).join("")}
-        </select>
-      </div>`
-    : `<p>${t("BurnerLine", { name: escape(burners[0].actor.name), value: currentLuck(burners[0].actor).value })}</p>
-       <input type="hidden" name="actor" value="${escape(burners[0].actor.uuid)}">`;
-  const sign = defaultSign(burners[0].role);
-  const content = `
-    <div class="lotm burn-luck-dialog">
-      <p class="hint">${t("DialogHint", { title: escape(check.title ?? ""), total: totalWithLuck(check.total, luckBurnsOn(message).map((m) => m.getFlag("lotm", "luckBurn").amount)) })}</p>
-      ${actorField}
-      <div class="form-group">
-        <label>${t("Amount")}</label>
-        <input type="number" name="amount" value="1" min="1" step="1" autofocus>
-      </div>
-      <div class="form-group">
-        <label>${t("Direction")}</label>
-        <select name="sign">
-          <option value="1" ${sign > 0 ? "selected" : ""}>${t("Add")}</option>
-          <option value="-1" ${sign < 0 ? "selected" : ""}>${t("Subtract")}</option>
-        </select>
-      </div>
-      <p class="hint">${t("NaturalHint")}</p>
-    </div>`;
+  const content = renderTemplateSync("systems/lotm/templates/dialogs/burn-luck.hbs", {
+    title: check.title ?? "",
+    total: totalWithLuck(check.total, luckBurnsOn(message).map((m) => m.getFlag("lotm", "luckBurn").amount)),
+    hasChoice: burners.length > 1,
+    burners: burners.map(({ actor, role }) => ({
+      uuid: actor.uuid, name: actor.name, luck: currentLuck(actor).value, sign: defaultSign(role),
+    })),
+    // The direction starts as the first creature's usual one.
+    adds: defaultSign(burners[0].role) > 0,
+  });
 
   const input = await foundry.applications.api.DialogV2.prompt({
     window: { title: "LORD_OF_THE_MYSTERIES.Luck.BurnTitle", icon: "fa-solid fa-clover" },
@@ -206,7 +189,7 @@ export async function openBurnLuckDialog(message) {
   const burner = burners.find(({ actor }) => actor.uuid === input.actorUuid)?.actor;
   if (!burner) return null;
   if (!Number.isFinite(input.amount) || input.amount < 1) {
-    ui.notifications.warn(t("InvalidAmount"));
+    ui.notifications.warn(luckText("InvalidAmount"));
     return null;
   }
   return burnLuck(message, burner, input.sign * Math.floor(input.amount));
@@ -232,21 +215,22 @@ export async function burnLuck(message, burner, amount) {
   const after = before + amount;
   const natural = check.natural ?? null;
 
-  const lines = [t("Total", { before, after })];
-  if (natural === 20 || natural === 1) lines.push(t(natural === 20 ? "StillBigSuccess" : "StillBigFailure"));
+  // The card's lines (templates/chat/luck-burn.hbs).
+  const lines = [{ key: `${LUCK}.Total`, data: { before, after } }];
+  if (natural === 20 || natural === 1) lines.push({ key: `${LUCK}.${natural === 20 ? "StillBigSuccess" : "StillBigFailure"}` });
 
   // Pass or fail: a sanity check (at or under Sanity), or a DC.
   let flipped = null;
   if (check.kind === "sanity") {
     const was = sanityCheckSucceeds({ total: before, natural, sanity: check.sanity });
     const now = sanityCheckSucceeds({ total: after, natural, sanity: check.sanity });
-    lines.push(resultLine(game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.Against", { sanity: check.sanity }), now, was));
+    lines.push(resultLine("LORD_OF_THE_MYSTERIES.Sanity.Against", { sanity: check.sanity }, now, was));
     if (now !== was) flipped = now;
   }
   else if (check.dc !== null && check.dc !== undefined) {
     const was = checkSucceeds({ total: before, natural, dc: check.dc });
     const now = checkSucceeds({ total: after, natural, dc: check.dc });
-    lines.push(resultLine(game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.DC", { dc: check.dc }), now, was));
+    lines.push(resultLine("LORD_OF_THE_MYSTERIES.RollDialog.DC", { dc: check.dc }, now, was));
     if (now !== was) flipped = now;
   }
 
@@ -256,9 +240,7 @@ export async function burnLuck(message, burner, amount) {
     const was = isAttackHit({ total: before, natural, defense: target.defense });
     const now = isAttackHit({ total: after, natural, defense: target.defense });
     const word = (hit) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Attack.${hit ? "Hit" : "Miss"}`);
-    const change = now === was ? "" : ` ${t("Was", { result: word(was) })}`;
-    lines.push(`<span class="${now ? "is-hit" : "is-miss"}">${escape(target.name)}: <strong>${word(now)}</strong>${change}</span>`
-      + ` <span class="lotm-gm-only">(${target.defense})</span>`);
+    lines.push({ target: { name: target.name, hit: now, word: word(now), was: now === was ? "" : word(was), defense: target.defense } });
   }
 
   // A sanity check whose result flipped. Its loss not rolled yet: nothing to change, the Roll Loss button rolls the
@@ -278,25 +260,23 @@ export async function burnLuck(message, burner, amount) {
     const state = latest ?? rolled ?? legacy;
     if (state) {
       const changed = await changeSanityResult(state, flipped);
-      lines.push(changed.html);
+      lines.push({ html: changed.html });
       luckBurn.sanityState = changed.state;
     }
-    else lines.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.LossNotRolled"));
+    else lines.push({ key: "LORD_OF_THE_MYSTERIES.Sanity.LossNotRolled" });
   }
 
   const roller = fromUuidSync(check.actorUuid);
   const burnMessage = await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: burner }),
-    content: `<div class="lotm chat-luck-burn">
-      <p class="chat-luck-title"><i class="fa-solid fa-clover"></i> ${t("Burned", {
-        name: escape(burner.name),
-        amount: Math.abs(amount),
-        change: amount > 0 ? `+${amount}` : `${amount}`,
-        roller: escape(roller?.name ?? ""),
-        title: escape(check.title ?? ""),
-      })}</p>
-      ${lines.map((line) => `<div class="chat-luck-line">${line}</div>`).join("")}
-    </div>`,
+    content: renderTemplateSync("systems/lotm/templates/chat/luck-burn.hbs", {
+      name: burner.name,
+      amount: Math.abs(amount),
+      change: amount > 0 ? `+${amount}` : `${amount}`,
+      roller: roller?.name ?? "",
+      title: check.title ?? "",
+      lines,
+    }),
     // Seen by the same people as the roll it changes.
     whisper: [...(message.whisper ?? [])],
     blind: !!message.blind,
@@ -317,16 +297,16 @@ export async function burnLuck(message, burner, amount) {
 
 
 /**
- * "DC 15: Success (was Failure)".
- * @param {string} label
- * @param {boolean} now
- * @param {boolean} was
- * @returns {string}
+ * A burn card line for a check's result: "DC 15: Success (was Failure)".
+ * @param {string} labelKey      Lang key of what it's against ("DC {dc}").
+ * @param {object} labelData
+ * @param {boolean} now          It succeeds now.
+ * @param {boolean} was          It succeeded before the burn.
+ * @returns {{result: object}}   A line for templates/chat/luck-burn.hbs.
  */
-function resultLine(label, now, was) {
+function resultLine(labelKey, labelData, now, was) {
   const word = (success) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
-  const change = now === was ? "" : ` ${t("Was", { result: word(was) })}`;
-  return `<span class="roll-dc-result ${now ? "success" : "failure"}">${label}: ${word(now)}</span>${change}`;
+  return { result: { labelKey, labelData, now, word: word(now), was: now === was ? "" : word(was) } };
 }
 
 
@@ -338,7 +318,7 @@ function resultLine(label, now, was) {
 async function postGMNote(burner, message) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: burner }),
-    content: `<p class="lotm chat-luck-note">${t("AdjustByHand")}</p>`,
+    content: renderTemplateSync("systems/lotm/templates/chat/luck-note.hbs"),
     whisper: game.users.filter((user) => user.isGM || user.id === game.user.id).map((user) => user.id),
   });
 }

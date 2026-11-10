@@ -1,0 +1,32 @@
+{{!-- A token took damage: each type's incoming damage, what its damage reduction took off, and what it took.
+      Its Health isn't shown (helpers/action-roll.mjs postDamageTaken). --}}
+<div class="lotm chat-damage-taken">
+  <p class="chat-damage-title">{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Title" name=name amount=total}}</p>
+  <table class="chat-damage-table">
+    <thead><tr>
+      <th>{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Type"}}</th>
+      <th>{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Incoming"}}</th>
+      <th>{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Reduced"}}</th>
+      <th>{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Taken"}}</th>
+    </tr></thead>
+    <tbody>
+      {{#each parts as |part|}}
+        <tr data-damage-type="{{part.type}}">
+          <td>{{part.label}}</td>
+          <td>{{part.amount}}</td>
+          <td>{{part.reduced}}</td>
+          <td><strong>{{part.taken}}</strong></td>
+        </tr>
+      {{/each}}
+      {{#if totals}}
+        <tr class="chat-damage-total">
+          <td>{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Total"}}</td>
+          <td>{{totals.incoming}}</td>
+          <td>{{totals.reduced}}</td>
+          <td><strong>{{totals.total}}</strong></td>
+        </tr>
+      {{/if}}
+    </tbody>
+  </table>
+  {{#if ignoreReduction}}<p class="chat-damage-ignored">{{lotmLang "LORD_OF_THE_MYSTERIES.Action.DamageTaken.Ignored"}}</p>{{/if}}
+</div>

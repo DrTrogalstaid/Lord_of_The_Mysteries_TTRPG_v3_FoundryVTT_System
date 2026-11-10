@@ -1,0 +1,12 @@
+{{!-- A damage roll's flavor (above the dice): "Shoot: Damage (Fire, Cold)", "5 Fire · 3 Cold" when there's more
+      than one type, the Big Success note, and the Damage / Heal buttons (helpers/action-roll.mjs postDamageRoll). --}}
+{{lotmLang flavorKey action=title type=typeText}}
+{{#if parts}}
+  <div class="lotm chat-damage-types">
+    {{#each parts as |part|}}{{#unless @first}} · {{/unless}}<span class="chat-damage-type" data-damage-type="{{part.type}}">{{part.amount}} {{part.label}}</span>{{/each}}
+  </div>
+{{/if}}
+{{#if bigSuccess}}
+  <div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> {{lotmLang bigSuccess.key rolled=bigSuccess.rolled minimum=bigSuccess.minimum}}</div>
+{{/if}}
+{{> "systems/lotm/templates/chat/apply-buttons.hbs" amount=amount}}

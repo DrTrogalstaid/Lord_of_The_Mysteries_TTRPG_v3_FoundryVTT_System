@@ -34,7 +34,8 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     // The skill it rolls with (UUID of a skill Item). Blank = Occultism. Set by dropping a skill on the spell
     // sheet's Skill slot (helpers/skill-slot.mjs).
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
-    // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). This used to be "attack".
+    // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). Saved as "attack" on older
+    // spells; migrateData below moves it here.
     schema.attackRollMacro = new fields.StringField({ required: false, blank: true });
     // Which defense the attack roll goes against (same as an action's). Blank = no hit check.
     schema.defenseTarget = new fields.StringField({
@@ -53,10 +54,11 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     schema.damageRollMacro = new fields.StringField({ required: false, blank: true });
     // The damage type of every part of the damage formula that doesn't name its own.
     schema.damageType = new fields.StringField({ required: false, blank: true, initial: "" });
-    //DC_Results
-    //TODO: Make an array?? Mayebe, but it could also be a markdown table. Or the sheet would process the array into a markdown table??
+    // What each result against the DC does, as free text (the sheet's DC Results box). For results drawn
+    // automatically, use the success / failure tables above.
     schema.dcResults = new fields.StringField({ required: false, initial: "Results" });
 
+    // What the spell gains at higher Sequences: one line of text each (the sheet's Sequence Upgrades list).
     schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );

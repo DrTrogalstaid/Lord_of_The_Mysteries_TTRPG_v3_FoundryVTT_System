@@ -11,20 +11,12 @@ export default class LordOfTheMysteriesAbility extends LordOfTheMysteriesItemBas
     schema.special = new fields.StringField({ required: false, initial: "na" });
     schema.canBeStolen = new fields.BooleanField({ required: true, initial: true})
 
-    //Action Type (e.i. Attack/Spell, quick action, free action)
+    // Action Type (attack/spell, quick action, free action, ...): a key of CONFIG.LORD_OF_THE_MYSTERIES.actionTypes.
     schema.actionType = new fields.StringField({ required: false, blank: true, initial:"", choices: Object.keys(CONFIG.LORD_OF_THE_MYSTERIES.actionTypes) });
 
-
-    //Roll modifiers
-
-    //Vistion/Senses gained
-    //TODO: Vistion object? How does foundry handle this??
-
-    //Spirituatlity Cost
     schema.spiritualityCost = new fields.NumberField({required: false, integer: true, min: 0});
 
-    //Higher sequence bonuses (array containing all sequences?)
-    //TODO: What should this be besides a string?
+    // What the ability gains at higher Sequences: one line of text each (the sheet's Sequence Upgrades list).
     schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );

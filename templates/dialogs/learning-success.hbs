@@ -1,0 +1,23 @@
+{{!-- The Success dialog: record a success with an ability that teaches by doing (openSuccessDialog in
+      apps/study-dialog.mjs). With more than one such ability, the player picks which one. --}}
+<p class="study-current">{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Fast.Progress" count=count needed=needed next=next}}</p>
+{{#if hasChoice}}
+  <div class="form-group">
+    <label>{{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Fast.Ability"}}</label>
+    <div class="form-fields">
+      <select name="ability">
+        {{#each abilities as |ability|}}<option value="{{ability.uuid}}">{{ability.name}}</option>{{/each}}
+      </select>
+    </div>
+  </div>
+{{else}}
+  <input type="hidden" name="ability" value="{{abilities.0.uuid}}">
+{{/if}}
+<p class="hint success-condition"></p>
+<p class="study-preview">
+  {{#if isLevelUp}}
+    {{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Fast.PreviewLevelUp" level=next}}
+  {{else}}
+    {{lotmLang "LORD_OF_THE_MYSTERIES.Learning.Fast.PreviewProgress" count=nextCount needed=needed}}
+  {{/if}}
+</p>

@@ -1,0 +1,19 @@
+{{!-- The money dialog: Receive / Pay / Move / Exchange (helpers/currency.mjs openMoneyDialog). Which fields it has
+      depends on the mode. fields: [{ label, name, options: [{ value, label, selected }] } or { label, name, placeholder,
+      autofocus }]; rates: the exchange rates line (Exchange only). --}}
+{{#each fields as |field|}}
+  <div class="form-group">
+    <label>{{lotmLang field.label}}</label>
+    <div class="form-fields">
+      {{#if field.options}}
+        <select name="{{field.name}}">
+          {{#each field.options as |option|}}<option value="{{option.value}}"{{#if option.selected}} selected{{/if}}>{{option.label}}</option>{{/each}}
+        </select>
+      {{else}}
+        <input type="text" name="{{field.name}}" placeholder="{{localize field.placeholder}}"{{#if field.autofocus}} autofocus{{/if}}>
+      {{/if}}
+    </div>
+  </div>
+{{/each}}
+{{#if rates}}<p class="hint">{{rates}}</p>{{/if}}
+<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Money.AmountHint"}}</p>

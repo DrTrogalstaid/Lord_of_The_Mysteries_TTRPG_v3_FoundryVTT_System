@@ -4,7 +4,7 @@
  *   - getTooltip(): the breakdown also lists flat modifiers ("STR  3"), not only dice, with penalties shown negative.
  *   - cleanFormula: "1d20 + 5[STR]" shows as "1d20 + STR". Every modifier is tagged N[Label]
  *     (helpers/skill-check-formula.mjs builds them that way).
- * The name is kept from the old prototype (chat messages save the class name of their rolls).
+ * Keep the class name: chat messages save the class name of their rolls, so renaming it would break older messages.
  */
 export default class LOTM_VTTRoll extends Roll {
     /**

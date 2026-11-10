@@ -142,7 +142,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         }, {}));
 
         // Learning progress, one entry per skill being learned (helpers/skill-learning.mjs, apps/study-dialog.mjs).
-        // Kept apart from `skills` (it used to be wiped by the Character tab's form, which saved whole skill lists).
+        // Kept apart from `skills`, so a form that saves whole skill lists can't wipe it.
         schema.learning = new fields.ArrayField(
             new fields.SchemaField({
                 // The skill's key ("pistol"). Entries saved before skill keys have its UUID; both are read.
@@ -524,8 +524,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
     _prepareMovement() {
         const armor = this.carrying.armor;
         // Movement in meters (Strength + Agility), halved (rounded up) or stopped by armor that's too heavy,
-        // then x3 for feet. The armor rule rounds in meters, so it's applied before the conversion.
-        //TODO: Change the multiplication here to depend on the system's distance unit.
+        // then x3 for feet (the system's grid unit, system.json). The armor rule rounds in meters, so it's applied
+        // before the conversion.
         // Loss of Balance halves the Agility used here (rounded up).
         const meters = this.attributes.str.total + movementAgility(this.attributes.agi.total, this.statusModifiers.movement);
         this.movement = armoredMovement(meters, armor.movement) * 3;

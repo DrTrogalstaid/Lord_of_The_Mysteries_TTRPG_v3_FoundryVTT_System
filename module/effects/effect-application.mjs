@@ -25,6 +25,8 @@
  */
 
 import { resetExpiryEvents } from "./action-expiry.mjs";
+import { postEffectLine } from "./effect-chat.mjs";
+import { renderTemplateSync } from "../helpers/render.mjs";
 
 /** Item types whose new effects start as passive (they lend themselves to the owner). Others start as "targets". */
 const PASSIVE_ITEM_TYPES = ["ability", "sequence", "gear"];
@@ -35,7 +37,6 @@ const DELETE_EFFECTS_QUERY = "lotm.deleteEffects";
 
 const localize = (key) => game.i18n.localize(key);
 const format = (key, data) => game.i18n.format(key, data);
-const escape = (text) => Handlebars.escapeExpression(text ?? "");
 
 
 /* -------------------------------------------- */
@@ -305,14 +306,11 @@ export async function askGM(query, data, name) {
  * @param {string[]} names
  */
 async function postApplied(caster, effect, names) {
-  const text = format("LORD_OF_THE_MYSTERIES.Effects.Apply.Chat", {
-    name: escape(caster.name),
-    effect: escape(effect.name),
-    targets: names.map(escape).join(", "),
-  });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker({ actor: caster }),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
+    img: effect.img,
+    key: "LORD_OF_THE_MYSTERIES.Effects.Apply.Chat",
+    data: { name: caster.name, effect: effect.name, targets: names.join(", ") },
   });
 }
 
@@ -324,13 +322,11 @@ async function postApplied(caster, effect, names) {
  * @param {Actor|null} [speaker]  Posted as this character (the first one who got it).
  */
 export async function postEffectGiven(effect, names, speaker = null) {
-  const text = format("LORD_OF_THE_MYSTERIES.Effects.Apply.ChatNoCaster", {
-    effect: escape(effect.name),
-    targets: names.map(escape).join(", "),
-  });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker(speaker ? { actor: speaker } : {}),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
+    img: effect.img,
+    key: "LORD_OF_THE_MYSTERIES.Effects.Apply.ChatNoCaster",
+    data: { effect: effect.name, targets: names.join(", ") },
   });
 }
 
@@ -348,14 +344,15 @@ export async function postEffectGiven(effect, names, speaker = null) {
 export function effectButtonsHTML(item) {
   const effects = (item?.effects?.contents ?? []).filter((effect) => effectUse(effect) !== "passive");
   if (!effects.length) return "";
-  const buttons = effects.map((effect) => {
-    const labelKey = effectUse(effect) === "toggle" ? "LORD_OF_THE_MYSTERIES.Effects.Toggle.Button" : "LORD_OF_THE_MYSTERIES.Effects.Apply.Button";
-    const label = format(labelKey, { name: escape(effect.name) });
-    const hint = escape(useLabel(effect));
-    return `<button type="button" class="lotm-apply-effect" data-lotm-apply-effect="${effect.id}" data-tooltip="${hint}">`
-      + `<img src="${escape(effect.img)}" alt="" width="16" height="16"> ${label}</button>`;
-  }).join("");
-  return `<div class="lotm-effect-buttons">${buttons}</div>`;
+  return renderTemplateSync("systems/lotm/templates/chat/effect-buttons.hbs", {
+    buttons: effects.map((effect) => ({
+      id: effect.id,
+      img: effect.img,
+      name: effect.name,
+      labelKey: effectUse(effect) === "toggle" ? "LORD_OF_THE_MYSTERIES.Effects.Toggle.Button" : "LORD_OF_THE_MYSTERIES.Effects.Apply.Button",
+      hint: useLabel(effect),
+    })),
+  });
 }
 
 

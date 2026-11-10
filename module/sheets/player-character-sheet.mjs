@@ -19,6 +19,8 @@ import { buildMoneyView, openMoneyDialog } from "../helpers/currency.mjs";
 import { openSpendLuckDialog } from "../helpers/luck.mjs";
 import { ownersAndGMs } from "../effects/status-checks.mjs";
 import { bindEach } from "../helpers/listeners.mjs";
+import { paragraphsHTML, renderTemplateSync } from "../helpers/render.mjs";
+import { langSection } from "../helpers/lang.mjs";
 
 /** One row of the Character tab's Granted Skills box (skills a Sequence raises or trains), with the skill controls. */
 const GRANTED_SKILL_ENTRY_PARTIAL = "systems/lotm/templates/actor/player-character/parts/granted-skill-entry.hbs";
@@ -279,17 +281,17 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
   #educationGrowthTooltip() {
     const growth = this.actor.system.educationGrowth;
     if (!growth) return "";
-    const format = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.EducationGrowth.${key}`, data);
-    const lines = [format("Total", { bonus: growth.bonus })];
+    const growthText = langSection("LORD_OF_THE_MYSTERIES.EducationGrowth");
+    const lines = [growthText("Total", { bonus: growth.bonus })];
     for (const tier of growth.tiers) {
-      lines.push(format("Tier", {
+      lines.push(growthText("Tier", {
         level: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[tier.level] ?? tier.level),
         count: tier.count,
         bonus: tier.bonus,
         next: (tier.bonus + 1) * tier.per,
       }));
     }
-    lines.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.EducationGrowth.Hint"));
+    lines.push(growthText("Hint"));
     // Plain text, not HTML, so it shows the same in every Foundry version's tooltips.
     return lines.join(" · ");
   }
@@ -632,18 +634,16 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
       "system.hasBeenTreated": false,
     });
 
-    const L = (key, data) => game.i18n.format(`LORD_OF_THE_MYSTERIES.Recovery.${key}`, data ?? {});
+    const line = (key, data = {}) => ({ key: `LORD_OF_THE_MYSTERIES.Recovery.${key}`, data });
     const lines = [
-      L(isTreated ? "HealthTreated" : "HealthUntreated", { heal: hpAfter - hpBefore, before: hpBefore, after: hpAfter }),
-      L("Spirituality"),
-      L("Luck"),
-      isMad ? L("SanityMad") : L("Sanity", { gain: Math.max(rpBefore, rpAfter) - rpBefore }),
+      line(isTreated ? "HealthTreated" : "HealthUntreated", { heal: hpAfter - hpBefore, before: hpBefore, after: hpAfter }),
+      line("Spirituality"),
+      line("Luck"),
+      isMad ? line("SanityMad") : line("Sanity", { gain: Math.max(rpBefore, rpAfter) - rpBefore }),
     ];
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="lotm chat-rest"><p class="chat-rest-title"><i class="fa-solid fa-bed"></i> ${L("LongRestTitle", {
-        name: Handlebars.escapeExpression(actor.name),
-      })}</p><ul>${lines.map((line) => `<li>${line}</li>`).join("")}</ul></div>`,
+      content: renderTemplateSync("systems/lotm/templates/chat/long-rest.hbs", { name: actor.name, lines }),
       whisper: ownersAndGMs(actor),
     });
   }
@@ -892,7 +892,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     // Closing the dialog gives null (rejectClose: false), so nothing is made.
     const type = await foundry.applications.api.DialogV2.wait({
       window: { title: "LORD_OF_THE_MYSTERIES.Inventory.Add.Title" },
-      content: `<p>${game.i18n.localize("LORD_OF_THE_MYSTERIES.Inventory.Add.Prompt")}</p>`,
+      content: paragraphsHTML({ key: "LORD_OF_THE_MYSTERIES.Inventory.Add.Prompt" }),
       buttons: [
         { action: "gear", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Gear", icon: "fa-solid fa-toolbox", default: true },
         { action: "container", label: "LORD_OF_THE_MYSTERIES.Inventory.Add.Container", icon: "fa-solid fa-shirt" },

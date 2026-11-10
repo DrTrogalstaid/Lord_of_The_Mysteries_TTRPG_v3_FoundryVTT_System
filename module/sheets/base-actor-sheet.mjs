@@ -42,6 +42,7 @@ import { bindDropZone, bindEach } from "../helpers/listeners.mjs";
 import { prepareEffectsPanel, prepareStatusNotes } from "./actor/effects-panel.mjs";
 import { DIGESTION_MAX, DIGESTION_MIN, ORDER_FLAG, STACKABLE_TYPES, SectionBuilder, sectionForType, sectionLabel } from "./actor/sections.mjs";
 import { COLLAPSED_FLAG, COLLAPSED_SPELLS_FLAG, FAVORITES_FLAG, groupActions, groupSpellLists, spellListCollapseKey } from "./actor/groups.mjs";
+import { paragraphsHTML, renderTemplateSync } from "../helpers/render.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -890,15 +891,9 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       doc.system?.description ?? "",
       { secrets: doc.isOwner, relativeTo: doc }
     );
-    const name = Handlebars.escapeExpression(doc.name);
-    const img = Handlebars.escapeExpression(doc.img);
-
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-      content: `<div class="lotm chat-item">
-        <header class="chat-item-header"><img src="${img}" width="36" height="36" alt=""><h3>${name}</h3></header>
-        <div class="chat-item-description">${description}</div>
-      </div>`,
+      content: renderTemplateSync("systems/lotm/templates/chat/item-card.hbs", { name: doc.name, img: doc.img, description }),
     });
   }
 
@@ -967,7 +962,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     if (!event.shiftKey) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
         window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
-        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(item.name) })}</p>`,
+        content: paragraphsHTML({ key: "LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", data: { name: item.name } }),
         rejectClose: false,
         modal: true,
       });
@@ -1037,7 +1032,7 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     if (!event.shiftKey) {
       const confirmed = await foundry.applications.api.DialogV2.confirm({
         window: { title: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.RemoveTitle") },
-        content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", { name: Handlebars.escapeExpression(effect.name) })}</p>`,
+        content: paragraphsHTML({ key: "LORD_OF_THE_MYSTERIES.Drop.RemoveConfirm", data: { name: effect.name } }),
         rejectClose: false,
         modal: true,
       });

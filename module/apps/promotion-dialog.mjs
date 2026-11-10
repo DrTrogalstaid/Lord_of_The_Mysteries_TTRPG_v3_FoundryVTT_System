@@ -1,7 +1,8 @@
 import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
 import { signedTerm } from "../helpers/skill-check-formula.mjs";
 import { sanityCheckSucceeds } from "../helpers/check-results.mjs";
-import { PROMOTION_BASE, REPEATED_BASE, promotionModifiers, stageHTML } from "../helpers/promotion.mjs";
+import { PROMOTION_BASE, REPEATED_BASE, promotionCardHTML, promotionModifiers } from "../helpers/promotion.mjs";
+import { formatHTML } from "../helpers/render.mjs";
 
 /**
  * PromotionDialog
@@ -175,7 +176,7 @@ export default class PromotionDialog extends LotmRollDialog {
 
   /** "Promotion: Sequence 8: Clown" @override */
   _flavor() {
-    return game.i18n.format("LORD_OF_THE_MYSTERIES.Promotion.Flavor", { sequence: Handlebars.escapeExpression(this.sequenceName) });
+    return formatHTML("LORD_OF_THE_MYSTERIES.Promotion.Flavor", { sequence: this.sequenceName });
   }
 
   /**
@@ -188,10 +189,8 @@ export default class PromotionDialog extends LotmRollDialog {
     const success = sanityCheckSucceeds({ total: roll.total, sanity, isPromotion: true });
     const table = CONFIG.LORD_OF_THE_MYSTERIES.promotionSanityLoss?.[this.sequenceNumber] ?? { success: "0", failure: "0" };
 
-    const resultLabel = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
-    const html = ` <span class="roll-dc-result ${success ? "success" : "failure"}">`
-      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.Result", { sanity, result: resultLabel })}</span>`
-      + `<div class="lotm chat-promotion">${stageHTML("pendingLoss", { name: this.actor.name, sequence: this.sequenceName })}</div>`;
+    const html = LotmRollDialog.resultHTML({ result: { key: "LORD_OF_THE_MYSTERIES.Sanity.Result", data: { sanity }, success } })
+      + promotionCardHTML("pendingLoss", { name: this.actor.name, sequence: this.sequenceName });
 
     return {
       html,

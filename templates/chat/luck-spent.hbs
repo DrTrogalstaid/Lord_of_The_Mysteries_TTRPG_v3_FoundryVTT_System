@@ -1,0 +1,9 @@
+{{!-- "Klein spends 2 Luck on Initiative." (helpers/luck.mjs spendLuck) --}}
+<div class="lotm chat-luck">
+  <i class="fa-solid fa-clover"></i>
+  {{#if reason}}
+    {{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Spent" name=name amount=amount reason=(lotmLang "LORD_OF_THE_MYSTERIES.Luck.SpentReason" reason=reason)}}
+  {{else}}
+    {{lotmLang "LORD_OF_THE_MYSTERIES.Luck.Spent" name=name amount=amount reason=""}}
+  {{/if}}
+</div>
