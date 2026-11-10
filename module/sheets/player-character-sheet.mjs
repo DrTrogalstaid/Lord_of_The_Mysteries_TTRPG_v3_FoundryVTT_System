@@ -8,7 +8,8 @@
  **/
 
 import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";
-import { skillRaiseText, skillRollTooltip } from "./actor/skill-tooltips.mjs";
+import { skillRollTooltip } from "./actor/skill-tooltips.mjs";
+import { skillLevelLabel } from "../helpers/skill-modifiers.mjs";
 import { abilityTeaches, canTeachTo, nextLevel, studyProgressFor, successesFor, successesNeeded } from "../helpers/skill-learning.mjs";
 import { skillRecordUpdate } from "../helpers/skill-data.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
@@ -285,7 +286,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const lines = [growthText("Total", { bonus: growth.bonus })];
     for (const tier of growth.tiers) {
       lines.push(growthText("Tier", {
-        level: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[tier.level] ?? tier.level),
+        level: skillLevelLabel(tier.level),
         count: tier.count,
         bonus: tier.bonus,
         next: (tier.bonus + 1) * tier.per,
@@ -309,7 +310,6 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
    */
   async _prepareSkillList(abilityEntries = [], grantedUuids = []) {
     const tabs = CONFIG.LORD_OF_THE_MYSTERIES.skillTabAttributes ?? [];
-    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
     const grantedKeys = new Set(grantedUuids.map((uuid) => skillKeyFor(uuid)).filter(Boolean));
 
     const skillsByCategory = Object.fromEntries(tabs.map((tab) => [tab, []]));
@@ -318,14 +318,14 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
     for (const record of Object.values(this.actor.system.skills ?? {})) {
       if (record.isBroken) {
-        if (record.isSaved) this._missingSkills.push(this.#missingSkillRow(record, levelLabel));
+        if (record.isSaved) this._missingSkills.push(this.#missingSkillRow(record));
         continue;
       }
       const onTab = (record.isStandard || record.isSaved) && tabs.includes(record.attribute);
       // Skills a Sequence gives that aren't on a tab (not saved yet, or linked to an attribute with no tab) are only
       // in the Granted Skills box. Kept under GRANTED_ONLY, which isn't a tab, so the tabs never list them.
       if (!onTab && !grantedKeys.has(record.key)) continue;
-      const row = this.#skillRow(record, levelLabel);
+      const row = this.#skillRow(record);
       (onTab ? skillsByCategory[record.attribute] : grantedOnly).push(row);
     }
     for (const rows of Object.values(skillsByCategory)) rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -340,40 +340,15 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
 
 
   /**
-   * One skill row for the tabs and the Granted Skills box (character.hbs, granted-skill-entry.hbs).
-   *   level           the player's pick (the dropdown)
-   *   effectiveLevel  the level it's rolled at, with the reason on hover (associatedTooltip) when it's higher
+   * One skill row for the tabs and the Granted Skills box (character.hbs, granted-skill-entry.hbs): the shared row
+   * (_skillRow in base-actor-sheet.mjs), plus
    *   learnLevel      what studying and learning by doing go on from (no effects)
-   *   modifier        the number shown: attribute + level bonus + its own modifier + effect bonuses
-   *   rollTooltip     "Click to roll", plus its effect bonuses
-   *   canSave         its level can be changed (its attribute has a tab)
+   *   analysis        Beyonder abilities analyzed toward it
    * @param {object} record   actor.system.skills[key]
-   * @param {(level: string) => string} levelLabel
    * @returns {object}
    */
-  #skillRow(record, levelLabel) {
-    const raisedText = skillRaiseText(record, levelLabel);
-    return {
-      key: record.key,
-      uuid: record.uuid,
-      name: record.name,
-      img: record.img,
-      level: record.ownLevel,
-      effectiveLevel: record.effectiveLevel,
-      learnLevel: record.learnLevel,
-      associated: !!raisedText,
-      associatedTooltip: raisedText,
-      categories: record.categories,
-      attributeTotal: record.attributeTotal,
-      analysis: record.analysis ?? 0,
-      category: record.attribute,
-      attribute: record.attribute,
-      flatModifier: record.flatModifier ?? 0,
-      modifier: record.total,
-      hasBonus: (record.bonusTotal ?? 0) !== 0,
-      rollTooltip: skillRollTooltip(this.actor, record.key),
-      canSave: record.canSave,
-    };
+  #skillRow(record) {
+    return { ...this._skillRow(record), learnLevel: record.learnLevel, analysis: record.analysis ?? 0 };
   }
 
 
@@ -381,15 +356,14 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
    * A saved skill whose Item can't be found (deleted, or its compendium isn't installed). Its level and analyses are
    * still saved under its key; the row lets the player see that and remove it.
    * @param {object} record
-   * @param {(level: string) => string} levelLabel
    * @returns {{key: string, uuid: string, name: string, levelLabel: string, analysis: number}}
    */
-  #missingSkillRow(record, levelLabel) {
+  #missingSkillRow(record) {
     return {
       key: record.key,
       uuid: record.uuid,
       name: game.i18n.format("LORD_OF_THE_MYSTERIES.SkillKeys.MissingSkill", { key: record.key }),
-      levelLabel: levelLabel(record.level),
+      levelLabel: skillLevelLabel(record.level),
       analysis: record.analysis ?? 0,
     };
   }
@@ -411,7 +385,6 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
     const teachers = docs.filter((doc) => doc?.system?.fastLearning?.enabled);
 
     const learning = this.actor.system.learningByKey ?? {};
-    const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
     // Each ability's single skills by key, so a world copy of a skill dropped on the ability counts too.
     const teaching = teachers.map((ability) => ({
       ability,
@@ -435,7 +408,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
         const needed = successesNeeded(level);
         row.successText = `${count}/${needed}`;
         row.successTooltip = game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.Fast.ProgressTooltip", {
-          count, needed, next: levelLabel(next),
+          count, needed, next: skillLevelLabel(next),
         });
       }
     }
@@ -461,7 +434,7 @@ export class PlayerCharacterSheet extends LordOfTheMysteriesActorSheetBase {
       row.studyTooltip = row.studyPercent
         ? game.i18n.format("LORD_OF_THE_MYSTERIES.Learning.ProgressTooltip", {
             percent: row.studyPercent,
-            next: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[next] ?? next),
+            next: skillLevelLabel(next),
           })
         : "";
     }

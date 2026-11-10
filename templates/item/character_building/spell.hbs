@@ -1,11 +1,6 @@
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
@@ -13,24 +8,12 @@
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
       <div class="description-box">
-        <div class="box-title">Description</div>
-        {{#if editable}}
-          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-            {{{enrichedDescription}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedDescription}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Description"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
       </div>
       <div class="description-box">
-        <div class="box-title">Special</div>
-        {{#if editable}}
-          <prose-mirror name="system.special" button="true" editable="{{editable}}" toggled="false" value="{{system.special}}">
-            {{{enrichedSpecial}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedSpecial}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Special"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.special" value=system.special enriched=enrichedSpecial}}
       </div>
     </div>
 
@@ -38,7 +21,7 @@
     <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
 
       <fieldset class="actionType ">
-        <legend>Action Type</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.ActionType"}}</legend>
         <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionTypes selected=system.actionType localize=true blank=""}}
         </select>
@@ -50,19 +33,19 @@
       <!--TODO: Put Target, Spirituality Cost, and Range in a sidebar-->
       <!--Target-->
       <fieldset>
-        <legend>Target</legend>
-        <input id="target" class="blend-input" type="text" name="system.target" value="{{system.target}}" placeholder="Target" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Target"}}</legend>
+        <input id="target" class="blend-input" type="text" name="system.target" value="{{system.target}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Target'}}" />
       </fieldset>
 
       <!--Spirituality Cost-->
       <fieldset>
-        <legend>Spirituality Cost</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SpiritualityCost"}}</legend>
         <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" />
       </fieldset>
       
       <!--Range-->
       <fieldset>
-        <legend>Range</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Range"}}</legend>
         <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" />
       </fieldset>
 
@@ -72,13 +55,13 @@
 
       <!--DC Results-->
       <fieldset>
-        <legend>DC Results</legend>
-        <input id="dcResults" class="blend-input" type="text" name="system.dcResults" value="{{system.dcResults}}" placeholder="DC Results" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DCResults"}}</legend>
+        <input id="dcResults" class="blend-input" type="text" name="system.dcResults" value="{{system.dcResults}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.DCResults'}}" />
       </fieldset>
 
       <!--Sequence Upgrades-->
       {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.higherSequenceUpgrades" rows=higherSequenceUpgrades
-          class="sequence-upgrades" legend="Sequence Upgrades" placeholder="Upgrade description" addLabel="Add Upgrade"}}
+          class="sequence-upgrades" legend="LORD_OF_THE_MYSTERIES.ItemSheet.SequenceUpgrades" placeholder="LORD_OF_THE_MYSTERIES.ItemSheet.UpgradePlaceholder" addLabel="LORD_OF_THE_MYSTERIES.ItemSheet.AddUpgrade"}}
 
     </div>
 

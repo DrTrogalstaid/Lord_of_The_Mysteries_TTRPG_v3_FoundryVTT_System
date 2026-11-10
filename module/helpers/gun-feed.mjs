@@ -46,9 +46,6 @@ export const FEED_TYPES = ["magazine", "cylinder", "barrels"];
  */
 export const HANDLING_DEFAULTS = { reload: "attack", chamber: "free", rotate: "quick", unload: "attack" };
 
-/** The handling uses, in button order: ["reload", "chamber", "rotate", "unload"]. */
-export const HANDLING_USES = Object.keys(HANDLING_DEFAULTS);
-
 
 /**
  * A gun's feed type: the one it has saved, or for an older gun with none, the one it works like.

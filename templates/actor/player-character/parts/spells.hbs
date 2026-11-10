@@ -12,15 +12,7 @@
 <section class="tab spells-tab {{tab.cssClass}}" data-group="sheet" data-tab="spells">
   <div class="drop-section" data-drop-zone="spells">
 
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.spells"}}</h3>
-      <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-      {{#if editable}}
-      <button type="button" class="drop-section-add" data-action="addSpell" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Drop.Add"}}">
-        <i class="fa-solid fa-plus"></i>
-      </button>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.spells" add="addSpell"}}
 
     {{!-- Each Spell List folds open and closed by clicking its title. The sheet remembers which ones this player
           closed (#saveCollapsed in base-actor-sheet.mjs), so it only needs to leave "open" off those. --}}

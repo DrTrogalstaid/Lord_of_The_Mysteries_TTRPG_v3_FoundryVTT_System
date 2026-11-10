@@ -1,8 +1,8 @@
 <section class="pc-header-box">
 
   <div class="name-row">
-    <label for="actor-name">Name:</label>
-    <input id="actor-name" type="text" name="name" value="{{actor.name}}" placeholder="Name" />
+    <label for="actor-name">{{localize "LORD_OF_THE_MYSTERIES.Character.Name"}}:</label>
+    <input id="actor-name" type="text" name="name" value="{{actor.name}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Character.Name'}}" />
   </div>
 
   <div class="header-rows">
@@ -16,12 +16,12 @@
       <div class="header-info">
 
         <div class="sequence-row">
-          <span class="sequence-title-label">Sequence Title:</span>
+          <span class="sequence-title-label">{{localize "LORD_OF_THE_MYSTERIES.Character.SequenceTitle"}}:</span>
           {{!-- Filled in from the character's lowest-numbered Sequence (_currentSequence in base-actor-sheet.mjs).
                 Change it by adding or removing Sequences on the Sequences tab. --}}
           {{#if currentSequence}}
           <span class="sequence-title-value">{{currentSequence.name}}</span>
-          <span class="pathway-label">(Sequence {{currentSequence.number}}{{#if currentSequence.pathway}} · {{currentSequence.pathway}}{{/if}})</span>
+          <span class="pathway-label">({{localize "LORD_OF_THE_MYSTERIES.Character.SequenceNumber" number=currentSequence.number}}{{#if currentSequence.pathway}} · {{currentSequence.pathway}}{{/if}})</span>
           {{else}}
           <span class="sequence-title-value none">{{localize "LORD_OF_THE_MYSTERIES.NPC.NoSequence"}}</span>
           {{/if}}
@@ -29,19 +29,19 @@
 
         <div class="basic-info-row">
           <div class="info-field">
-            <label>Age:</label>
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Character.Age"}}:</label>
             <input type="number" name="system.age" value="{{system.age}}" />
           </div>
           <div class="info-field">
-            <label>Occupation:</label>
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Character.Occupation"}}:</label>
             <input type="text" name="system.occupation" value="{{system.occupation}}" />
           </div>
           <div class="info-field">
-            <label>Race:</label>
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Character.Race"}}:</label>
             <input type="text" name="system.race" value="{{system.race}}" />
           </div>
           <div class="info-field">
-            <label>Gender:</label>
+            <label>{{localize "LORD_OF_THE_MYSTERIES.Character.Gender"}}:</label>
             <input type="text" name="system.gender" value="{{system.gender}}" />
           </div>
         </div>

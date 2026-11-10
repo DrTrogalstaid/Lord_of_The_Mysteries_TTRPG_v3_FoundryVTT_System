@@ -50,7 +50,7 @@
         <i class="fa-solid fa-link"></i> {{localize (lookup @root.skillLevelOptions row.effectiveLevel)}}
       </span>
     {{/if}}
-    <select class="skill-level-select" data-skill-field="level" {{#unless (and @root.editable row.canSave)}}disabled{{/unless}}>
+    <select class="skill-level-select" data-skill-field="level" {{#unless (and @root.editable row.canChangeLevel)}}disabled{{/unless}}>
       {{selectOptions @root.skillLevelOptions selected=row.level localize=true}}
     </select>
     {{!-- Study meter and button, same as the tab rows. --}}

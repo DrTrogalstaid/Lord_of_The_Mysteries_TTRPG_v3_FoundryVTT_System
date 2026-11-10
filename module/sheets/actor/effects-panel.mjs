@@ -9,6 +9,7 @@ import { STATUS_RULES, activeStatusIds, statusRule } from "../../effects/status-
 import { grantedEffectsDiff } from "../../effects/granted-effects.mjs";
 import { grantedActionUuids } from "../../effects/effect-grants.mjs";
 import { usesLeft } from "../../effects/action-expiry.mjs";
+import { skillLevelLabel } from "../../helpers/skill-modifiers.mjs";
 import { CATEGORY_BONUS_PATTERN, SKILL_BONUS_PATTERN, changeAmount, effectChanges } from "../../effects/skill-bonuses.mjs";
 
 /**
@@ -126,14 +127,13 @@ async function effectGrantsText(actor, effect) {
 
   const nameOf = async (uuid) => (await fromUuid(uuid).catch(() => null))?.name
     ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing");
-  const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
 
   const parts = await Promise.all([
     ...actions.map(nameOf),
     ...skills.map(async (row) => {
       const text = `${await nameOf(row.skillUuid)} +${row.value}`;
       return row.maxLevel
-        ? `${text} (${game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Config.Grants.AtMost", { level: levelLabel(row.maxLevel) })})`
+        ? `${text} (${game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Config.Grants.AtMost", { level: skillLevelLabel(row.maxLevel) })})`
         : text;
     }),
     ...bonuses,

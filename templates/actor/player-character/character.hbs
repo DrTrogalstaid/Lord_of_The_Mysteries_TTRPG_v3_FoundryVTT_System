@@ -1,18 +1,18 @@
 <section class="tab character-tab {{tab.cssClass}}" data-group="sheet" data-tab="character">
 
   <div class="attributes-box">
-    <div class="box-title">Attributes</div>
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Character.Attributes"}}</div>
     <div class="attributes-grid">
       {{#each attributesList}}
       <div class="attribute-cell">
         <div class="attribute-label ">{{localize this.label}}</div>
         <a class="attribute-total modifier rollable-number" data-action="rollAttribute" data-attribute="{{this.key}}">{{this.total}}</a>
         <div class="attribute-breakdown">
-          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
+          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeBase'}}" />
           <span>+</span>
-          <input type="number" value="{{this.sequence_bonus}}" title="Sequence Bonus" readonly tabindex="-1" />
+          <input type="number" value="{{this.sequence_bonus}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeSequence'}}" readonly tabindex="-1" />
           <span>+</span>
-          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
+          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeCorruption'}}" />
           {{!-- Education growth from learned skills (base-actor.mjs). Read-only; hover for the count. --}}
           {{#if this.isEducation}}
           <span>+</span>
@@ -26,11 +26,10 @@
   </div>
 
   <div class="skills-box">
-    <span class="collapse-toggle" title="Collapse (not yet wired up)"></span>
-    <div class="box-title">Languages</div>
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Character.Languages"}}</div>
     <div class="languages-columns">
     <div class="language-common-column">
-      <label>Common Languages:</label>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Character.CommonLanguages"}}:</label>
       <ul class="language-list">
         {{#each system.languages.common as |row|}}
         <li class="language-row">
@@ -50,7 +49,7 @@
       </button>
     </div>
     <div class="language-mystical-column">
-      <label>Mystical Languages:</label>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Character.MysticalLanguages"}}:</label>
       <ul class="language-list">
         {{#each system.languages.mystical as |row|}}
         <li class="language-row">
@@ -153,8 +152,8 @@
           {{/with}}
 
           {{else}}
+          {{!-- {{#with}} skips an empty list, so the "No ... skills" line is its {{else}}. --}}
           {{#with (lookup @root.skillsByCategory tab.id) as |categorySkills|}}
-            {{#if categorySkills.length}}
             {{#if (and (eq tab.id "edu") @root.analyzeAbility)}}
             {{!-- Labels the Education rows' analysis boxes; same layout as the ability tabs' header. --}}
             <div class="granted-skills-header">
@@ -231,9 +230,8 @@
               </li>
               {{/each}}
             </ul>
-            {{else}}
-            <p class="placeholder-note">No {{localize tab.label}} skills found in the compendium.</p>
-            {{/if}}
+          {{else}}
+            <p class="placeholder-note">{{localize "LORD_OF_THE_MYSTERIES.Character.NoSkills" tab=(localize tab.label)}}</p>
           {{/with}}
           {{/if}}
         </div>
@@ -268,12 +266,7 @@
         study controls as the tab rows above (granted-skill-entry.hbs). Still a drop section, so skills dropped here
         are added like anywhere else on the sheet. --}}
   <div class="drop-section granted-skills-box" data-drop-zone="skills">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}
 
     {{#if sections.skills.length}}
       <ol class="drop-section-list">

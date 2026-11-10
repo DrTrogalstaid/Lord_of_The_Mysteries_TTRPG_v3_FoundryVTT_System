@@ -1,23 +1,13 @@
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs"}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
 
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
-      {{#if editable}}
-        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-          {{{enrichedDescription}}}
-        </prose-mirror>
-      {{else}}
-        {{{enrichedDescription}}}
-      {{/if}}
+      {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
 
     </div>
 
@@ -49,7 +39,7 @@
 
       <!--Skill Attribute Drop Down-->
       <fieldset class="skillAttributes flexrow">
-        <legend>Skill Attribute</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SkillAttribute"}}</legend>
         <select name="system.skill_attribute" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.skillAttributes selected=system.skill_attribute localize=true}}
         </select>

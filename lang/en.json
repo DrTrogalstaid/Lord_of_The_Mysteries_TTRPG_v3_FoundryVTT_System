@@ -3,7 +3,7 @@
     "Attributes": {
       "Str": { "long": "Strength", "abbr": "str" },
       "Agi": { "long": "Agility", "abbr": "agi" },
-      "Wil": { "long": "Wilpower", "abbr": "wil" },
+      "Wil": { "long": "Willpower", "abbr": "wil" },
       "Phy": { "long": "Physique", "abbr": "phy" },
       "Cha": { "long": "Charisma", "abbr": "cha" },
       "Ins": { "long": "Inspiration", "abbr": "ins" },
@@ -606,6 +606,7 @@
     },
 
     "Drop": {
+      "SendToChat": "Send to chat",
       "Sections": {
         "skills": "Granted Skills",
         "sequences": "Sequences",
@@ -684,20 +685,101 @@
       "SkillsHint": "Drop skills here",
       "SkillsEmpty": "No skills yet. Drag skills here from the Skills compendium or the sidebar.",
       "RaisedBy": "Raised by {names}",
-      "AddGear": "Create blank gear",
-      "Resources": {
-        "Health": "Health",
-        "Sanity": "Sanity",
-        "Spirituality": "Spirituality",
-        "Luck": "Luck"
-      },
+      "AddGear": "Create blank gear"
+    },
+
+    "Sidebar": {
+      "Health": "Health",
+      "Sanity": "Sanity",
+      "Spirituality": "Spirituality",
+      "Luck": "Luck",
+      "ShortRest": "Short<br />Rest",
+      "LongRest": "Long<br />Rest",
       "Defenses": {
         "Physical": "Physical",
         "Physique": "Physique",
         "Will": "Will"
       },
-      "DamageResistance": "Damage Resistance",
       "Movement": "Movement Speed"
+    },
+
+    "Character": {
+      "Name": "Name",
+      "SequenceTitle": "Sequence Title",
+      "SequenceNumber": "Sequence {number}",
+      "Age": "Age",
+      "Occupation": "Occupation",
+      "Race": "Race",
+      "Gender": "Gender",
+      "Attributes": "Attributes",
+      "AttributeBase": "Base",
+      "AttributeSequence": "Sequence Bonus",
+      "AttributeCorruption": "Corruption",
+      "Languages": "Languages",
+      "CommonLanguages": "Common Languages",
+      "MysticalLanguages": "Mystical Languages",
+      "NoSkills": "No {tab} skills found in the compendium."
+    },
+
+    "Biography": {
+      "Height": "Height",
+      "Weight": "Weight",
+      "PhysicalDescription": "Physical Description",
+      "Religion": "Religion",
+      "PrizedPossession": "Prized Possession",
+      "IdeasAndBeliefs": "Ideas & Beliefs",
+      "FavoriteThings": "Favorite Things",
+      "Dislikes": "Dislikes",
+      "BirthDate": "Birth Date",
+      "BirthPlace": "Birth Place"
+    },
+
+    "ItemSheet": {
+      "NamePlaceholder": "Item",
+      "Description": "Description",
+      "Special": "Special",
+      "Title": "Title",
+      "TitlePlaceholder": "Action Title",
+      "Trigger": "Trigger",
+      "Target": "Target",
+      "ActionType": "Action Type",
+      "Category": "Category",
+      "SpiritualityCost": "Spirituality Cost",
+      "Range": "Range",
+      "DCResults": "DC Results",
+      "ResultsPlaceholder": "Results",
+      "SpecialResults": "Special Results",
+      "SpecialResultPlaceholder": "Great success / big failure event",
+      "AddSpecialResult": "Add Special Result",
+      "SequenceUpgrades": "Sequence Upgrades",
+      "UpgradePlaceholder": "Upgrade description",
+      "AddUpgrade": "Add Upgrade",
+      "SpellsPlaceholder": "Spells",
+      "Spell": "Spell",
+      "DragSpell": "Drag a Spell",
+      "Actions": "Actions",
+      "Ability": "Ability",
+      "DragAction": "Drag an Action",
+      "Skill": "Skill",
+      "DragSkill": "Drag a Skill",
+      "DragAbility": "Drag an Ability",
+      "CanBeStolen": "Can Be Stolen/Recorded",
+      "Delete": "Delete",
+      "SequenceNumber": "Sequence Number",
+      "DigestionAmount": "Digestion Amount",
+      "ActingPrinciples": "Acting Principles",
+      "AttributeGain": "Attribute Gain",
+      "Attribute": "Attribute",
+      "Value": "Value",
+      "AddAttribute": "Add Attribute",
+      "SkillIncrease": "Skill Increase",
+      "AbilitiesGained": "Abilities Gained",
+      "SkillAttribute": "Skill Attribute",
+      "Modifiers": "Modifiers",
+      "AttackRollMacro": "Attack Roll Macro",
+      "AttackRollPlaceholder": "1d20 (the skill bonus is added when rolled)",
+      "DamageRollMacro": "Damage Roll Macro",
+      "DamageType": "Damage Type"
     },
 
     "DamageTypes": {

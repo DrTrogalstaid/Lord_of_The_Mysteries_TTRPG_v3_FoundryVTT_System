@@ -1,5 +1,5 @@
 import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
-import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
+import { calculateSkillModifier, skillLevelLabel } from "../helpers/skill-modifiers.mjs";
 import { buildSkillCheckFormula, computeSkillCheckTotal, signedTerm } from "../helpers/skill-check-formula.mjs";
 import { spiritualityCost } from "../helpers/spirituality.mjs";
 import { skillBonusRowsFor } from "../helpers/check-bonuses.mjs";
@@ -172,7 +172,7 @@ export default class SkillCheckDialog extends LotmRollDialog {
         return {
             attrTotal: this.actor.system.attributes[this.attributeKey]?.total ?? 0,
             levelBonus,
-            levelLabel: game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[this.skillEntry.level] ?? this.skillEntry.level),
+            levelLabel: skillLevelLabel(this.skillEntry.level),
             flatModifier: this.skillEntry.flatModifier ?? 0,
         };
     }

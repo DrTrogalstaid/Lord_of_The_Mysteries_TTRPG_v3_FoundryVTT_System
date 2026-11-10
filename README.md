@@ -72,7 +72,7 @@ Every piece of text is in `lang/en.json`. For a file that uses many keys from on
 ## Styles
 
 The styles are plain CSS in `css/`, edited directly (no build step). `system.json` lists them under `styles`:
-`lotm.css` has the shared basics (window, layout helpers such as `flexrow` and `grid-3col`, form fields); the others
+`lotm.css` has the shared basics (sheet headers and tabs, item lists, form fields); the others
 are one file per part of the system (actor sheets, item sheets, drop sections, inventory, NPC sheet, roll dialogs,
 effects).
 

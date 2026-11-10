@@ -4,7 +4,7 @@
 
       <!--Modifiers-->
       <fieldset>
-        <legend>Modifiers</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Modifiers"}}</legend>
         <input id="modifiers" class="blend-input" type="number" name="system.modifiers" value="{{system.modifiers}}" step="1" />
       </fieldset>
 
@@ -34,8 +34,8 @@
 
       <!--Attack Roll Macro-->
       <fieldset>
-        <legend>Attack Roll Macro</legend>
-        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.AttackRollMacro"}}</legend>
+        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.AttackRollPlaceholder'}}" />
       </fieldset>
 
       <!--Defense Targeted: which defense of the targeted tokens the attack roll goes against (hit or miss).
@@ -85,7 +85,7 @@
 
       <!--Damage Roll Macro. Parts can name their own damage type: 2d6[fire] + 1d4[cold]. -->
       <fieldset>
-        <legend>Damage Roll Macro</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DamageRollMacro"}}</legend>
         <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="2d8[fire]" />
         <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DamageTypesHint"}}</p>
       </fieldset>
@@ -93,7 +93,7 @@
       <!--Damage Type: the type of every part of the damage formula that doesn't name its own (2d6[fire] does).
           Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes. The blank first option = no damage type. -->
       <fieldset class="damageType">
-        <legend>Damage Type</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DamageType"}}</legend>
         <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.damageTypes selected=system.damageType blank="" localize=true}}
         </select>

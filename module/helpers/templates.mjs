@@ -67,6 +67,7 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/hidden-grants.hbs',
     'systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs',
     'systems/lotm/templates/actor/player-character/parts/entry-favorite.hbs',
+    'systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs',
 
     // App partials
     'systems/lotm/templates/apps/skill-check-dialog.hbs',
@@ -83,5 +84,9 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/item/parts/item-header.hbs',
     'systems/lotm/templates/item/parts/action-traits.hbs',
     'systems/lotm/templates/item/parts/item-effects.hbs',
+    'systems/lotm/templates/item/parts/tab-nav.hbs',
+
+    // Used by actor and item sheets: a rich text field.
+    'systems/lotm/templates/parts/rich-text.hbs',
   ]);
 };

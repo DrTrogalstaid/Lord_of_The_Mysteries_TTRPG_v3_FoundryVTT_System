@@ -223,22 +223,6 @@
   opacity: 0.6;
 }
 
-/* Remove button on a skill row in the Character tab's skill list (only skills that aren't from the compendium). */
-.lotm.sheet.actor .skill-remove {
-  flex: 0 0 auto;
-  width: 1.5rem;
-  height: 1.5rem;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  line-height: 1;
-  opacity: 0.6;
-}
-
-.lotm.sheet.actor .skill-remove:hover {
-  opacity: 1;
-}
-
 /* Same width as .drop-entry-remove, so rows without a remove button keep their columns aligned. */
 .lotm.sheet.actor .drop-entry-spacer {
   flex: 0 0 1.5rem;

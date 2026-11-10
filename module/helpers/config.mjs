@@ -28,11 +28,10 @@ LORD_OF_THE_MYSTERIES.attributeAbbreviations = {
 };
 
 LORD_OF_THE_MYSTERIES.resources = {
-    hp: 'LORD_OF_THE_MYSTERIES.Attributes.Health.long',
-    rp: 'LORD_OF_THE_MYSTERIES.Attributes.Sanity.long',
-    lp: 'LORD_OF_THE_MYSTERIES.Attributes.Luck.long',
-    spp: 'LORD_OF_THE_MYSTERIES.Attributes.Spirituality.long',
-
+    hp: 'LORD_OF_THE_MYSTERIES.Resources.Health.long',
+    rp: 'LORD_OF_THE_MYSTERIES.Resources.Sanity.long',
+    lp: 'LORD_OF_THE_MYSTERIES.Resources.Luck.long',
+    spp: 'LORD_OF_THE_MYSTERIES.Resources.Spirituality.long',
 };
 
 LORD_OF_THE_MYSTERIES.skillLevels = {

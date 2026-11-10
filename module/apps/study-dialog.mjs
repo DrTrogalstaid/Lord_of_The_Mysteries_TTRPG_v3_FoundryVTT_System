@@ -11,6 +11,7 @@
  */
 
 import { lowerLevel } from "../helpers/skill-associations.mjs";
+import { skillLevelLabel } from "../helpers/skill-modifiers.mjs";
 import { learningEntryFor, skillRecordUpdate } from "../helpers/skill-data.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import { renderTemplateSync } from "../helpers/render.mjs";
@@ -25,7 +26,6 @@ const { DialogV2 } = foundry.applications.api;
 const LEARNING = "LORD_OF_THE_MYSTERIES.Learning";
 const learningText = langSection(LEARNING);
 
-const levelLabel = (level) => game.i18n.localize(CONFIG.LORD_OF_THE_MYSTERIES.skillLevels[level] ?? level);
 const roundOne = (n) => Math.round(n * 10) / 10;
 
 /**
@@ -141,8 +141,8 @@ export async function openStudyDialog(actor, skill) {
   const progress = studyProgressFor(entry, skill.level);
 
   const content = renderTemplateSync("systems/lotm/templates/dialogs/study.hbs", {
-    level: levelLabel(skill.level),
-    next: levelLabel(next),
+    level: skillLevelLabel(skill.level),
+    next: skillLevelLabel(next),
     percent: meterPercent(progress),
     // The schedule dropdown, fastest first. "3-5 days a week" is picked to start with.
     schedules: [...STUDY_SCHEDULES].reverse()
@@ -165,10 +165,10 @@ export async function openStudyDialog(actor, skill) {
     const full = studyWeeksNeeded(skill.level, { ...choice, inspiration, extraSteps });
     const result = applyStudyWeeks({ level: skill.level, progress, inspiration, extraSteps, ...choice });
     const outcome = result.gained.length
-      ? learningText("PreviewLevelUp", { level: levelLabel(result.level) })
-      : learningText("PreviewProgress", { percent: meterPercent(result.progress), next: levelLabel(next) });
+      ? learningText("PreviewLevelUp", { level: skillLevelLabel(result.level) })
+      : learningText("PreviewProgress", { percent: meterPercent(result.progress), next: skillLevelLabel(next) });
     form.querySelector(".study-preview").textContent =
-      `${learningText("PreviewStep", { from: levelLabel(skill.level), to: levelLabel(next), time: formatStudyTime(full) })} ${outcome}`;
+      `${learningText("PreviewStep", { from: skillLevelLabel(skill.level), to: skillLevelLabel(next), time: formatStudyTime(full) })} ${outcome}`;
   };
 
   const choice = await DialogV2.wait({
@@ -233,10 +233,10 @@ export async function logStudy(actor, skill, { weeks, schedule, selfStudy }) {
   const how = learningText(`Schedules.${schedule}`) + (selfStudy ? `, ${learningText("SelfStudyShort")}` : "");
   const lines = [{ key: `${LEARNING}.Chat.Studied`, data: { skill: skill.name, weeks, how } }];
   for (const step of result.gained) {
-    lines.push({ key: `${LEARNING}.Chat.LevelUp`, data: { skill: skill.name, level: levelLabel(step.to) }, strong: true });
+    lines.push({ key: `${LEARNING}.Chat.LevelUp`, data: { skill: skill.name, level: skillLevelLabel(step.to) }, strong: true });
   }
   const next = nextLevel(result.level);
-  if (next) lines.push({ key: `${LEARNING}.Chat.Progress`, data: { percent: meterPercent(result.progress), next: levelLabel(next) } });
+  if (next) lines.push({ key: `${LEARNING}.Chat.Progress`, data: { percent: meterPercent(result.progress), next: skillLevelLabel(next) } });
   if (growthLine) lines.push(growthLine);
   await postLearningMessage(actor, lines);
 }
@@ -269,7 +269,7 @@ export async function openSuccessDialog(actor, skill, abilityUuids) {
   const needed = successesNeeded(skill.level);
 
   const content = renderTemplateSync("systems/lotm/templates/dialogs/learning-success.hbs", {
-    count, needed, next: levelLabel(next),
+    count, needed, next: skillLevelLabel(next),
     abilities: abilities.map((ability) => ({ uuid: ability.uuid, name: ability.name })),
     hasChoice: abilities.length > 1,
     isLevelUp: count + 1 >= needed,
@@ -323,7 +323,7 @@ export async function openSuccessDialog(actor, skill, abilityUuids) {
 export async function recordSuccess(actor, skill, ability) {
   const maxLevel = ability.system.fastLearning?.maxLevel ?? "mastery";
   if (!canTeachTo(skill.level, maxLevel)) {
-    ui.notifications.warn(learningText("Fast.AtAbilityMax", { ability: ability.name, skill: skill.name, level: levelLabel(maxLevel) }));
+    ui.notifications.warn(learningText("Fast.AtAbilityMax", { ability: ability.name, skill: skill.name, level: skillLevelLabel(maxLevel) }));
     return;
   }
 
@@ -342,14 +342,14 @@ export async function recordSuccess(actor, skill, ability) {
   // "Recorded a success for Clever Hands with Thief's Hand. 1 of 2 successes toward Proficient."
   const lines = [{ key: `${LEARNING}.Fast.Chat.Success`, data: { skill: skill.name, ability: ability.name } }];
   if (result.gained) {
-    lines.push({ key: `${LEARNING}.Chat.LevelUp`, data: { skill: skill.name, level: levelLabel(result.level) }, strong: true });
+    lines.push({ key: `${LEARNING}.Chat.LevelUp`, data: { skill: skill.name, level: skillLevelLabel(result.level) }, strong: true });
   }
   const next = nextLevel(result.level);
   if (next && canTeachTo(result.level, maxLevel)) {
     lines.push({ key: `${LEARNING}.Fast.Progress`,
-      data: { count: result.successes, needed: successesNeeded(result.level), next: levelLabel(next) } });
+      data: { count: result.successes, needed: successesNeeded(result.level), next: skillLevelLabel(next) } });
   } else if (next) {
-    lines.push({ key: `${LEARNING}.Fast.Chat.Maxed`, data: { ability: ability.name, level: levelLabel(maxLevel) } });
+    lines.push({ key: `${LEARNING}.Fast.Chat.Maxed`, data: { ability: ability.name, level: skillLevelLabel(maxLevel) } });
   }
   if (growthLine) lines.push(growthLine);
   await postLearningMessage(actor, lines);

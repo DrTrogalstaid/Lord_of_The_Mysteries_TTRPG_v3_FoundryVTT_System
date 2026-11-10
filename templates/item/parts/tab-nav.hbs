@@ -1,0 +1,9 @@
+{{!-- An item sheet's tabs: Description, Details, and Effects on the sheets that have one (effects=true).
+      {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}} --}}
+<nav class="sheet-tabs tabs" data-group="sheet">
+  <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Description"}}</a>
+  <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Details"}}</a>
+  {{#if effects}}
+  <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
+  {{/if}}
+</nav>

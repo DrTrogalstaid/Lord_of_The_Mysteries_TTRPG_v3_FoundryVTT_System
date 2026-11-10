@@ -1,0 +1,20 @@
+{{!-- A drop section's header: its title and, while the sheet can be edited, the drop hint and the "+" button.
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs"
+      label="LORD_OF_THE_MYSTERIES.Drop.Sections.actions" add="addAction"}}
+  label     lang key for the title
+  hint      lang key for the drop hint (default: Drop.Hint, "Drop an Item here")
+  add       optional data-action for the "+" button
+  addLabel  lang key for the "+" button's tooltip (default: Drop.Add, "Add") --}}
+<header class="drop-section-header">
+  <h3 class="drop-section-title">{{localize label}}</h3>
+  {{#if editable}}
+    <span class="drop-section-hint">{{#if hint}}{{localize hint}}{{else}}{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}{{/if}}</span>
+    {{#if add}}
+      <button type="button" class="drop-section-add" data-action="{{add}}"
+              data-tooltip="{{#if addLabel}}{{addLabel}}{{else}}LORD_OF_THE_MYSTERIES.Drop.Add{{/if}}"
+              aria-label="{{#if addLabel}}{{localize addLabel}}{{else}}{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}{{/if}}">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    {{/if}}
+  {{/if}}
+</header>

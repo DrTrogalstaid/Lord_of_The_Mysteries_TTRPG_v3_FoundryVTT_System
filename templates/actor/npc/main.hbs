@@ -24,12 +24,7 @@
 
   {{!-- Skills. A dropped skill is saved at Trained (#dropSkill in base-actor-sheet.mjs). --}}
   <div class="drop-section npc-skills" data-drop-zone="skills">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.NPC.Skills"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.NPC.SkillsHint"}}</span>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.NPC.Skills" hint="LORD_OF_THE_MYSTERIES.NPC.SkillsHint"}}
 
     {{#if skills.length}}
     <ul class="skill-list npc-skill-list">
@@ -99,15 +94,7 @@
 
   {{!-- Actions: one drop section, so dropping an action anywhere in this box works. --}}
   <div class="drop-section actions-section" data-drop-zone="actions">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.actions"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-        <button type="button" class="drop-section-add" data-action="addAction" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Add" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.actions" add="addAction"}}
 
     {{> "systems/lotm/templates/actor/player-character/parts/action-groups.hbs"}}
 

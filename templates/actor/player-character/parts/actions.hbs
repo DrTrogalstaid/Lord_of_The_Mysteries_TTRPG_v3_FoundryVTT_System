@@ -4,15 +4,7 @@
         Inside it: Favorites, then one collapsible section per action type.
         Built by groupActions() in base-actor-sheet.mjs (action-groups.hbs, shared with the NPC sheet). --}}
   <div class="drop-section actions-section" data-drop-zone="actions">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.actions"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-        <button type="button" class="drop-section-add" data-action="addAction" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Add" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.actions" add="addAction"}}
 
     {{> "systems/lotm/templates/actor/player-character/parts/action-groups.hbs"}}
   </div>

@@ -1,11 +1,6 @@
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
@@ -13,24 +8,12 @@
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
       <div class="description-box">
-        <div class="box-title">Description</div>
-        {{#if editable}}
-          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-            {{{enrichedDescription}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedDescription}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Description"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
       </div>
       <div class="description-box">
-        <div class="box-title">Special</div>
-        {{#if editable}}
-          <prose-mirror name="system.special" button="true" editable="{{editable}}" toggled="false" value="{{system.special}}">
-            {{{enrichedSpecial}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedSpecial}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Special"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.special" value=system.special enriched=enrichedSpecial}}
       </div>
     </div>
     
@@ -41,18 +24,18 @@
       <!--TODO: Put Trigger, Spirituality Cost, and Range in a sidebar-->
       <!--Trigger-->
       <fieldset>
-        <legend>Trigger</legend>
-          <input id="trigger" class="blend-input" type="text" name="system.trigger" value="{{system.trigger}}" placeholder="Trigger" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Trigger"}}</legend>
+          <input id="trigger" class="blend-input" type="text" name="system.trigger" value="{{system.trigger}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Trigger'}}" />
       </fieldset>
 
       <!--Spirituality Cost-->
       <fieldset>
-        <legend>Spirituality Cost</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SpiritualityCost"}}</legend>
           <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" />
       </fieldset>
       
       <fieldset class="actionType ">
-        <legend>Action Type</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.ActionType"}}</legend>
         <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionTypes selected=system.actionType localize=true blank=""}}
         </select>
@@ -60,23 +43,23 @@
 
       <!--Range-->
       <fieldset>
-        <legend>Range</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Range"}}</legend>
           <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" />
       </fieldset>
 
       <!--Sequence Upgrades-->
       {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.higherSequenceUpgrades" rows=higherSequenceUpgrades
-          class="sequence-upgrades" legend="Sequence Upgrades" placeholder="Upgrade description" addLabel="Add Upgrade"}}
+          class="sequence-upgrades" legend="LORD_OF_THE_MYSTERIES.ItemSheet.SequenceUpgrades" placeholder="LORD_OF_THE_MYSTERIES.ItemSheet.UpgradePlaceholder" addLabel="LORD_OF_THE_MYSTERIES.ItemSheet.AddUpgrade"}}
 
       <!--Spell List-->
       <fieldset class="spell-list" data-drop-zone="spellList">
         <legend>
           <input type="text" class="blend-input" name="system.spellList.name"
-                value="{{system.spellList.name}}" placeholder="Spells" />
+                value="{{system.spellList.name}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.SpellsPlaceholder'}}" />
         </legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Spell</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Spell"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each spellListSpells as |row|}}
@@ -86,24 +69,24 @@
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteSpell" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteSpell" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
           {{#unless spellListSpells.length}}
-          <li class="item flexrow drop-hint">Drag a Spell</li>
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DragSpell"}}</li>
           {{/unless}}
         </ol>
       </fieldset>
 
       <!--Action List-->
       <fieldset class="actions-gained" data-drop-zone="actionList">
-        <legend>Actions</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Actions"}}</legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Ability</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Ability"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each actionListActions as |row|}}
@@ -113,14 +96,14 @@
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteAction" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteAction" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
           {{#unless actionListActions.length}}
-          <li class="item flexrow drop-hint">Drag an Action</li>
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DragAction"}}</li>
           {{/unless}}
         </ol>
       </fieldset>
@@ -143,7 +126,7 @@
         <legend>{{localize "LORD_OF_THE_MYSTERIES.GrantedSkills.Options"}}</legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Skill</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Skill"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each skillOptionRows as |row|}}
@@ -153,7 +136,7 @@
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteSkillOption" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteSkillOption" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
@@ -210,7 +193,7 @@
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteFastSkill" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteFastSkill" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
@@ -225,8 +208,8 @@
 
       <!--Can Be Stolen-->
       <fieldset>
-        <legend>Can Be Stolen/Recorded</legend>
-          <input id="canBeStolen" class="blend-input" type="bool" name="system.canBeStolen" value="{{system.canBeStolen}}" placeholder="Can Be Stolen" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.CanBeStolen"}}</legend>
+        <input type="checkbox" name="system.canBeStolen" {{checked system.canBeStolen}} {{#unless editable}}disabled{{/unless}} />
       </fieldset>
     </div>
 

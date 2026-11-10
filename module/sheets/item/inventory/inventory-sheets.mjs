@@ -100,7 +100,7 @@ class InventoryItemSheet extends LordOfTheMysteriesItemSheetBase {
 
 /**
  * The lists of Items a gear Item grants. Each is a list of UUIDs on the gear's system data, and the
- * character sheet already shows them (NESTED_FIELDS in player-character-sheet.mjs).
+ * character sheet already shows them (NESTED_FIELDS in sheets/actor/sections.mjs).
  *   field  The gear system field holding the UUIDs.
  *   type   The only Item type that can be dropped on this list.
  */

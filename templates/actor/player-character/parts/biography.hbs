@@ -3,57 +3,46 @@
   <div class="biography-box">
     <div class="biography-row edge-divider-top edge-divider-bottom">
       <div class="biography-field">
-        Height:<input id="height" class="blend-input" type="text" name="system.height" value="{{system.height}}" placeholder="Height" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.Height"}}:<input id="height" class="blend-input" type="text" name="system.height" value="{{system.height}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.Height'}}" />
       </div>
       <div class="biography-field biography-field-divided">
-        Weight:<input id="weight" class="blend-input" type="text" name="system.weight" value="{{system.weight}}" placeholder="Weight" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.Weight"}}:<input id="weight" class="blend-input" type="text" name="system.weight" value="{{system.weight}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.Weight'}}" />
       </div>
     </div>
-    <div class="box-title">Physical Description</div>
-    {{#if editable}}
-    <prose-mirror name="system.physicalDescription" button="true" editable="{{editable}}" toggled="false" value="{{system.physicalDescription}}">
-      {{{enrichedPhysicalDescription}}}
-    </prose-mirror>
-    {{else}}
-      {{{enrichedPhysicalDescription}}}
-    {{/if}}
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Biography.PhysicalDescription"}}</div>
+    {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.physicalDescription" value=system.physicalDescription enriched=enrichedPhysicalDescription}}
   </div>
 
   <div class="biography-box">
     <div class="biography-row edge-divider-top edge-divider-bottom">
       <div class="biography-field">
-        Religion:<input id="religion" class="blend-input" type="text" name="system.religion" value="{{system.religion}}" placeholder="Religion"></input>
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.Religion"}}:<input id="religion" class="blend-input" type="text" name="system.religion" value="{{system.religion}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.Religion'}}" />
       </div>
       <div class="biography-field biography-field-divided">
-        Prized Possession:<input id="religion" class="blend-input" type="text" name="system.prizedPossession" value="{{system.prizedPossession}}" placeholder="Prized Possession"></input>
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.PrizedPossession"}}:<input id="prizedPossession" class="blend-input" type="text" name="system.prizedPossession" value="{{system.prizedPossession}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.PrizedPossession'}}" />
       </div>
     </div>
-    <div class="box-title">Ideas & Beliefs</div>
-    {{#if editable}}
-      <prose-mirror name="system.ideasAndBeliefs" button="true" editable="{{editable}}" toggled="false" value="{{system.ideasAndBeliefs}}">
-        {{{enrichedIdeasAndBeliefs}}}
-      </prose-mirror>
-    {{else}}
-      {{{enrichedIdeasAndBeliefs}}}
-    {{/if}}
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Biography.IdeasAndBeliefs"}}</div>
+    {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.ideasAndBeliefs" value=system.ideasAndBeliefs enriched=enrichedIdeasAndBeliefs}}
   </div>
 
   <div class="biography-box">
     <div class="biography-row edge-divider-top">
       <div class="biography-field">
-        Favorite Things:<input id="favoriteThings" class="blend-input" type="text" name="system.favoriteThings" value="{{system.favoriteThings}}" placeholder="Favorite Things" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.FavoriteThings"}}:<input id="favoriteThings" class="blend-input" type="text" name="system.favoriteThings" value="{{system.favoriteThings}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.FavoriteThings'}}" />
       </div>
       <div class="biography-field biography-field-divided">
-        Dislikes:<input id="dislikes" class="blend-input" type="text" name="system.dislikes" value="{{system.dislikes}}" placeholder="Dislikes" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.Dislikes"}}:<input id="dislikes" class="blend-input" type="text" name="system.dislikes" value="{{system.dislikes}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.Dislikes'}}" />
       </div>
     </div>
     <div class="biography-row edge-divider-bottom">
       <div class="biography-field">
-        Birth Date:<input id="birthDate" class="blend-input" type="text" name="system.birthDate" value="{{system.birthDate}}" placeholder="Birth Date" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.BirthDate"}}:<input id="birthDate" class="blend-input" type="text" name="system.birthDate" value="{{system.birthDate}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.BirthDate'}}" />
       </div>
       <div class="biography-field biography-field-divided">
-        Birth Place:<input id="birthPlace" class="blend-input" type="text" name="system.birthPlace" value="{{system.birthPlace}}" placeholder="Birth Place" />
+        {{localize "LORD_OF_THE_MYSTERIES.Biography.BirthPlace"}}:<input id="birthPlace" class="blend-input" type="text" name="system.birthPlace" value="{{system.birthPlace}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.Biography.BirthPlace'}}" />
       </div>
     </div>
+  </div>
 
 </section>

@@ -1,6 +1,6 @@
 {{!--
   The roll buttons of an action or spell row: [d20 Pistol +5] [Damage], ammo buttons, "Spend N", On / Off, the gun's rounds.
-  The context is the row's entry (buildEntry / #addActionButtons in base-actor-sheet.mjs). Renders nothing when
+  The context is the row's entry (buildEntry / addActionButtons in sheets/actor/sections.mjs). Renders nothing when
   the entry has nothing to roll (hasRolls). Used by section-entry.hbs and drop-entry.hbs:
     {{> "systems/lotm/templates/actor/player-character/parts/entry-rolls.hbs"}}
 --}}
@@ -22,7 +22,7 @@
       {{localize "LORD_OF_THE_MYSTERIES.Drop.Damage"}}
     </button>
   {{/if}}
-  {{!-- Reload / Chamber / Rotate / Unload (#onUseAmmo in base-actor-sheet.mjs -> useAmmoAction in helpers/firearms.mjs).
+  {{!-- Reload / Chamber / Rotate / Unload (#onUseAmmo in base-actor-sheet.mjs -> GunHandling in helpers/gun-handling.mjs).
         A reload action gets two: Reload and Unload. --}}
   {{!-- Inside #each the context is the button, so the row's own values are read with ../ --}}
   {{#each ammoButtons as |button|}}

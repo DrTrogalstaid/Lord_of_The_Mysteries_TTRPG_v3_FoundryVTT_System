@@ -16,7 +16,6 @@
  */
 
 import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";
-import { skillRaiseText, skillRollTooltip } from "./actor/skill-tooltips.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import { CARRY_MODES } from "../helpers/inventory-config.mjs";
 import { autoPlacement } from "../helpers/inventory.mjs";
@@ -185,20 +184,17 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
    * (data/actor/base-actor.mjs): the NPC's own level (at least the starting level, e.g. Dodge's Trained), raised by its
    * Sequences and effects, then by related skills.
    *
-   * Rows:
-   *   key             The skill's key (what's saved, and what the level dropdown and trash button use).
+   * Rows: the shared skill row (_skillRow in base-actor-sheet.mjs: key, level, effectiveLevel, modifier,
+   * canChangeLevel...), plus
    *   owned           true when the GM dropped it on (trash button). false = only a Sequence or effect gives it (hide button).
-   *   canChangeLevel  Its level can be saved (its attribute has a skill tab, the same rule as dropping).
-   *   level           The NPC's own level (the dropdown).
-   *   effectiveLevel  The level it's rolled at.
-   *   modifier        Attribute total + level bonus + its own modifier + effect bonuses.
+   *   attributeLabel  Its attribute's abbreviation.
+   *   raisedByLabel   The Sequences and effects that raise it.
    *   hideKey         What the hide button hides: the Sequence's reference to the skill.
    * @returns {Promise<object[]>}
    */
   async #prepareSkills() {
     const config = CONFIG.LORD_OF_THE_MYSTERIES;
     const system = this.actor.system;
-    const levelLabel = (level) => game.i18n.localize(config.skillLevels[level] ?? level);
 
     // Which owned Sequences raise each skill, for the "Raised by" label, and the UUID each uses (what hiding hides).
     const hidden = new Set(system.hiddenGrants ?? []);
@@ -236,36 +232,21 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
       // Active effects raising a skill are named in the "Raised by" label too.
       const names = [...(raisedBy.get(record.key) ?? [])];
       for (const name of record.raisedBy ?? []) if (name && !names.includes(name)) names.push(name);
-      const raisedText = skillRaiseText(record, levelLabel);
 
+      const attributeLabel = config.attributeAbbreviations[record.attribute];
       rows.push({
-        key: record.key,
-        uuid: record.uuid,
-        name: record.name,
-        img: record.img,
+        ...this._skillRow(record),
         broken: false,
         owned,
-        category: record.attribute,
-        attribute: record.attribute,
-        attributeLabel: config.attributeAbbreviations[record.attribute] ? game.i18n.localize(config.attributeAbbreviations[record.attribute]) : "",
-        attributeTotal: record.attributeTotal,
-        flatModifier: record.flatModifier ?? 0,
-        categories: record.categories,
-        level: record.ownLevel,
-        effectiveLevel: record.effectiveLevel,
-        canChangeLevel: record.canSave,
+        attributeLabel: attributeLabel ? game.i18n.localize(attributeLabel) : "",
         raisedByLabel: names.join(", "),
-        associated: !!raisedText,
-        associatedTooltip: raisedText,
-        modifier: record.total,
-        hasBonus: (record.bonusTotal ?? 0) !== 0,
-        rollTooltip: skillRollTooltip(this.actor, record.key),
         hideKey: hideKeys.get(record.key) ?? record.uuid,
       });
     }
 
     return rows.sort((a, b) => a.name.localeCompare(b.name));
   }
+
 
 
   /**

@@ -1,5 +1,5 @@
 {{!--
-  One row in a drop section list. The context is one entry built by buildEntry() in base-actor-sheet.mjs.
+  One row in a drop section list. The context is one entry built by buildEntry() in sheets/actor/sections.mjs.
   Extra values passed in by the caller:
     deleteAction  the sheet action for the remove button, e.g. "deleteSpell"
     favorites     true on sheets that have Favorites (@root.showFavorites): spell rows get the star (entry-favorite.hbs)
@@ -11,7 +11,7 @@
   {{#if broken}}
   <span class="drop-entry-icon"><img class="drop-entry-img" src="{{img}}" alt=""></span>
   {{else}}
-  <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}" data-tooltip="Send to chat">
+  <button type="button" class="drop-entry-icon" data-action="sendToChat" data-uuid="{{uuid}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.SendToChat">
     <img class="drop-entry-img" src="{{img}}" alt="">
     <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
   </button>

@@ -599,7 +599,7 @@ function looseStacks(actor, gun, rounds) {
         abilities_gained: [...(round.abilities ?? [])],
       },
     };
-    // Put it in a pocket or bag, the same way dropped gear is placed (player-character-sheet.mjs #dropEmbedded).
+    // Put it in a pocket or bag, the same way dropped gear is placed (#dropEmbedded in sheets/base-actor-sheet.mjs).
     foundry.utils.mergeObject(data, foundry.utils.expandObject(autoPlacement(actor, data)));
     return data;
   });

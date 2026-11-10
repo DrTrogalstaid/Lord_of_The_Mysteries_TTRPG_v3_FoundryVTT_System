@@ -4,18 +4,18 @@
  */
 
 import { skillBonusRowsFor } from "../../helpers/check-bonuses.mjs";
+import { skillLevelLabel } from "../../helpers/skill-modifiers.mjs";
 
 /**
  * Hover text for a skill that active effects raise: "Effects: Eagle Eye (+1, at most Advanced), Focus (+1)".
  * Used by the player and NPC sheets' skill lists.
  * @param {{value: number, maxLevel: string, name: string}[]} raises   actor.system.effectSkillRaises[uuid]
- * @param {(level: string) => string} levelLabel
  * @returns {string}
  */
-export function effectRaiseText(raises, levelLabel) {
+function effectRaiseText(raises) {
   const parts = (raises ?? []).map((raise) => {
     const detail = raise.maxLevel
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectStepsCapped", { steps: raise.value, level: levelLabel(raise.maxLevel) })
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectStepsCapped", { steps: raise.value, level: skillLevelLabel(raise.maxLevel) })
       : game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.EffectSteps", { steps: raise.value });
     return `${raise.name} (${detail})`;
   });
@@ -27,21 +27,20 @@ export function effectRaiseText(raises, levelLabel) {
  * Hover text for a skill rolled higher than the player's pick: "Sequence: +1 level(s) · Effects: ... · Rolled at
  * Trained, raised by Sword (Advanced)". Empty when nothing raised it. Used by the player and NPC sheets.
  * @param {object} record   The skill's record (actor.system.skills[key]).
- * @param {(level: string) => string} levelLabel
  * @returns {string}
  */
-export function skillRaiseText(record, levelLabel) {
+export function skillRaiseText(record) {
   if (!record || record.effectiveLevel === record.ownLevel) return "";
   const reasons = [];
   if (record.sequenceSteps > 0) {
     reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps: record.sequenceSteps }));
   }
-  if (record.boostedByEffects) reasons.push(effectRaiseText(record.effectRaises, levelLabel));
+  if (record.boostedByEffects) reasons.push(effectRaiseText(record.effectRaises));
   const associated = record.associated;
   if (associated?.raised) {
     reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
-      level: levelLabel(associated.level),
-      sources: associated.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
+      level: skillLevelLabel(associated.level),
+      sources: associated.sources.map((source) => `${source.name} (${skillLevelLabel(source.level)})`).join(", "),
     }));
   }
   return reasons.join(" · ");

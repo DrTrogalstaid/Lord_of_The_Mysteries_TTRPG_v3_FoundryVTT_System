@@ -43,6 +43,7 @@ import { prepareEffectsPanel, prepareStatusNotes } from "./actor/effects-panel.m
 import { DIGESTION_MAX, DIGESTION_MIN, ORDER_FLAG, STACKABLE_TYPES, SectionBuilder, sectionForType, sectionLabel } from "./actor/sections.mjs";
 import { COLLAPSED_FLAG, COLLAPSED_SPELLS_FLAG, FAVORITES_FLAG, groupActions, groupSpellLists, spellListCollapseKey } from "./actor/groups.mjs";
 import { paragraphsHTML, renderTemplateSync } from "../helpers/render.mjs";
+import { skillRaiseText, skillRollTooltip } from "./actor/skill-tooltips.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -199,6 +200,42 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       .sort((a, b) => (a.system.sequence_number ?? 9) - (b.system.sequence_number ?? 9))[0];
     if (!top) return null;
     return { name: top.name, number: top.system.sequence_number ?? "?", pathway: top.system.pathway ?? "" };
+  }
+
+
+  /**
+   * A skill's row in the sheet's skill lists (the player sheet's skill tabs and Granted Skills box, the NPC sheet's
+   * Skills box), from its record (actor.system.skills, worked out in data/actor/base-actor.mjs). Each sheet adds
+   * its own fields to it.
+   *   level           the level picked on the sheet (the dropdown)
+   *   effectiveLevel  the level it's rolled at, with the reason on hover (associatedTooltip) when it's higher
+   *   modifier        the number shown: attribute + level bonus + its own modifier + effect bonuses
+   *   rollTooltip     "Click to roll", plus its effect bonuses
+   *   canChangeLevel  its level can be saved (its attribute has a skill tab)
+   * @param {object} record   actor.system.skills[key]
+   * @returns {object}
+   */
+  _skillRow(record) {
+    const raisedText = skillRaiseText(record);
+    return {
+      key: record.key,
+      uuid: record.uuid,
+      name: record.name,
+      img: record.img,
+      category: record.attribute,
+      attribute: record.attribute,
+      attributeTotal: record.attributeTotal,
+      categories: record.categories,
+      flatModifier: record.flatModifier ?? 0,
+      level: record.ownLevel,
+      effectiveLevel: record.effectiveLevel,
+      associated: !!raisedText,
+      associatedTooltip: raisedText,
+      modifier: record.total,
+      hasBonus: (record.bonusTotal ?? 0) !== 0,
+      rollTooltip: skillRollTooltip(this.actor, record.key),
+      canChangeLevel: record.canSave,
+    };
   }
 
 

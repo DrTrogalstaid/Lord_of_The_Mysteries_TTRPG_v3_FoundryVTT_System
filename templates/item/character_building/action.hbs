@@ -1,11 +1,6 @@
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
@@ -13,20 +8,14 @@
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
       <div class="description-box">
-        <div class="box-title">Description</div>
-        {{#if editable}}
-          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-            {{{enrichedDescription}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedDescription}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Description"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
       </div>
       <div class="description-box">
       <!--Special Results (Great Success / Big Failure events)-->
       {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.specialResults" rows=specialResults
-          class="special-results" legend="Special Results" placeholder="Great success / big failure event"
-          addLabel="Add Special Result"}}
+          class="special-results" legend="LORD_OF_THE_MYSTERIES.ItemSheet.SpecialResults"
+          placeholder="LORD_OF_THE_MYSTERIES.ItemSheet.SpecialResultPlaceholder" addLabel="LORD_OF_THE_MYSTERIES.ItemSheet.AddSpecialResult"}}
       </div>
     </div>
 
@@ -35,13 +24,13 @@
 
       <!--Title-->
       <fieldset>
-        <legend>Title</legend>
-        <input id="title" class="blend-input" type="text" name="system.title" value="{{system.title}}" placeholder="Action Title" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Title"}}</legend>
+        <input id="title" class="blend-input" type="text" name="system.title" value="{{system.title}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.TitlePlaceholder'}}" />
       </fieldset>
 
       <!--Action Type-->
       <fieldset class="actionType">
-        <legend>Action Type</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.ActionType"}}</legend>
         <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionTypes selected=system.actionType localize=true}}
         </select>
@@ -52,7 +41,7 @@
 
       <!--Category-->
       <fieldset class="category">
-        <legend>Category</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Category"}}</legend>
         <select name="system.category" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionCategories selected=system.category localize=true}}
         </select>
@@ -60,13 +49,13 @@
 
       <!--Spirituality Cost-->
       <fieldset>
-        <legend>Spirituality Cost</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SpiritualityCost"}}</legend>
         <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" min="0" step="1" />
       </fieldset>
 
       <!--Range-->
       <fieldset>
-        <legend>Range</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Range"}}</legend>
         <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" min="0" step="1" />
       </fieldset>
 
@@ -96,8 +85,8 @@
 
       <!--DC Results-->
       <fieldset class="dc-results">
-        <legend>DC Results</legend>
-        <textarea id="dcResults" class="blend-input" name="system.dcResults" rows="4" placeholder="Results" {{#unless editable}}disabled{{/unless}}>{{system.dcResults}}</textarea>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DCResults"}}</legend>
+        <textarea id="dcResults" class="blend-input" name="system.dcResults" rows="4" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.ResultsPlaceholder'}}" {{#unless editable}}disabled{{/unless}}>{{system.dcResults}}</textarea>
       </fieldset>
 
     </div>
