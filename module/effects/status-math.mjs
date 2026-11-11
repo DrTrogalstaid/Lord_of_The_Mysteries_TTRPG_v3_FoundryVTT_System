@@ -74,7 +74,7 @@ export function combineStatusRules(rules = []) {
  *   - Agility and Dodge each count fully, halved or not at all (see combineStatusRules).
  *   - The modifier (Disadvantage's -2) lowers the Agility + Dodge part. When neither of them counts any more
  *     (Bound, Off Guard), there's nothing left for it to lower, so it's skipped.
- * With no statuses this is exactly the old formula.
+ * With no statuses it's the plain formula.
  * @param {object} values
  * @param {number} values.agility   Agility total (after armor and carrying penalties).
  * @param {number} values.armor     Worn armor's points.

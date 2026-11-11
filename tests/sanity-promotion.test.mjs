@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// Real Handlebars and the system's templates: rolledValueHTML renders one.
+import "./support/templates.mjs";
 import {
   lossAfterSolidification, parseSanityLoss, pendingSanityLoss, rolledValueHTML, wantedSanityStatuses,
 } from "../module/helpers/sanity.mjs";

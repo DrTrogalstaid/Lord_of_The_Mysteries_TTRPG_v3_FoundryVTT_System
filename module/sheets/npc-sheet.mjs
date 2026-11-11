@@ -15,10 +15,8 @@
  * because NPC data has a hiddenGrants list (data/actor/actor-npc.mjs).
  */
 
-import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, effectRaiseText } from "./base-actor-sheet.mjs";
-import { calculateSkillModifier } from "../helpers/skill-modifiers.mjs";
-import { atLeastLevel, computeAssociatedLevels, raiseLevel, skillCategoriesOf } from "../helpers/skill-associations.mjs";
-import { applySkillRaises } from "../effects/effect-grants.mjs";
+import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";
+import { skillKeyFor } from "../helpers/skill-registry.mjs";
 import { CARRY_MODES } from "../helpers/inventory-config.mjs";
 import { autoPlacement } from "../helpers/inventory.mjs";
 
@@ -32,6 +30,9 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
 
   /** NPC actions have no Favorites section or stars. */
   static FAVORITES = false;
+
+  /** The GM types an NPC's Spirituality straight in. */
+  static SPIRITUALITY_EDITABLE = true;
 
   /**
    * @override
@@ -52,7 +53,7 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
   /** @override */
   static PARTS = {
     header:    { template: `${TEMPLATES}/npc/header.hbs` },
-    sidebar:   { template: `${TEMPLATES}/npc/sidebar.hbs` },
+    sidebar:   { template: SIDEBAR_TEMPLATE },
     tabs:      { template: `${TEMPLATES}/npc/tab-nav.hbs` },
     main:      { template: `${TEMPLATES}/npc/main.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
     abilities: { template: `${TEMPLATES}/npc/abilities.hbs`, templates: SHARED_PARTIALS, scrollable: [""] },
@@ -176,139 +177,76 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
 
 
   /**
-   * The Skills list on the Main tab: every skill the GM dropped on the NPC (system.skills, the same place the
-   * player sheet keeps skill levels, so action rolls find them), plus skills only a Sequence raises.
+   * The Skills list on the Main tab: every skill the GM dropped on the NPC (its saved skill records), plus skills a
+   * Sequence or an active effect raises. NPCs don't get every standard skill (actor-npc.mjs).
    *
-   * Each row's level is worked out like the player sheet does: the NPC's own level (at least the starting
-   * level, e.g. Dodge's Trained), raised by its Sequences, then by related skills.
+   * Levels, totals and bonuses come from the NPC's skill records, worked out like a player character's
+   * (data/actor/base-actor.mjs): the NPC's own level (at least the starting level, e.g. Dodge's Trained), raised by its
+   * Sequences and effects, then by related skills.
    *
-   * Rows:
-   *   owned           true when the GM dropped it on (trash button). false = only a Sequence gives it (hide button).
-   *   category        The system.skills list it's saved in ("" when it can't be saved, so its level can't be changed).
-   *   level           The NPC's own level (the dropdown).
-   *   effectiveLevel  The level it's rolled at.
-   *   modifier        Attribute total + level bonus, like the player sheet shows.
+   * Rows: the shared skill row (_skillRow in base-actor-sheet.mjs: key, level, effectiveLevel, modifier,
+   * canChangeLevel...), plus
+   *   owned           true when the GM dropped it on (trash button). false = only a Sequence or effect gives it (hide button).
+   *   attributeLabel  Its attribute's abbreviation.
+   *   raisedByLabel   The Sequences and effects that raise it.
+   *   hideKey         What the hide button hides: the Sequence's reference to the skill.
    * @returns {Promise<object[]>}
    */
   async #prepareSkills() {
     const config = CONFIG.LORD_OF_THE_MYSTERIES;
-    const folders = config.skillCompendiumFolders ?? {};
-    const minimums = config.defaultSkillLevels ?? {};
     const system = this.actor.system;
-    const sequenceSteps = system.sequenceSkillSteps ?? {};   // already leaves out hidden raises (base-actor.mjs)
-    const effectRaises = system.effectSkillRaises ?? {};     // active effects' raises (effects/effect-grants.mjs)
-    const levelLabel = (level) => game.i18n.localize(config.skillLevels[level] ?? level);
 
-    // Which owned Sequences raise each skill, for the "Raised by" label.
+    // Which owned Sequences raise each skill, for the "Raised by" label, and the UUID each uses (what hiding hides).
     const hidden = new Set(system.hiddenGrants ?? []);
-    const raisedBy = new Map();   // skill uuid -> [Sequence names]
+    const raisedBy = new Map();   // skill key -> [Sequence names]
+    const hideKeys = new Map();   // skill key -> the UUID in the Sequence's list
     for (const item of this.actor.items) {
       if (item.type !== "sequence") continue;
       for (const { skill_uuid, value } of item.system.skill_increase ?? []) {
         if (!skill_uuid || !value || hidden.has(skill_uuid)) continue;
-        const names = raisedBy.get(skill_uuid) ?? [];
+        const key = skillKeyFor(skill_uuid);
+        if (!key) continue;
+        const names = raisedBy.get(key) ?? [];
         if (!names.includes(item.name)) names.push(item.name);
-        raisedBy.set(skill_uuid, names);
+        raisedBy.set(key, names);
+        if (!hideKeys.has(key)) hideKeys.set(key, skill_uuid);
       }
     }
 
-    // Active effects raising a skill are named in the "Raised by" label too.
-    for (const [uuid, raises] of Object.entries(effectRaises)) {
-      const names = raisedBy.get(uuid) ?? [];
-      for (const { name } of raises) if (name && !names.includes(name)) names.push(name);
-      raisedBy.set(uuid, names);
-    }
-
-    // 1. What to list: the skills the GM dropped on, then skills only a Sequence or an active effect raises.
-    const listed = new Map();   // skill uuid -> { category, level } (level null = only from a Sequence)
-    for (const [category, entries] of Object.entries(system.skills ?? {})) {
-      for (const entry of entries ?? []) {
-        if (entry?.skill && !listed.has(entry.skill)) listed.set(entry.skill, { category, level: entry.level });
-      }
-    }
-    for (const [uuid, steps] of Object.entries(sequenceSteps)) {
-      if (steps > 0 && !listed.has(uuid)) listed.set(uuid, { category: null, level: null });
-    }
-    for (const uuid of Object.keys(effectRaises)) {
-      if (!listed.has(uuid)) listed.set(uuid, { category: null, level: null });
-    }
-
-    // 2. One row per skill.
-    const rows = await Promise.all([...listed].map(async ([uuid, stored]) => {
-      const doc = await fromUuid(uuid).catch(() => null);
-      const owned = stored.level !== null;
+    const rows = [];
+    for (const record of Object.values(system.skills ?? {})) {
+      const owned = !!record.isSaved;
+      if (!owned && !((record.sequenceSteps ?? 0) > 0) && !(record.raisedBy ?? []).length) continue;
 
       // A saved skill whose Item was deleted: still listed, so the GM can remove it.
-      if (!doc) {
-        if (!owned) return null;
-        return {
-          uuid, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"), img: "icons/svg/hazard.svg",
-          broken: true, owned, category: stored.category, level: stored.level, effectiveLevel: stored.level,
+      if (record.isBroken) {
+        if (!owned) continue;
+        rows.push({
+          key: record.key, uuid: record.uuid, name: game.i18n.localize("LORD_OF_THE_MYSTERIES.Drop.Missing"),
+          img: "icons/svg/hazard.svg", broken: true, owned, level: record.level, effectiveLevel: record.level,
           categories: [], canChangeLevel: false,
-        };
+        });
+        continue;
       }
 
-      const skillAttribute = doc.system?.skill_attribute;
-      // Where a drop would file it (see #dropSkill in base-actor-sheet.mjs), for skills only a Sequence gives.
-      const category = stored.category ?? ([skillAttribute].find((key) => key && key in folders) ?? "");
-      // Same attribute choice as the player sheet: the list's attribute, or the skill's own for lists like Languages.
-      const attributeKey = category in config.attributes ? category : (skillAttribute ?? category);
-      const attribute = skillAttribute || category;
-      const level = atLeastLevel(stored.level ?? "untrained", minimums[uuid]);
+      // Active effects raising a skill are named in the "Raised by" label too.
+      const names = [...(raisedBy.get(record.key) ?? [])];
+      for (const name of record.raisedBy ?? []) if (name && !names.includes(name)) names.push(name);
 
-      return {
-        uuid,
-        name: doc.name,
-        img: doc.img,
+      const attributeLabel = config.attributeAbbreviations[record.attribute];
+      rows.push({
+        ...this._skillRow(record),
         broken: false,
         owned,
-        category,
-        attribute,
-        attributeLabel: config.attributeAbbreviations[attribute] ? game.i18n.localize(config.attributeAbbreviations[attribute]) : "",
-        attributeTotal: system.attributes[attributeKey]?.total ?? 0,
-        flatModifier: doc.system?.modifier ?? 0,
-        categories: skillCategoriesOf(doc.system),
-        level,
-        effectiveLevel: level,
-        canChangeLevel: !!category,
-        raisedByLabel: (raisedBy.get(uuid) ?? []).join(", "),
-        associated: false,
-        associatedTooltip: "",
-      };
-    }));
-    const skills = rows.filter(Boolean);
-
-    // 3. Sequence raises, then active effects' raises, then related skills (the player sheet's #applySkillAssociations).
-    const working = skills.filter((row) => !row.broken);
-    const sequenced = working.map((row) => raiseLevel(row.level, sequenceSteps[row.uuid] ?? 0));
-    const raised = working.map((row, index) => ({ ...row, level: applySkillRaises(sequenced[index], effectRaises[row.uuid]) }));
-    const results = computeAssociatedLevels(raised);
-
-    for (const [index, row] of working.entries()) {
-      const steps = sequenceSteps[row.uuid] ?? 0;
-      const boostedByEffects = raised[index].level !== sequenced[index];
-      const result = results.get(row.uuid);
-      row.effectiveLevel = result?.level ?? raised[index].level;
-      row.modifier = calculateSkillModifier(row.effectiveLevel, row.attributeTotal);
-      if (row.effectiveLevel === row.level) continue;   // nothing raised it: no badge
-
-      row.associated = true;
-      const reasons = [];
-      if (steps > 0) {
-        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBySequence", { steps }));
-      }
-      if (boostedByEffects) reasons.push(effectRaiseText(effectRaises[row.uuid], levelLabel));
-      if (result?.raised) {
-        reasons.push(game.i18n.format("LORD_OF_THE_MYSTERIES.SkillAssociation.RaisedBy", {
-          level: levelLabel(result.level),
-          sources: result.sources.map((source) => `${source.name} (${levelLabel(source.level)})`).join(", "),
-        }));
-      }
-      row.associatedTooltip = reasons.join(" · ");
+        attributeLabel: attributeLabel ? game.i18n.localize(attributeLabel) : "",
+        raisedByLabel: names.join(", "),
+        hideKey: hideKeys.get(record.key) ?? record.uuid,
+      });
     }
 
-    return skills.sort((a, b) => a.name.localeCompare(b.name));
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
   }
+
 
 
   /**
@@ -339,43 +277,6 @@ export class NpcSheet extends LordOfTheMysteriesActorSheetBase {
     }
 
     return { locationOptions };
-  }
-
-
-  /** @override */
-  _onRender(context, options) {
-    super._onRender(context, options);
-
-    // Skill level dropdowns. They have no `name` (the form doesn't save them); each saves only its own skill,
-    // so a change can't wipe the rest of the list.
-    for (const select of this.element.querySelectorAll("[data-npc-skill-level]")) {
-      if (select.dataset.bound) continue;
-      select.dataset.bound = "1";
-      select.addEventListener("change", (event) => this.#onSkillLevelChange(event));
-    }
-  }
-
-
-  /**
-   * Save a skill's new level from its dropdown. A skill the NPC only had through a Sequence gets its own
-   * saved level this way (and then a trash button instead of the hide button).
-   * @param {Event} event
-   */
-  async #onSkillLevelChange(event) {
-    if (!this.isEditable) return;
-    const select = event.currentTarget;
-    const row = select.closest("[data-skill-uuid]");
-    const uuid = row?.dataset.skillUuid;
-    const category = row?.dataset.category;
-    if (!uuid || !category) return;
-
-    const level = select.value;
-    const current = this.actor.toObject().system.skills?.[category] ?? [];
-    const index = current.findIndex((entry) => entry.skill === uuid);
-    const updated = index < 0
-      ? [...current, { skill: uuid, level }]
-      : current.map((entry, i) => (i === index ? { ...entry, level } : entry));
-    await this.actor.update({ [`system.skills.${category}`]: updated });
   }
 
 

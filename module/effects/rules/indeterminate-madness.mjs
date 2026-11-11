@@ -28,9 +28,7 @@ export default class IndeterminateMadnessRule extends StatusRule {
     const { rollMadnessTendency } = await import("../../helpers/sanity.mjs");
     const symptom = await rollMadnessTendency();
     await effect.update({ name: `${game.i18n.localize(this.name)}: ${symptom.label}`, "system.madness": symptom.value });
-    await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.MadnessSymptom", actor, effect, {
-      symptom: Handlebars.escapeExpression(symptom.label),
-    }));
+    await statusChat(actor, this.text("LORD_OF_THE_MYSTERIES.Status.Results.MadnessSymptom", actor, effect, { symptom: symptom.label }));
   }
 
 

@@ -24,18 +24,37 @@ import { calculateSkillModifier } from "./skill-modifiers.mjs";
 /**
  * Build the contents of one skill-granting ability's tab: its granted skills
  * (each rolled with its own attribute) and the dropdown options not yet taken.
+ *
+ * Each granted skill's level and analyses stay on the ability (system.grantedSkills). A granted skill that has a
+ * skill Item behind it (picked from the options, or an Education copy of a regular skill) has that skill's key, and
+ * gets the skill's bonuses from Active Effects (effects/skill-bonuses.mjs). Typed-in custom skills have no key.
  * @param {{id: string, name: string, grantedSkills: object[], options: {uuid, name, attribute}[]}} ability
  * @param {Record<string, number>} attributeTotals  Attribute key -> total
+ * @param {object} [skills]
+ * @param {(uuid: string) => string} [skills.keyOf]       A skill UUID -> its key ("" when unknown).
+ * @param {(key: string) => number} [skills.bonusOf]      A skill key -> its bonus from effects.
+ * @param {(key: string) => string} [skills.tooltipOf]    A skill key ("" for none) -> the hover text of its number.
  * @returns {{abilityId: string, abilityName: string, skills: object[], options: object[]}}
+ *   Each skill: its saved fields, plus key, bonus, modifier (attribute + level bonus + bonus) and rollTooltip.
  */
-export function buildGrantedSkillTab(ability, attributeTotals) {
+export function buildGrantedSkillTab(ability, attributeTotals, { keyOf = () => "", bonusOf = () => 0, tooltipOf = () => "" } = {}) {
   const granted = ability.grantedSkills ?? [];
   const takenUuids = new Set(granted.map((s) => s.uuid).filter(Boolean));
   return {
     abilityId: ability.id,
     abilityName: ability.name,
     skills: granted
-      .map((s) => ({ ...s, modifier: calculateSkillModifier(s.level, attributeTotals[s.attribute] ?? 0) }))
+      .map((s) => {
+        const key = s.uuid ? (keyOf(s.uuid) || "") : "";
+        const bonus = key ? (Number(bonusOf(key)) || 0) : 0;
+        return {
+          ...s,
+          key,
+          bonus,
+          modifier: calculateSkillModifier(s.level, attributeTotals[s.attribute] ?? 0) + bonus,
+          rollTooltip: tooltipOf(key),
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name)),
     options: (ability.options ?? [])
       .filter((o) => !takenUuids.has(o.uuid))

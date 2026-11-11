@@ -14,10 +14,13 @@
  * In the roll window (apps/roll-dialog.mjs) each effect's bonus is its own row, named after the effect
  * ("Spirit Vision +2"), removable for that roll like the status modifiers. Rolls straight from an action's
  * Attack Roll Macro (no skill) don't know their attribute, so they don't get it.
+ *
+ * Skill bonuses (effects/skill-bonuses.mjs) work the same way: system.skills.<key>.bonus and
+ * system.skillCategoryBonuses.<category>, one row per effect in skill checks and in actions and spells that roll with
+ * the skill (skillBonusRowsFor below). The actor's data preparation works the rows out (data/actor/base-actor.mjs).
  */
 
-/** The change type that adds (v14's "add"; older effects stored ADD as mode 2). */
-const isAddChange = (change) => change?.type === "add" || change?.mode === 2;
+import { changeAmount, effectChanges } from "../effects/skill-bonuses.mjs";
 
 
 /**
@@ -36,10 +39,10 @@ export function bonusRows(actor, key, restLabel, rowKey = key) {
 
   for (const effect of actor?.allApplicableEffects?.() ?? []) {
     if (!(effect.active ?? !effect.disabled)) continue;
-    const changes = effect.system?.changes ?? effect.changes ?? [];
-    const value = changes
-      .filter((change) => change?.key === path && isAddChange(change))
-      .reduce((sum, change) => sum + (Number(change.value) || 0), 0);
+    // Add and Subtract changes to the field: a penalty (Subtract 2) is a -2 row named after its effect too.
+    const value = effectChanges(effect)
+      .filter((change) => change?.key === path)
+      .reduce((sum, change) => sum + (changeAmount(change) ?? 0), 0);
     if (value) rows.push({ key: `${rowKey}:${effect.id}`, label: effect.name, value, img: effect.img ?? null });
   }
 
@@ -70,4 +73,33 @@ export function checkBonusRows(actor, attributeKey) {
 export function spiritualIntuitionRows(actor) {
   return bonusRows(actor, "spiritualIntuitionBonus",
     game.i18n.localize("LORD_OF_THE_MYSTERIES.SpiritualIntuition.Bonus"));
+}
+
+
+/**
+ * The rows a roll with this skill gets from Active Effects: one per effect that adds to the skill
+ * ("Marksman's Focus"), one per effect that adds to its related-skill categories ("Drill (Firearms)"), and one for
+ * anything else that changed them ("Pistol bonus"). See effects/skill-bonuses.mjs.
+ * @param {Actor} actor
+ * @param {string} key   The skill's key.
+ * @returns {{key: string, label: string, value: number, img: string|null}[]}
+ */
+export function skillBonusRowsFor(actor, key) {
+  const record = key ? actor?.system?.skillFor?.(key) : null;
+  if (!record) return [];
+  const categories = CONFIG.LORD_OF_THE_MYSTERIES.skillCategories ?? {};
+  const categoryLabel = (category) => game.i18n.localize(categories[category] ?? category ?? "");
+  const skillName = record.name || key;
+
+  return (record.bonusRows ?? []).filter((row) => row.value).map((row) => {
+    let label;
+    if (row.kind === "skill") {
+      label = row.rest ? game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.SkillBonus", { skill: skillName }) : row.name;
+    } else {
+      label = row.rest
+        ? game.i18n.format("LORD_OF_THE_MYSTERIES.RollDialog.CategoryBonus", { category: categoryLabel(row.category) })
+        : `${row.name} (${categoryLabel(row.category)})`;
+    }
+    return { key: `skillBonus:${key}:${row.id}`, label, value: row.value, img: row.img ?? null };
+  });
 }

@@ -1,0 +1,93 @@
+{{!-- The sidebar of both actor sheets (player and NPC): Health, Sanity, Spirituality, Luck, defenses.
+      Spirituality is typed straight in on NPCs; on player characters it's read-only and spent with the Spend button
+      (isSpiritualityEditable, SPIRITUALITY_EDITABLE in sheets/base-actor-sheet.mjs). --}}
+<aside class="sheet-sidebar">
+
+  <div class="pool-container">
+    <div class="pool-row">
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Health"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.hp.value" value="{{system.resources.hp.value}}" />
+          <span class="pool-sep">/</span>
+          <input type="number" name="system.resources.hp.max" value="{{system.resources.hp.max}}" readonly/>
+        </div>
+        {{!-- Wounds treated with a Medicine check: Long Rest heals Physique instead of half. Cleared by Long Rest. --}}
+        <label class="pool-flag" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Recovery.TreatedHint'}}">
+          <input type="checkbox" name="system.hasBeenTreated" {{checked system.hasBeenTreated}} />
+          {{localize "LORD_OF_THE_MYSTERIES.Recovery.Treated"}}
+        </label>
+      </div>
+      <div class="pool-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Sanity"}}</label>
+        <div class="pool-values">
+          <input type="number" name="system.resources.rp.value" value="{{system.resources.rp.value}}" />
+          <span class="pool-sep">/</span>
+          <input type="number" name="system.resources.rp.max" value="{{system.resources.rp.max}}" readonly/>
+        </div>
+        <button type="button" class="spend-btn" data-action="sanityCheck"
+                data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.Sanity.ButtonHint'}}">{{localize "LORD_OF_THE_MYSTERIES.Sanity.Button"}}</button>
+      </div>
+    </div>
+  </div>
+
+  <!--Long and Short Rest-->
+  <div class="rest-row">
+    <button type="button" class="rest-btn" data-action="shortRest">{{lotmLang "LORD_OF_THE_MYSTERIES.Sidebar.ShortRest"}}</button>
+    <button type="button" class="rest-btn" data-action="longRest">{{lotmLang "LORD_OF_THE_MYSTERIES.Sidebar.LongRest"}}</button>
+  </div>
+
+  <!--Defense -->
+  <div class="defense-box">
+    <div class="stat-box full-width{{#if statusNotes.physical}} status-modified{{/if}}"{{#if statusNotes.physical}} data-tooltip="{{statusNotes.physical}}"{{/if}}>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Defenses.Physical"}}</label>
+      <input type="number" name="system.defenses.physical" value="{{system.defenses.physical}}" readonly/>
+      <label class="pool-flag" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.QuickDodge.Hint'}}">
+        <input type="checkbox" name="system.isQuickDodgable" {{checked system.isQuickDodgable}} />
+        {{localize "LORD_OF_THE_MYSTERIES.QuickDodge.Label"}}
+      </label>
+    </div>
+    <div class="pool-row">
+      <div class="stat-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Defenses.Physique"}}</label>
+        <input type="number" name="system.defenses.physique" value="{{system.defenses.physique}}" readonly/>
+      </div>
+      <div class="stat-box">
+        <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Defenses.Will"}}</label>
+        <input type="number" name="system.defenses.will" value="{{system.defenses.will}}" readonly/>
+      </div>
+    </div>
+    {{> "systems/lotm/templates/actor/parts/damage-defenses.hbs"}}
+  </div>
+
+  <!--Movement-->
+  <div class="speed-container">
+    <div class="speed-box full-width{{#if statusNotes.movement}} status-modified{{/if}}"{{#if statusNotes.movement}} data-tooltip="{{statusNotes.movement}}"{{/if}}>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Movement"}}</label>
+      <input type="number" name="system.movement" value="{{system.movement}}" readonly>
+    </div>
+  </div>
+
+  <!--Spirit and Luck-->
+  <div class="pool-row">
+    <div class="pool-box">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Spirituality"}}</label>
+      <div class="pool-values">
+        <input type="number" name="system.resources.spp.value" value="{{system.resources.spp.value}}" {{#unless @root.isSpiritualityEditable}}readonly{{/unless}}/>
+        <span class="pool-sep">/</span>
+        <input type="number" name="system.resources.spp.max" value="{{system.resources.spp.max}}" readonly/>
+      </div>
+      <button type="button" class="spend-btn" data-action="spendSpirituality">{{localize "LORD_OF_THE_MYSTERIES.Spirituality.Spend"}}</button>
+    </div>
+    <div class="pool-box">
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Sidebar.Luck"}}</label>
+      <div class="pool-values">
+        <input type="number" name="system.resources.lp.value" value="{{system.resources.lp.value}}"/>
+        <span class="pool-sep">/</span>
+        <input type="number" name="system.resources.lp.max" value="{{system.resources.lp.max}}" readonly/>
+      </div>
+      <button type="button" class="spend-btn" data-action="spendLuck">{{localize "LORD_OF_THE_MYSTERIES.Luck.Spend"}}</button>
+    </div>
+  </div>
+
+</aside>

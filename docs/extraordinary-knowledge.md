@@ -25,7 +25,11 @@ special-casing Extraordinary Knowledge.
     since it can be trained directly through analysis. It isn't copied.
 - **Granted skills' progress lives on the character's copy of the ability**
   (`system.grantedSkills`), so it goes with the ability if stolen and is lost if it's removed.
-  Education skills' analysis counts live on the character (`system.skills.edu[].analysis`).
+  Education skills' analysis counts live on the character, on the skill's record (`system.skills.<key>.analysis`,
+  e.g. `system.skills.history.analysis`; before skill keys, `system.skills.edu[].analysis`).
+- Granted skills that have a skill Item behind them (picked from the options, or an Education copy of a regular skill)
+  get that skill's roll bonuses from Active Effects: a Stealth bonus also counts for the Education copy of Stealth.
+  Custom typed-in skills have no skill Item, so effects can't point at them.
 - Everything rolls like a normal skill. Nothing substitutes for other skills automatically.
 
 ## Open items — need to be addressed

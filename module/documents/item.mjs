@@ -1,20 +1,11 @@
 import { GRANT_TRIGGER_TYPES, syncGrantedEffects } from "../effects/granted-effects.mjs";
 
 /**
- * Extend the basic Item with some very simple modifications.
+ * The system's Item: keeps copied effects pointing at their Item, keeps granted-ability effects in step, and posts
+ * an Item to chat from a hotbar macro.
  * @extends {Item}
  */
 export class LordOfTheMysteriesItem extends Item {
-  /**
-   * Augment the basic Item data model with additional dynamic data.
-   */
-  
-  prepareData() {
-    // As with the actor class, items are documents that can have their data
-    // preparation methods overridden (such as prepareBaseData()).
-    super.prepareData();
-  }
-
   /**
    * A copied Item (dropped on a character, duplicated, imported from a compendium) brings its effects along, still
    * naming the Item they were copied from as their origin. Point them at this Item, so effects handed out from it
@@ -102,41 +93,16 @@ export class LordOfTheMysteriesItem extends Item {
   }
 
   /**
-   * Handle clickable rolls.
-   * @param {Event} event   The originating click event
-   * @private
+   * Post the Item's description to chat (a hotbar macro for anything but an action or spell, which roll their attack
+   * instead: rollItemMacro in lotm.mjs).
    */
   async roll() {
-    const item = this;
-
-    // Initialize chat data.
-    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
     // Who sees it: what the chat sidebar is set to (Foundry v14's "messageMode"; "rollMode" is deprecated).
     const messageMode = game.settings.get('core', 'messageMode');
-    const label = `[${item.type}] ${item.name}`;
-
-    // If there's no roll data, send a chat message.
-    if (!this.system.formula) {
-      ChatMessage.create({
-        speaker: speaker,
-        flavor: label,
-        content: item.system.description ?? '',
-      }, { messageMode });
-    }
-    // Otherwise, create a roll and send a chat message from it.
-    else {
-      // Retrieve roll data.
-      const rollData = this.getRollData();
-
-      // Invoke the roll and submit it to chat.
-      const roll = new Roll(rollData.formula, rollData.actor);
-      // If you need to store the value first, uncomment the next line.
-      // const result = await roll.evaluate();
-      roll.toMessage({
-        speaker: speaker,
-        flavor: label,
-      }, { messageMode });
-      return roll;
-    }
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      flavor: `[${this.type}] ${this.name}`,
+      content: this.system.description ?? '',
+    }, { messageMode });
   }
 }

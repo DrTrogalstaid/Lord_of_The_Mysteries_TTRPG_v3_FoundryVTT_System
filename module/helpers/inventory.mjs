@@ -86,68 +86,13 @@ export function calculateCarrying(items, strength) {
 
   // 1. Containers. Done first so gear can find the container it's in.
   for (const item of items) {
-    if (item.type !== "container") continue;
-    const system = item.system;
-    result.containers[item.id] = {
-      equipped: system.equipped,
-      capacityUnits: system.slots * UNITS_PER_SLOT,
-      hiddenCapacityUnits: system.hiddenPockets * UNITS_PER_SLOT,
-      maxSizeRank: sizeRank(system.maxSize),
-      usedUnits: 0,
-      hiddenUnits: 0,
-      full: false,
-      hiddenFull: false,
-    };
-    if (system.equipped) {
-      if (system.combatPenalty < result.combatPenalty) result.combatPenalty = system.combatPenalty;
-      if (system.category === "clothing") result.clothingCount += 1;
-    }
+    if (item.type === "container") addContainer(result, item);
   }
 
   // 2. Gear.
   const wornArmor = [];   // armor that's worn and could protect
   for (const item of items) {
-    if (item.type !== "gear") continue;
-    const system = item.system;
-    const info = { place: "", warnings: [] };
-    result.gear[item.id] = info;
-
-    // Worn armor: can it protect?
-    if (system.isArmor && system.carry === "worn") {
-      const cannotWear = system.strengthNeeds.cannotWear;
-      if (system.destroyed) info.warnings.push("ArmorDestroyed");
-      else if (cannotWear !== null && strength < cannotWear) info.warnings.push("TooWeakToWear");
-      else wornArmor.push(item);
-    }
-
-    // On the body: Strength only.
-    if (system.carry === "held" || system.carry === "worn") {
-      info.place = system.carry;
-      result.usedUnits += system.units;
-      continue;
-    }
-
-    // Stowed, but not in a container that exists.
-    const container = result.containers[system.containerId];
-    if (!container) {
-      info.place = "loose";
-      info.warnings.push("NoContainer");
-      result.usedUnits += system.units;
-      continue;
-    }
-
-    // In a container. It fills the container whether or not the container is equipped,
-    // but only counts toward Strength while the container is being carried.
-    container.usedUnits += system.units;
-    if (system.hidden) container.hiddenUnits += system.units;
-    if (sizeRank(system.size) > container.maxSizeRank) info.warnings.push("TooBig");
-
-    if (container.equipped) {
-      info.place = "stowed";
-      result.usedUnits += system.units;
-    } else {
-      info.place = "leftBehind";
-    }
+    if (item.type === "gear") placeGear(result, item, strength, wornArmor);
   }
 
   // 3. Over the limits?
@@ -162,27 +107,110 @@ export function calculateCarrying(items, strength) {
   wornArmor.sort((a, b) => b.system.armorValue - a.system.armorValue);
   const [best, ...extra] = wornArmor;
   for (const item of extra) result.gear[item.id].warnings.push("ExtraArmor");
-  if (best) {
-    const system = best.system;
-    const needs = system.strengthNeeds;
-    let movement = "normal";
-    if (needs.immobile !== null && strength < needs.immobile) movement = "none";
-    else if (needs.halfMove !== null && strength < needs.halfMove) movement = "half";
-
-    Object.assign(result.armor, {
-      itemId: best.id,
-      name: best.name,
-      value: system.armorValue,
-      reduction: { ...system.reduction },
-      agilityPenalty: system.agilityPenalty,
-      movement,
-      unprotected: [...system.unprotected],
-      breach: system.armorState.breach,
-      critPenaltyReduction: system.critPenaltyReduction,
-    });
-  }
+  if (best) Object.assign(result.armor, protectingArmor(best, strength));
 
   return result;
+}
+
+/**
+ * calculateCarrying step 1: a coat or bag's room, and what wearing it does (a suitcase's combat penalty, an outfit).
+ * @param {object} result   calculateCarrying's result, added to.
+ * @param {Item} item       The container.
+ */
+function addContainer(result, item) {
+  const system = item.system;
+  result.containers[item.id] = {
+    equipped: system.equipped,
+    capacityUnits: system.slots * UNITS_PER_SLOT,
+    hiddenCapacityUnits: system.hiddenPockets * UNITS_PER_SLOT,
+    maxSizeRank: sizeRank(system.maxSize),
+    usedUnits: 0,
+    hiddenUnits: 0,
+    full: false,
+    hiddenFull: false,
+  };
+  if (system.equipped) {
+    if (system.combatPenalty < result.combatPenalty) result.combatPenalty = system.combatPenalty;
+    if (system.category === "clothing") result.clothingCount += 1;
+  }
+}
+
+/**
+ * calculateCarrying step 2: where one piece of gear is (its "place") and what it counts toward. Worn armor that can
+ * protect goes in wornArmor, for step 4.
+ * @param {object} result       calculateCarrying's result, added to.
+ * @param {Item} item           The gear.
+ * @param {number} strength
+ * @param {Item[]} wornArmor    Added to.
+ */
+function placeGear(result, item, strength, wornArmor) {
+  const system = item.system;
+  const info = { place: "", warnings: [] };
+  result.gear[item.id] = info;
+
+  // Worn armor: can it protect?
+  if (system.isArmor && system.carry === "worn") {
+    const cannotWear = system.strengthNeeds.cannotWear;
+    if (system.destroyed) info.warnings.push("ArmorDestroyed");
+    else if (cannotWear !== null && strength < cannotWear) info.warnings.push("TooWeakToWear");
+    else wornArmor.push(item);
+  }
+
+  // On the body: Strength only.
+  if (system.carry === "held" || system.carry === "worn") {
+    info.place = system.carry;
+    result.usedUnits += system.units;
+    return;
+  }
+
+  // Stowed, but not in a container that exists.
+  const container = result.containers[system.containerId];
+  if (!container) {
+    info.place = "loose";
+    info.warnings.push("NoContainer");
+    result.usedUnits += system.units;
+    return;
+  }
+
+  // In a container. It fills the container whether or not the container is equipped,
+  // but only counts toward Strength while the container is being carried.
+  container.usedUnits += system.units;
+  if (system.hidden) container.hiddenUnits += system.units;
+  if (sizeRank(system.size) > container.maxSizeRank) info.warnings.push("TooBig");
+
+  if (container.equipped) {
+    info.place = "stowed";
+    result.usedUnits += system.units;
+  } else {
+    info.place = "leftBehind";
+  }
+}
+
+/**
+ * calculateCarrying step 4: what the suit of armor that protects the character gives, and what it does to movement
+ * when the character isn't strong enough for it.
+ * @param {Item} armor
+ * @param {number} strength
+ * @returns {object}   The fields of calculateCarrying's result.armor.
+ */
+function protectingArmor(armor, strength) {
+  const system = armor.system;
+  const needs = system.strengthNeeds;
+  let movement = "normal";
+  if (needs.immobile !== null && strength < needs.immobile) movement = "none";
+  else if (needs.halfMove !== null && strength < needs.halfMove) movement = "half";
+
+  return {
+    itemId: armor.id,
+    name: armor.name,
+    value: system.armorValue,
+    reduction: { ...system.reduction },
+    agilityPenalty: system.agilityPenalty,
+    movement,
+    unprotected: [...system.unprotected],
+    breach: system.armorState.breach,
+    critPenaltyReduction: system.critPenaltyReduction,
+  };
 }
 
 /**
@@ -271,41 +299,16 @@ export function buildInventoryView(entries, actor) {
     const info = carrying.containers[entry.id];
     if (!item || !info) continue;
 
-    const system = item.system;
-    const kind = CONTAINER_TYPES[system.kind];
-    const warnings = [];
-    if (info.full) {
-      warnings.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.ContainerFull", {
-        slots: formatSlots(info.usedUnits - info.capacityUnits),
-      }));
-    }
-    if (info.hiddenFull) warnings.push(localize("LORD_OF_THE_MYSTERIES.Inventory.Warnings.HiddenFull"));
-
-    const group = {
-      key: entry.id, container: true, id: entry.id, uuid: entry.uuid, name: entry.name, img: entry.img,
-      place: entry.id,
-      category: system.category,
-      kindLabel: kind ? localize(kind.label) : "",
-      drawLabel: system.draw ? localize(DRAW_ACTIONS[system.draw]) : "",
-      equipped: system.equipped,
-      leftBehind: !system.equipped,
-      used: formatSlots(info.usedUnits),
-      capacity: formatSlots(info.capacityUnits),
-      hiddenUsed: formatSlots(info.hiddenUnits),
-      hiddenCapacity: info.hiddenCapacityUnits ? formatSlots(info.hiddenCapacityUnits) : "",
-      full: info.full,
-      hiddenFull: info.hiddenFull,
-      combatPenalty: system.combatPenalty || 0,
-      warning: warnings.join(" "),
-      emptyText: localize("LORD_OF_THE_MYSTERIES.Inventory.EmptyContainer"),
-      entries: [],
-    };
+    const group = containerGroup(entry, item, info);
     containerGroups.push(group);
     groupById[entry.id] = group;
   }
 
   // Worn clothing first, then carried bags, then anything not equipped (left behind).
-  const groupRank = (group) => (group.leftBehind ? 2 : (group.category === "clothing" ? 0 : 1));
+  const groupRank = (group) => {
+    if (group.leftBehind) return 2;
+    return group.category === "clothing" ? 0 : 1;
+  };
   containerGroups.sort((a, b) => groupRank(a) - groupRank(b));
 
   // The choices in each gear row's location dropdown.
@@ -327,30 +330,10 @@ export function buildInventoryView(entries, actor) {
       continue;
     }
 
-    const system = item.system;
-    const size = ITEM_SIZES[system.size] ?? ITEM_SIZES.smallMedium;
-    const onBody = info.place === "held" || info.place === "worn";
-    entry.gear = {
-      quantity: system.quantity,
-      sizeLabel: localize(size.label),
-      slotsLabel: formatSlots(system.units),
-      hidden: system.hidden,
-      canHide: info.place === "stowed" || info.place === "leftBehind",
-      location: onBody ? info.place : (info.place === "loose" ? "" : system.containerId),
-      locationLabel: onBody
-        ? localize(CARRY_MODES[info.place].label)
-        : (groupById[system.containerId]?.name ?? localize("LORD_OF_THE_MYSTERIES.Inventory.NotStowed")),
-      warning: info.warnings.map((key) => localize(`LORD_OF_THE_MYSTERIES.Inventory.Warnings.${key}`)).join(" "),
-      // Armor: "Armor 8" on the row, and whether this is the suit that's protecting the character.
-      armorLabel: system.isArmor
-        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Armor.RowLabel", { armor: system.armorValue })
-        : "",
-      protecting: carrying.armor.itemId === item.id,
-    };
-
-    if (onBody) person.entries.push(entry);
+    entry.gear = gearControls(item, info, carrying, groupById);
+    if (info.place === "held" || info.place === "worn") person.entries.push(entry);
     else if (info.place === "loose") loose.entries.push(entry);
-    else groupById[system.containerId].entries.push(entry);
+    else groupById[item.system.containerId].entries.push(entry);
   }
 
   // 3. Group order on the tab. "Not stowed" and "Other items" only show when they have something in them.
@@ -367,7 +350,98 @@ export function buildInventoryView(entries, actor) {
     });
   }
 
-  // 4. Totals and warnings for the top of the tab.
+  return {
+    groups,
+    locationOptions,
+    noContainers: containerGroups.length === 0,
+    summary: inventorySummary(carrying),
+  };
+}
+
+
+/**
+ * buildInventoryView: the group for one coat or bag, with its room used and its warnings.
+ * @param {object} entry   Its entry in the Inventory section.
+ * @param {Item} item      The container.
+ * @param {object} info    Its carrying.containers row (calculateCarrying).
+ * @returns {object}
+ */
+function containerGroup(entry, item, info) {
+  const localize = (key) => game.i18n.localize(key);
+  const system = item.system;
+  const kind = CONTAINER_TYPES[system.kind];
+  const warnings = [];
+  if (info.full) {
+    warnings.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.ContainerFull", {
+      slots: formatSlots(info.usedUnits - info.capacityUnits),
+    }));
+  }
+  if (info.hiddenFull) warnings.push(localize("LORD_OF_THE_MYSTERIES.Inventory.Warnings.HiddenFull"));
+
+  return {
+    key: entry.id, container: true, id: entry.id, uuid: entry.uuid, name: entry.name, img: entry.img,
+    place: entry.id,
+    category: system.category,
+    kindLabel: kind ? localize(kind.label) : "",
+    drawLabel: system.draw ? localize(DRAW_ACTIONS[system.draw]) : "",
+    equipped: system.equipped,
+    leftBehind: !system.equipped,
+    used: formatSlots(info.usedUnits),
+    capacity: formatSlots(info.capacityUnits),
+    hiddenUsed: formatSlots(info.hiddenUnits),
+    hiddenCapacity: info.hiddenCapacityUnits ? formatSlots(info.hiddenCapacityUnits) : "",
+    full: info.full,
+    hiddenFull: info.hiddenFull,
+    combatPenalty: system.combatPenalty || 0,
+    warning: warnings.join(" "),
+    emptyText: localize("LORD_OF_THE_MYSTERIES.Inventory.EmptyContainer"),
+    entries: [],
+  };
+}
+
+/**
+ * buildInventoryView: what a gear row's controls show (drop-entry.hbs): quantity, size, location, warnings, armor.
+ * @param {Item} item
+ * @param {object} info        Its carrying.gear row (calculateCarrying).
+ * @param {object} carrying    actor.system.carrying
+ * @param {Record<string, object>} groupById   The container groups, by container id.
+ * @returns {object}
+ */
+function gearControls(item, info, carrying, groupById) {
+  const localize = (key) => game.i18n.localize(key);
+  const system = item.system;
+  const size = ITEM_SIZES[system.size] ?? ITEM_SIZES.smallMedium;
+  const onBody = info.place === "held" || info.place === "worn";
+  // The location dropdown's value: held / worn, a container's id, or "" for loose.
+  let location = system.containerId;
+  if (onBody) location = info.place;
+  else if (info.place === "loose") location = "";
+  return {
+    quantity: system.quantity,
+    sizeLabel: localize(size.label),
+    slotsLabel: formatSlots(system.units),
+    hidden: system.hidden,
+    canHide: info.place === "stowed" || info.place === "leftBehind",
+    location,
+    locationLabel: onBody
+      ? localize(CARRY_MODES[info.place].label)
+      : (groupById[system.containerId]?.name ?? localize("LORD_OF_THE_MYSTERIES.Inventory.NotStowed")),
+    warning: info.warnings.map((key) => localize(`LORD_OF_THE_MYSTERIES.Inventory.Warnings.${key}`)).join(" "),
+    // Armor: "Armor 8" on the row, and whether this is the suit that's protecting the character.
+    armorLabel: system.isArmor
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Armor.RowLabel", { armor: system.armorValue })
+      : "",
+    protecting: carrying.armor.itemId === item.id,
+  };
+}
+
+/**
+ * buildInventoryView: the totals and warnings at the top of the Inventory tab.
+ * @param {object} carrying   actor.system.carrying
+ * @returns {object}
+ */
+function inventorySummary(carrying) {
+  const localize = (key) => game.i18n.localize(key);
   let stowedUnits = 0;
   let capacityUnits = 0;
   for (const container of Object.values(carrying.containers)) {
@@ -390,24 +464,19 @@ export function buildInventoryView(entries, actor) {
   if (armor.movement === "none") warnings.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Inventory.Warnings.ArmorImmobile", { name: armor.name }));
 
   return {
-    groups,
-    locationOptions,
-    noContainers: containerGroups.length === 0,
-    summary: {
-      carried: formatSlots(carrying.usedUnits),
-      strength: formatSlots(carrying.strengthUnits),
-      overloaded: carrying.penalty > 0,
-      stowed: formatSlots(stowedUnits),
-      capacity: formatSlots(capacityUnits),
-      stowedOver: stowedUnits > capacityUnits,
-      // The suit that's protecting the character, for an optional readout in inventory.hbs. null = none.
-      armor: armor.itemId ? {
-        name: armor.name,
-        value: armor.value,
-        reduction: reductionLabel(armor.reduction),
-        agilityPenalty: armor.agilityPenalty,
-      } : null,
-      warnings,
-    },
+    carried: formatSlots(carrying.usedUnits),
+    strength: formatSlots(carrying.strengthUnits),
+    overloaded: carrying.penalty > 0,
+    stowed: formatSlots(stowedUnits),
+    capacity: formatSlots(capacityUnits),
+    stowedOver: stowedUnits > capacityUnits,
+    // The suit that's protecting the character, for an optional readout in inventory.hbs. null = none.
+    armor: armor.itemId ? {
+      name: armor.name,
+      value: armor.value,
+      reduction: reductionLabel(armor.reduction),
+      agilityPenalty: armor.agilityPenalty,
+    } : null,
+    warnings,
   };
 }

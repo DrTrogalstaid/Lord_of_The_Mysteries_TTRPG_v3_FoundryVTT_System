@@ -1,4 +1,4 @@
-import { test, beforeEach } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 
 /*
@@ -161,8 +161,10 @@ test("two Helpless targets: +2 once", () => {
 
 test("Deaf: a note on Listen checks only", () => {
   const actor = makeActor("Klein", [makeEffect(["deaf"])]);
-  assert.deepEqual(statusRollExtras({ actor, kind: "skill", skillUuid: LISTEN }).notes, ["Deaf: hearing checks fail"]);
-  assert.deepEqual(statusRollExtras({ actor, kind: "skill", skillUuid: SPOT }).notes, []);
+  assert.deepEqual(statusRollExtras({ actor, kind: "skill", skillKey: "listening", skillUuid: LISTEN }).notes, ["Deaf: hearing checks fail"]);
+  assert.deepEqual(statusRollExtras({ actor, kind: "skill", skillKey: "spot", skillUuid: SPOT }).notes, []);
+  // Skills are matched by key, so a world copy of Listening (another UUID) counts too.
+  assert.deepEqual(statusRollExtras({ actor, kind: "skill", skillKey: "listening", skillUuid: "Item.worldCopy" }).notes, ["Deaf: hearing checks fail"]);
   assert.deepEqual(statusRollExtras({ actor, kind: "attribute" }).notes, []);
 });
 

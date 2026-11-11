@@ -1,33 +1,45 @@
-<!--TODO: Change this to a sheet that can be filled out based on Sequence's data model data -->
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs"}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
 
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
-      {{#if editable}}
-        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-          {{{enrichedDescription}}}
-        </prose-mirror>
-      {{else}}
-        {{{enrichedDescription}}}
-      {{/if}}
+      {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
 
     </div>
 
     {{!-- Details Tab --}}
     <div class="tab details {{tabs.details.cssClass}}" data-group="sheet" data-tab="details">
 
+      {{!-- The skill's key and whether every character has it (data/item/character_building/skill.mjs). --}}
+      <fieldset class="skill-identity">
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.Legend"}}</legend>
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.Identifier"}}</label>
+          <div class="form-fields">
+            <input type="text" name="system.identifier" value="{{system.identifier}}" placeholder="{{identifierPlaceholder}}"
+                   {{#unless editable}}disabled{{/unless}} />
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IdentifierHint" key=skillKey}}</p>
+          {{#if keyUsedBy}}
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.KeyUsedBy" name=keyUsedBy}}</p>
+          {{/if}}
+        </div>
+        <div class="form-group">
+          <label>{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IsStandard"}}</label>
+          <div class="form-fields">
+            <input type="checkbox" name="system.isStandard" {{checked isStandard}} {{#unless editable}}disabled{{/unless}} />
+          </div>
+          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.IsStandardHint"}}</p>
+        </div>
+      </fieldset>
+
       <!--Skill Attribute Drop Down-->
       <fieldset class="skillAttributes flexrow">
-        <legend>Skill Attribute</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SkillAttribute"}}</legend>
         <select name="system.skill_attribute" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.skillAttributes selected=system.skill_attribute localize=true}}
         </select>

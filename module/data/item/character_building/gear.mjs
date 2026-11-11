@@ -40,7 +40,7 @@ export default class LordOfTheMysteriesGear extends LordOfTheMysteriesItemBase {
     // In one of that container's hidden pockets.
     schema.hidden = new fields.BooleanField({ required: true, initial: false });
     // Magic items. Same field names as Sequences and Abilities, so the character sheet already lists
-    // what these grant in the Abilities and Actions tabs (see NESTED_FIELDS in player-character-sheet.mjs).
+    // what these grant in the Abilities and Actions tabs (see NESTED_FIELDS in sheets/actor/sections.mjs).
     schema.abilities_gained = new fields.ArrayField(
       new fields.DocumentUUIDField({ type: "Item", required: true })
     );

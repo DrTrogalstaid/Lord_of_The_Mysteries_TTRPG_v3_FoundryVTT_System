@@ -1,0 +1,3 @@
+{{!-- Lines of lang text, one paragraph each (Sanity losses, promotion steps). lines: [{ key, data }]; a value that is
+      already HTML (a rolled number) is passed as safeHTML(...) from helpers/render.mjs. --}}
+{{#each lines as |line|}}<p>{{lotmLang line.key line.data}}</p>{{/each}}

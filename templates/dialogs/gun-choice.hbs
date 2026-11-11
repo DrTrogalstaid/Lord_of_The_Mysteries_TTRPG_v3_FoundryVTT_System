@@ -1,0 +1,11 @@
+{{!-- Pick barrels to fire, or the chamber to rotate to (helpers/firearms.mjs chooseBarrels / rotateCylinder).
+      choices: [{ value, checked, label, name, special, empty }]: "Barrel 1: Silver bullet ✦", or an empty chamber. --}}
+<p>{{intro}}</p>
+<div class="lotm-gun-choices">
+  {{#each choices as |choice|}}
+    <label class="lotm-gun-choice">
+      <input type="{{../inputType}}" name="{{../inputName}}" value="{{choice.value}}" {{#if choice.checked}}checked{{/if}}>
+      {{choice.label}}: {{#if choice.empty}}<em>{{choice.name}}</em>{{else}}{{choice.name}}{{#if choice.special}} ✦{{/if}}{{/if}}
+    </label>
+  {{/each}}
+</div>

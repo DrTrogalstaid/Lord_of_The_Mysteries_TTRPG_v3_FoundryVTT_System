@@ -36,6 +36,7 @@
  */
 
 import { statusChat } from "./status-checks.mjs";
+import { formatHTML } from "../helpers/render.mjs";
 
 /** The journal in the LOTM Rules compendium that has one page per status. */
 export const STATUS_JOURNAL = "Compendium.lotm.rules_compendium.JournalEntry.xVlBNlTOMkhLtx6h";
@@ -79,7 +80,7 @@ export default class StatusRule {
     this.roll = config.roll ?? null;
     /** A modifier on rolls made against a creature with this status: { modifier, kinds, label }, or null. */
     this.targetRoll = config.targetRoll ?? null;
-    /** A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks), or null. */
+    /** A note on the creature's own rolls: { key, kinds, skill } (skill: only that skill's checks, by key), or null. */
     this.note = config.note ?? null;
     /** A note on rolls made against a creature with this status: { key, kinds }, or null. */
     this.targetNote = config.targetNote ?? null;
@@ -167,13 +168,14 @@ export default class StatusRule {
    * A note in the creature's own roll dialog and on its chat card (Deaf on a Listen check), or null.
    * @param {Actor} actor
    * @param {ActiveEffect} effect
-   * @param {{kind: string, skillUuid?: string}} context
+   * @param {{kind: string, skillKey?: string, skillUuid?: string}} context
+   *   The note's skill is a skill key ("listening"); a UUID there still works.
    * @returns {string|null}  HTML (escaped).
    */
-  rollNote(actor, effect, { kind, skillUuid = null }) {
+  rollNote(actor, effect, { kind, skillKey = null, skillUuid = null }) {
     const note = this.note;
     if (!note || !StatusRule.coversKind(note, kind)) return null;
-    if (note.skill && note.skill !== skillUuid) return null;
+    if (note.skill && note.skill !== skillKey && note.skill !== skillUuid) return null;
     return this.text(note.key, actor, effect);
   }
 
@@ -282,17 +284,16 @@ export default class StatusRule {
 
   /**
    * A language string with {name} (the creature) and {source} (who the effect is about, or "its source") filled in,
-   * both escaped, ready to put in chat HTML.
+   * ready to put in chat HTML: every value is escaped (formatHTML, helpers/render.mjs).
    * @param {string} key
    * @param {Actor} actor
    * @param {ActiveEffect} [effect]
-   * @param {object} [extra]   More values for the string.
-   * @returns {string}
+   * @param {object} [extra]   More values for the string. One that's already HTML goes in as langHTML / safeHTML.
+   * @returns {string}  HTML
    */
   text(key, actor, effect = null, extra = {}) {
-    const escape = Handlebars.escapeExpression;
     const source = effect?.sourceActor?.name ?? game.i18n.localize("LORD_OF_THE_MYSTERIES.Status.TheSource");
-    return game.i18n.format(key, { name: escape(actor?.name ?? ""), source: escape(source), ...extra });
+    return formatHTML(key, { name: actor?.name ?? "", source, ...extra });
   }
 
 

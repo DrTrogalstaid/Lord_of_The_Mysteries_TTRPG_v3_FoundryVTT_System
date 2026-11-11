@@ -412,6 +412,34 @@
   opacity: 0.7;
 }
 
+/* Skill Roll Bonuses and Category Bonuses (effects/skill-bonuses.mjs) */
+.lotm-effect-config .lotm-grant-row .lotm-category-icon {
+  flex: 0 0 24px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.lotm-effect-config .lotm-grant-row .lotm-change-type {
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-right: 2px;
+}
+
+.lotm-effect-config .lotm-category-add {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.lotm-effect-config .lotm-category-add select {
+  flex: 1;
+}
+
+.lotm-effect-config .lotm-category-add button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 /* -------------------------------------------------------------------- */
 /* Chat: Apply buttons on attack cards, and "X applies Y to Z"           */
 /* effects/effect-application.mjs                                        */

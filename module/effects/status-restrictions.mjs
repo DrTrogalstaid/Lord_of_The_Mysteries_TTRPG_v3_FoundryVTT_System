@@ -20,6 +20,7 @@
 
 import { statusRule, withImpliedStatuses } from "./status-effects.mjs";
 import { statusChat } from "./status-checks.mjs";
+import { renderTemplateSync } from "../helpers/render.mjs";
 
 /**
  * Why the actor's statuses stop it using this action or spell right now. Each status at most once.
@@ -54,12 +55,11 @@ export async function confirmStatusRestrictions(actor, item) {
   const found = statusRestrictions(actor, item);
   if (!found.length) return { proceed: true, note: "" };
 
-  const escape = Handlebars.escapeExpression;
-  const list = found.map((entry) => `<li>${escape(entry.reason)}</li>`).join("");
   const choice = await foundry.applications.api.DialogV2.wait({
     window: { title: game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Restrictions.Title", { name: item.name }) },
-    content: `<p>${game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Restrictions.Intro", { name: escape(actor.name), item: escape(item.name) })}</p>
-      <ul class="lotm-restriction-list">${list}</ul>`,
+    content: renderTemplateSync("systems/lotm/templates/dialogs/status-restrictions.hbs", {
+      actorName: actor.name, itemName: item.name, reasons: found.map((entry) => entry.reason),
+    }),
     buttons: [
       { action: "use", label: "LORD_OF_THE_MYSTERIES.Status.Restrictions.UseAnyway", icon: "fa-solid fa-triangle-exclamation" },
       { action: "cancel", label: "LORD_OF_THE_MYSTERIES.Status.Restrictions.Cancel", icon: "fa-solid fa-xmark", default: true },
@@ -69,11 +69,11 @@ export async function confirmStatusRestrictions(actor, item) {
   });
   if (choice !== "use") return { proceed: false, note: "" };
 
-  const statuses = found.map((entry) => escape(entry.name)).join(", ");
   return {
     proceed: true,
-    note: `<div class="lotm chat-used-despite"><i class="fa-solid fa-triangle-exclamation"></i> `
-      + `${game.i18n.format("LORD_OF_THE_MYSTERIES.Status.Restrictions.UsedDespite", { statuses })}</div>`,
+    note: renderTemplateSync("systems/lotm/templates/chat/used-despite.hbs", {
+      statuses: found.map((entry) => entry.name).join(", "),
+    }),
   };
 }
 
@@ -88,5 +88,5 @@ export async function confirmStatusRestrictions(actor, item) {
  */
 export async function postUsedDespite(actor, item, note) {
   if (!note) return;
-  await statusChat(actor, `<strong>${Handlebars.escapeExpression(item.name)}</strong> ${note}`, { isPublic: true });
+  await statusChat(actor, renderTemplateSync("systems/lotm/templates/chat/item-note.hbs", { name: item.name, note }), { isPublic: true });
 }

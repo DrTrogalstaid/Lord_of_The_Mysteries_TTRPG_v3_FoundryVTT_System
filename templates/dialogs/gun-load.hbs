@@ -1,0 +1,27 @@
+{{!-- The Load dialog: which ammo, how many, and (for an empty chamber) straight into the chamber
+      (helpers/firearms.mjs chooseLoad). --}}
+<div class="form-group">
+  <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.PickAmmo"}}</label>
+  <div class="form-fields">
+    <select name="ammo">
+      {{#each boxes as |box|}}
+        <option value="{{box.id}}">{{box.name}}{{#if box.special}} ✦{{/if}} ({{localize "LORD_OF_THE_MYSTERIES.Firearm.Rounds" n=box.rounds}})</option>
+      {{/each}}
+    </select>
+  </div>
+</div>
+{{#if hasAmount}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.LoadAmount"}}</label>
+    <div class="form-fields"><input type="number" name="count" value="{{start}}" min="1" max="{{most}}" step="1"></div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.LoadAmountHint" n=most}}</p>
+  </div>
+{{/if}}
+{{#if canLoadChamber}}
+  <div class="form-group">
+    <label>{{localize "LORD_OF_THE_MYSTERIES.Firearm.LoadChamber"}}</label>
+    <div class="form-fields"><input type="checkbox" name="intoChamber" {{#if chamberOnly}}checked disabled{{/if}}></div>
+    <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Firearm.LoadChamberHint"}}</p>
+  </div>
+{{/if}}
+<p class="hint">{{localize orderHint}}</p>

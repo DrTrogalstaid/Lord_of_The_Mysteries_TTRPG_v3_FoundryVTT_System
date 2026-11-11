@@ -12,7 +12,7 @@
  *
  *   @Check[wil|15]                 an attribute check against DC 15: str agi wil phy cha ins luc edu, or their names
  *                                  (Strength, Will, Willpower, Constitution, Physique, Dexterity, Luck, ...)
- *   @Check[Listening|30]           a skill check, by the skill's name in the Skills compendium (or a world skill)
+ *   @Check[Listening|30]           a skill check, by the skill's name (any capitals) or its key ("listening")
  *   @Check[phy|dc=15]{Hold on}     "DC 15" and "dc=15" work too; {label} is the button's text and the check's reason
  *   @Check[Medicine]               no DC
  *
@@ -46,6 +46,8 @@
  */
 
 import { parseSanityLoss } from "./sanity.mjs";
+import { paragraphsHTML } from "./render.mjs";
+import { langSection } from "./lang.mjs";
 
 /** Other words the translation uses for the attributes, all lower case. */
 const ATTRIBUTE_ALIASES = {
@@ -143,7 +145,7 @@ export function parseCheckLink(inner, attributeNames = {}) {
 /*  Foundry from here on                         */
 /* -------------------------------------------- */
 
-const L = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Enrichers.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Enrichers.${key}`));
+const enricherText = langSection("LORD_OF_THE_MYSTERIES.Enrichers");
 
 
 /** @Sanity[...]{label} or @Sanity[...]{label}: match[1] is what's in the brackets, match[2] the label. */
@@ -213,7 +215,7 @@ function button(kind, icon, text, data, options) {
   }
   const actor = actorOf(options?.relativeTo);
   if (actor) link.dataset.actorUuid = actor.uuid;
-  link.dataset.tooltip = L(HINTS[kind] ?? "CheckHint");
+  link.dataset.tooltip = enricherText(HINTS[kind] ?? "CheckHint");
   const i = document.createElement("i");
   i.className = icon;
   link.append(i, ` ${text}`);
@@ -226,7 +228,7 @@ function enrichSanity(match, options) {
   const { success, failure, penalty } = parseSanityLink(match[1]);
   const label = match[2]?.trim() ?? "";
   const loss = `${success}/${failure}${penalty ? ` ${penalty > 0 ? "+" : ""}${penalty}` : ""}`;
-  const text = label ? `${label} (${loss})` : L("Sanity", { loss });
+  const text = label ? `${label} (${loss})` : enricherText("Sanity", { loss });
   return button("sanity", "fa-solid fa-brain", text, { success, failure, penalty, reason: label }, options);
 }
 
@@ -238,7 +240,7 @@ function enrichCheck(match, options) {
   const { attribute, skill, dc } = parseCheckLink(match[1], names);
   const label = match[2]?.trim() ?? "";
   const name = attribute ? names[attribute] : (skill ?? "");
-  const text = label || (dc !== null ? L("CheckDC", { name, dc }) : L("Check", { name }));
+  const text = label || (dc !== null ? enricherText("CheckDC", { name, dc }) : enricherText("Check", { name }));
   return button("check", "fa-solid fa-dice-d20", text, { attribute, skill, dc, reason: label }, options);
 }
 
@@ -302,7 +304,7 @@ async function enrichEffect(match, options) {
   const label = match[2]?.trim() ?? "";
   const found = await findLinkedEffect({ uuid, status });
   const name = found?.name ?? label ?? "";
-  const text = label || (found ? L("Effect", { name }) : L("EffectMissing"));
+  const text = label || (found ? enricherText("Effect", { name }) : enricherText("EffectMissing"));
   const link = button("effect", "fa-solid fa-person-rays", text, {
     uuid: found?.uuid ?? uuid, status: found?.statusId ?? status, effectName: name,
   }, options);
@@ -324,7 +326,7 @@ export function addTableEffectButtons(message, html) {
   for (const anchor of html.querySelectorAll('a.content-link[data-type="ActiveEffect"][data-uuid]')) {
     if (anchor.nextElementSibling?.dataset?.lotmEnricher === "effect") continue;
     const name = anchor.textContent.trim();
-    const link = button("effect", "fa-solid fa-person-rays", L("Effect", { name }), {
+    const link = button("effect", "fa-solid fa-person-rays", enricherText("Effect", { name }), {
       uuid: anchor.dataset.uuid, effectName: name,
     }, { relativeTo: message });
     anchor.after(" ", link);
@@ -370,7 +372,7 @@ async function onEnricherClick(event) {
 
   const actors = actorsFor(link);
   if (!actors.length) {
-    ui.notifications.warn(L("NoActor"));
+    ui.notifications.warn(enricherText("NoActor"));
     return;
   }
   const fast = event.shiftKey;
@@ -409,7 +411,7 @@ async function onEnricherClick(event) {
 async function applyEffectLink(link, actors) {
   const found = await findLinkedEffect({ uuid: link.dataset.uuid ?? null, status: link.dataset.status ?? null });
   if (!found) {
-    ui.notifications.warn(L("EffectGone", { name: link.dataset.effectName ?? "" }));
+    ui.notifications.warn(enricherText("EffectGone", { name: link.dataset.effectName ?? "" }));
     return;
   }
 
@@ -418,10 +420,11 @@ async function applyEffectLink(link, actors) {
   const applied = new Set(message?.getFlag("lotm", "effectsApplied") ?? []);
   const repeats = actors.filter((actor) => applied.has(appliedEffectKey(actor.uuid, found)));
   if (repeats.length) {
-    const escape = (text) => Handlebars.escapeExpression(text ?? "");
     const again = await foundry.applications.api.DialogV2.confirm({
-      window: { title: L("EffectAgainTitle") },
-      content: `<p>${L("EffectAgain", { effect: escape(found.name), names: repeats.map((actor) => escape(actor.name)).join(", ") })}</p>`,
+      window: { title: enricherText("EffectAgainTitle") },
+      content: paragraphsHTML({ key: "LORD_OF_THE_MYSTERIES.Enrichers.EffectAgain", data: {
+        effect: found.name, names: repeats.map((actor) => actor.name).join(", "),
+      } }),
       rejectClose: false,
     });
     if (!again) return;
@@ -433,7 +436,7 @@ async function applyEffectLink(link, actors) {
     let created = false;
     if (found.rule) {
       if (actor.statuses?.has?.(found.statusId)) {
-        ui.notifications.info(L("EffectAlready", { name: actor.name, effect: found.name }));
+        ui.notifications.info(enricherText("EffectAlready", { name: actor.name, effect: found.name }));
         continue;
       }
       created = await createEffectsOn(actor, [found.rule.toEffectData()]);
@@ -454,7 +457,7 @@ async function applyEffectLink(link, actors) {
 
 /**
  * Roll a @Check button for one actor: an attribute check, or a skill check at the actor's level in that skill
- * (with related-skill raises and Sequence raises, the same as the sheet).
+ * (with related-skill raises, Sequence and effect raises, and the skill's effect bonuses, the same as the sheet).
  * @param {Actor} actor
  * @param {{attribute?: string, skill?: string, dc: number|null, reason: string, fast: boolean}} check
  */
@@ -464,38 +467,22 @@ async function rollCheckLink(actor, { attribute, skill, dc, reason, fast }) {
     return AttributeCheckDialog.prompt(actor, attribute, { dc, reason, fast });
   }
 
-  const skillItem = await skillByName(skill);
-  if (!skillItem) {
-    ui.notifications.warn(L("UnknownSkill", { name: skill ?? "" }));
+  const [{ skillInfoByName }, { default: SkillCheckDialog }] = await Promise.all([
+    import("./skill-registry.mjs"), import("../apps/skill-check-dialog.mjs"),
+  ]);
+  const info = skillInfoByName(skill);
+  const record = info ? actor.system?.skillFor?.(info.key) : null;
+  if (!record) {
+    ui.notifications.warn(enricherText("UnknownSkill", { name: skill ?? "" }));
     return null;
   }
-  const [{ findSkillEntry }, { effectiveSkillLevel }, { default: SkillCheckDialog }] = await Promise.all([
-    import("./action-roll.mjs"), import("./skill-levels.mjs"), import("../apps/skill-check-dialog.mjs"),
-  ]);
-  const { uuid, category } = findSkillEntry(actor, skillItem, skillItem.uuid);
-  const level = await effectiveSkillLevel(actor, uuid);
   return SkillCheckDialog.prompt(actor, {
-    uuid,
-    name: skillItem.name,
-    category,
-    attribute: skillItem.system.skill_attribute || category,
-    level,
-    flatModifier: skillItem.system.modifier ?? 0,
+    key: record.key,
+    uuid: record.uuid,
+    name: record.name,
+    category: record.attribute,
+    attribute: record.attribute,
+    level: record.effectiveLevel,
+    flatModifier: record.flatModifier ?? 0,
   }, { fast, dc });
-}
-
-
-/**
- * A skill Item by name (any capitals): the Skills compendium's first, then a world skill.
- * @param {string} name
- * @returns {Promise<Item|null>}
- */
-async function skillByName(name) {
-  const lower = String(name ?? "").trim().toLowerCase();
-  if (!lower) return null;
-  const pack = game.packs.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
-  const index = await pack?.getIndex();
-  const entry = index?.find((row) => row.name?.toLowerCase() === lower);
-  if (entry?.uuid) return fromUuid(entry.uuid).catch(() => null);
-  return game.items.find((item) => item.type === "skill" && item.name.toLowerCase() === lower) ?? null;
 }

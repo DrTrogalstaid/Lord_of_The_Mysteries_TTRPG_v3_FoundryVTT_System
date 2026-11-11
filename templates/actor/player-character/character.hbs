@@ -1,18 +1,18 @@
 <section class="tab character-tab {{tab.cssClass}}" data-group="sheet" data-tab="character">
 
   <div class="attributes-box">
-    <div class="box-title">Attributes</div>
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Character.Attributes"}}</div>
     <div class="attributes-grid">
       {{#each attributesList}}
       <div class="attribute-cell">
         <div class="attribute-label ">{{localize this.label}}</div>
         <a class="attribute-total modifier rollable-number" data-action="rollAttribute" data-attribute="{{this.key}}">{{this.total}}</a>
         <div class="attribute-breakdown">
-          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="Base" />
+          <input type="number" name="system.attributes.{{this.key}}.base" value="{{this.base}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeBase'}}" />
           <span>+</span>
-          <input type="number" value="{{this.sequence_bonus}}" title="Sequence Bonus" readonly tabindex="-1" />
+          <input type="number" value="{{this.sequence_bonus}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeSequence'}}" readonly tabindex="-1" />
           <span>+</span>
-          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="Corruption" />
+          <input type="number" name="system.attributes.{{this.key}}.corruption" value="{{this.corruption}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Character.AttributeCorruption'}}" />
           {{!-- Education growth from learned skills (base-actor.mjs). Read-only; hover for the count. --}}
           {{#if this.isEducation}}
           <span>+</span>
@@ -26,11 +26,10 @@
   </div>
 
   <div class="skills-box">
-    <span class="collapse-toggle" title="Collapse (not yet wired up)"></span>
-    <div class="box-title">Languages</div>
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Character.Languages"}}</div>
     <div class="languages-columns">
     <div class="language-common-column">
-      <label>Common Languages:</label>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Character.CommonLanguages"}}:</label>
       <ul class="language-list">
         {{#each system.languages.common as |row|}}
         <li class="language-row">
@@ -50,7 +49,7 @@
       </button>
     </div>
     <div class="language-mystical-column">
-      <label>Mystical Languages:</label>
+      <label>{{localize "LORD_OF_THE_MYSTERIES.Character.MysticalLanguages"}}:</label>
       <ul class="language-list">
         {{#each system.languages.mystical as |row|}}
         <li class="language-row">
@@ -99,6 +98,7 @@
               {{#each section.skills as |entry|}}
               <li class="skill-row granted-skill-row"
                   data-granted-id="{{entry.id}}"
+                  data-skill-key="{{entry.key}}"
                   data-skill-uuid="{{entry.uuid}}"
                   data-skill-name="{{entry.name}}"
                   data-category="{{entry.attribute}}"
@@ -106,7 +106,7 @@
                   data-level="{{entry.level}}"
                   data-flat-modifier="0">
                 <img class="skill-icon" src="icons/svg/book.svg" alt="{{entry.name}}" />
-                <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+                <a class="modifier rollable-number{{#if entry.bonus}} has-skill-bonus{{/if}}" data-action="rollSkill" data-tooltip="{{entry.rollTooltip}}">
                   {{numberFormat entry.modifier decimals=0 sign=true}}
                 </a>
                 <span class="skill-name">{{entry.name}}</span>
@@ -152,8 +152,8 @@
           {{/with}}
 
           {{else}}
+          {{!-- {{#with}} skips an empty list, so the "No ... skills" line is its {{else}}. --}}
           {{#with (lookup @root.skillsByCategory tab.id) as |categorySkills|}}
-            {{#if categorySkills.length}}
             {{#if (and (eq tab.id "edu") @root.analyzeAbility)}}
             {{!-- Labels the Education rows' analysis boxes; same layout as the ability tabs' header. --}}
             <div class="granted-skills-header">
@@ -164,8 +164,9 @@
             </div>
             {{/if}}
             <ul class="skill-list">
-              {{#each categorySkills as |entry index|}}
+              {{#each categorySkills as |entry|}}
               <li class="skill-row"
+                  data-skill-key="{{entry.key}}"
                   data-skill-uuid="{{entry.uuid}}"
                   data-skill-name="{{entry.name}}"
                   data-category="{{tab.id}}"
@@ -175,12 +176,12 @@
                   data-teachers="{{entry.teachers}}"
                   data-flat-modifier="{{entry.flatModifier}}">
                 <img class="skill-icon" src="{{entry.img}}" alt="{{entry.name}}" />
-                <a class="modifier rollable-number" data-action="rollSkill" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillCheck.RollTooltip'}}">
+                <a class="modifier rollable-number{{#if entry.hasBonus}} has-skill-bonus{{/if}}" data-action="rollSkill" data-tooltip="{{entry.rollTooltip}}">
                   {{numberFormat entry.modifier decimals=0 sign=true}}
                 </a>
                 <span class="skill-name">{{entry.name}}</span>
-                <input type="hidden" name="system.skills.{{tab.id}}.{{index}}.skill" value="{{entry.uuid}}" />
-                <select class="skill-level-select" name="system.skills.{{tab.id}}.{{index}}.level">
+                {{!-- No `name`: the dropdown saves only this skill (data-skill-field, base-actor-sheet.mjs). --}}
+                <select class="skill-level-select" data-skill-field="level" {{#unless @root.editable}}disabled{{/unless}}>
                   {{selectOptions @root.skillLevelOptions selected=entry.level localize=true}}
                 </select>
                 {{!-- Raised by a related skill: the level it's rolled at, with the reason on hover.
@@ -213,14 +214,12 @@
                 {{/if}}
                 {{!-- Analyze (Extraordinary Knowledge). Education skills keep their count here,
                       on the skill; other skills' analyses go to a copy in the ability's tab.
-                      The analysis input stays in the form either way so a submit can't reset it. --}}
+                      No `name`: the box saves only this skill (data-skill-field, base-actor-sheet.mjs). --}}
                 {{#if (and (eq tab.id "edu") @root.analyzeAbility)}}
                 <span class="granted-analysis">
-                  <input type="number" min="0" step="1" name="system.skills.{{tab.id}}.{{index}}.analysis" value="{{entry.analysis}}"
-                         data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AnalysisHint'}}" />
+                  <input type="number" min="0" step="1" data-skill-field="analysis" value="{{entry.analysis}}"
+                         data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.GrantedSkills.AnalysisHint'}}" {{#unless @root.editable}}disabled{{/unless}} />
                 </span>
-                {{else}}
-                <input type="hidden" name="system.skills.{{tab.id}}.{{index}}.analysis" value="{{entry.analysis}}" />
                 {{/if}}
                 {{#if (and @root.editable @root.analyzeAbility)}}
                 <a class="analyze-control" data-action="analyzeSkill" data-ability-id="{{@root.analyzeAbility.id}}"
@@ -231,14 +230,34 @@
               </li>
               {{/each}}
             </ul>
-            {{else}}
-            <p class="placeholder-note">No {{localize tab.label}} skills found in the compendium.</p>
-            {{/if}}
+          {{else}}
+            <p class="placeholder-note">{{localize "LORD_OF_THE_MYSTERIES.Character.NoSkills" tab=(localize tab.label)}}</p>
           {{/with}}
           {{/if}}
         </div>
         {{/each}}
       </div>
+
+      {{!-- Saved skills whose Item can't be found any more (deleted, or from a compendium that isn't installed).
+            Their level and analyses are still saved; remove them here if they're not coming back. --}}
+      {{#if missingSkills.length}}
+      <div class="missing-skills">
+        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.SkillKeys.MissingHint"}}</p>
+        <ul class="skill-list">
+          {{#each missingSkills as |missing|}}
+          <li class="skill-row missing-skill-row" data-skill-key="{{missing.key}}" data-tooltip="{{missing.uuid}}">
+            <img class="skill-icon" src="icons/svg/hazard.svg" alt="" />
+            <span class="skill-name">{{missing.name}}</span>
+            <span class="missing-skill-level">{{missing.levelLabel}}</span>
+            {{#if @root.editable}}
+            <a class="granted-control" data-action="deleteSkill" data-skill-key="{{missing.key}}"
+               data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.SkillKeys.RemoveMissing'}}"><i class="fa-solid fa-trash"></i></a>
+            {{/if}}
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
     </div>
 
   </div>
@@ -247,12 +266,7 @@
         study controls as the tab rows above (granted-skill-entry.hbs). Still a drop section, so skills dropped here
         are added like anywhere else on the sheet. --}}
   <div class="drop-section granted-skills-box" data-drop-zone="skills">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-      {{/if}}
-    </header>
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.skills"}}
 
     {{#if sections.skills.length}}
       <ol class="drop-section-list">

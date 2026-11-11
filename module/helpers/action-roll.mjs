@@ -2,12 +2,13 @@ import SkillCheckDialog from "../apps/skill-check-dialog.mjs";
 import ActionRollDialog from "../apps/action-roll-dialog.mjs";
 import LOTM_VTTRoll from "../dice/lotm-roll.mjs";
 import { calculateSkillModifier } from "./skill-modifiers.mjs";
-import { effectiveSkillLevel } from "./skill-levels.mjs";
 import { computeSkillCheckTotal, signedTerm } from "./skill-check-formula.mjs";
+import { skillInfo, skillInfoByName } from "./skill-registry.mjs";
 import { fireGun, gunFor, prepareShot } from "./firearms.mjs";
 import { postRoll } from "./message-modes.mjs";
 import { confirmStatusRestrictions } from "../effects/status-restrictions.mjs";
 import { applyEffectFromMessage, effectButtonsHTML } from "../effects/effect-application.mjs";
+import { renderTemplateSync } from "./render.mjs";
 import { bigSuccessDamage, reduceHit, splitBigSuccess } from "./damage-math.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
 
@@ -33,58 +34,24 @@ import { recordActionUse } from "../effects/action-expiry.mjs";
 /*  Skill lookup                                 */
 /* -------------------------------------------- */
 
-/**
- * Find the character's record of a skill: which category it's stored under and its level.
- * A skill dropped on gear may be the compendium copy or a world copy of the one on the character,
- * so it matches either. A skill the character has never touched is untrained, filed under the same
- * category a drop on the sheet would use (see PlayerCharacterSheet #dropSkill).
- * (Moved here from PlayerCharacterSheet._findSkillEntry so hotbar macros can use it too.)
- * @param {Actor} actor
- * @param {Item} skill
- * @param {string} skillUuid
- * @returns {{uuid: string, category: string, level: string}}
- */
-export function findSkillEntry(actor, skill, skillUuid) {
-  const ids = [skillUuid, skill.uuid, skill._stats?.compendiumSource].filter(Boolean);
-  for (const [category, entries] of Object.entries(actor.system.skills ?? {})) {
-    const entry = (entries ?? []).find((e) => ids.includes(e.skill));
-    if (entry) return { uuid: entry.skill, category, level: entry.level };
-  }
-  const folders = CONFIG.LORD_OF_THE_MYSTERIES.skillCompendiumFolders ?? {};
-  // (system.category used to be checked first here, but those are related-skill categories like "fighting",
-  // never a tab, and the field is now system.categories.)
-  const category = [skill.system.skill_attribute].find((key) => key && key in folders)
-    ?? skill.system.skill_attribute;
-  return { uuid: skillUuid, category, level: "untrained" };
-}
-
-/** The skill a spell rolls with when its Skill slot is empty, looked up by name if the configured UUID is gone. */
+/** The skill a spell rolls with when its Skill slot is empty, looked up by name if its key isn't found. */
 const SPELL_SKILL_NAME = "Occultism";
 
-/** The default spell skill's UUID once it's been found (a promise, so lookups at the same moment share one). */
-let spellSkillLookup = null;
+/** Warned once that there's no Occultism skill. */
+let warnedNoSpellSkill = false;
 
 /**
- * The skill spells roll with when their Skill slot is empty: CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid
- * (Occultism in the Skills compendium). If that UUID doesn't lead to a skill (the compendium's Occultism was
- * replaced, so it has a new id), the Skills compendium is searched for a skill named Occultism instead.
+ * The skill spells roll with when their Skill slot is empty: the skill with the key
+ * CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey (Occultism), or one named Occultism.
  * @returns {Promise<string>}  The skill's UUID, or "" when there's no Occultism skill at all.
  */
-export function defaultSpellSkillUuid() {
-  spellSkillLookup ??= (async () => {
-    const configured = CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid;
-    const found = configured ? await fromUuid(configured).catch(() => null) : null;
-    if (found?.type === "skill") return configured;
-
-    const pack = game.packs?.get(CONFIG.LORD_OF_THE_MYSTERIES.skillsCompendiumId);
-    const index = await pack?.getIndex();
-    const entry = index?.find((e) => e.name?.toLowerCase() === SPELL_SKILL_NAME.toLowerCase());
-    if (!entry) {
-      console.warn(`Lord of the Mysteries | No "${SPELL_SKILL_NAME}" skill found, so spells without a skill can't roll with it.`);
-    }
-    return entry?.uuid ?? "";
-  })();
-  return spellSkillLookup;
+export async function defaultSpellSkillUuid() {
+  const info = skillInfo(CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey) ?? skillInfoByName(SPELL_SKILL_NAME);
+  if (!info && !warnedNoSpellSkill) {
+    warnedNoSpellSkill = true;
+    console.warn(`Lord of the Mysteries | No "${SPELL_SKILL_NAME}" skill found, so spells without a skill can't roll with it.`);
+  }
+  return info?.uuid ?? "";
 }
 
 /**
@@ -100,31 +67,32 @@ export async function rollSkillUuid(item) {
 }
 
 /**
- * Everything SkillCheckDialog needs to know about the skill an action rolls with.
+ * Everything SkillCheckDialog needs to know about the skill an action rolls with: the character's record of it
+ * (data/actor/base-actor.mjs skillFor), with its level, total and bonuses already worked out.
  * Used both to roll the action and to show its "+5" on the sheet, so the two always agree.
  * @param {Actor} actor
  * @param {Item} action
- * @returns {Promise<{skill: Item, uuid: string, category: string, level: string, attribute: string, flatModifier: number}|null>}
+ * @returns {Promise<{record: object, key: string, uuid: string, name: string, category: string, level: string,
+ *                    attribute: string, flatModifier: number}|null>}
  *   null when the action has no skill, or its skill no longer exists.
  */
 async function resolveActionSkill(actor, action) {
   const skillUuid = await rollSkillUuid(action);
   if (!skillUuid) return null;
 
-  const skill = await fromUuid(skillUuid).catch(() => null);
-  if (!skill) return null;
-
-  const { uuid, category } = findSkillEntry(actor, skill, skillUuid);
-  // The level it's rolled at: the character's own, or higher if a related skill raises it
-  // (Advanced Sword makes Melee Trained) or it has a starting level (Dodge). Same as the Character tab shows.
-  const level = await effectiveSkillLevel(actor, uuid);
+  const record = actor?.system?.skillFor?.(skillUuid) ?? null;
+  if (!record || record.isBroken) return null;
   return {
-    skill,
-    uuid,
-    category,
-    level,
-    attribute: skill.system.skill_attribute || category,
-    flatModifier: skill.system.modifier ?? 0,
+    record,
+    key: record.key,
+    uuid: record.uuid || skillUuid,
+    name: record.name,
+    category: record.attribute,
+    // The level it's rolled at: the character's own, or higher if a Sequence, an effect or a related skill raises it
+    // (Advanced Sword makes Melee Trained), or it has a starting level (Dodge). Same as the Character tab shows.
+    level: record.effectiveLevel,
+    attribute: record.attribute,
+    flatModifier: record.flatModifier ?? 0,
   };
 }
 
@@ -154,7 +122,8 @@ export function getAttackFormula(action) {
 /**
  * What the sheet's attack button shows for an action: the skill name and the bonus added to the dice.
  * The bonus is worked out exactly like the total in SkillCheckDialog before the player adds anything:
- *   attribute total + skill level bonus + the skill's own modifier + the action's Modifiers field
+ *   attribute total + skill level bonus + the skill's own modifier + the skill's bonuses from effects
+ *   + the action's Modifiers field
  * An action with no skill but its own Attack Roll Macro gets a plain "Roll" button instead
  * (see getUnskilledAttackSummary).
  * @param {Actor} actor
@@ -169,9 +138,12 @@ export async function getActionAttackSummary(actor, action) {
   const info = await resolveActionSkill(actor, action);
   if (!info) return null;
 
-  // The action's Modifiers field goes in as one modifier, the same way the dialog adds it.
+  // The action's Modifiers field goes in as one modifier, the same way the dialog adds it, and so do the skill's
+  // bonuses from effects (the dialog lists each one; here they're added together).
   const actionModifier = Number(action.system.modifiers) || 0;
   const modifiers = actionModifier ? [{ id: "action", label: action.name, value: actionModifier }] : [];
+  const skillBonus = Number(info.record.bonusTotal) || 0;
+  if (skillBonus) modifiers.push({ id: "skillBonus", label: info.name, value: skillBonus });
 
   const bonus = computeSkillCheckTotal({
     attrTotal: actor.system.attributes[info.attribute]?.total ?? 0,
@@ -183,7 +155,7 @@ export async function getActionAttackSummary(actor, action) {
   // "+5", "+0" or "-2"
   const bonusLabel = bonus < 0 ? `${bonus}` : `+${bonus}`;
   return {
-    label: info.skill.name,
+    label: info.name,
     bonus,
     bonusLabel,
     // Hover text, e.g. "1d20 + 5"
@@ -308,8 +280,9 @@ async function rollAttackDice(actor, action, { fast = false, note = "", isSpirit
   }
 
   return SkillCheckDialog.prompt(actor, {
+    key: info.key,
     uuid: info.uuid,
-    name: info.skill.name,
+    name: info.name,
     category: info.category,
     attribute: info.attribute,
     level: info.level,
@@ -586,7 +559,7 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
   // How much of it is each damage type (see damageByType).
   let parts = damageByType(roll, defaultType);
   let amount = roll.total;
-  let note = "";
+  let bigSuccessNote = null;
   if (bigSuccess) {
     // Below the minimum: each type is raised (splitBigSuccess), so damage reduction and resistance still see each type.
     const maximums = await maximumByType(formula, rollData, defaultType);
@@ -597,27 +570,28 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
       amount = result.minimum;
     }
     const key = result.isRaised ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessRaised" : "LORD_OF_THE_MYSTERIES.Action.BigSuccessKept";
-    note = `<div class="lotm chat-big-success"><i class="fa-solid fa-star"></i> ${game.i18n.format(key, { rolled: roll.total, minimum: result.minimum })}</div>`;
+    bigSuccessNote = { key, rolled: roll.total, minimum: result.minimum };
   }
 
   // The types' names for the title ("Shoot: Damage (Fire, Cold)").
   const typeNames = parts.map((part) => part.label).filter(Boolean);
-  const typeText = typeNames.length ? ` (${Handlebars.escapeExpression(typeNames.join(", "))})` : "";
-  const flavorKey = !title
-    ? "LORD_OF_THE_MYSTERIES.Action.PlainDamageFlavor"
-    : (bigSuccess ? "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor" : "LORD_OF_THE_MYSTERIES.Action.DamageFlavor");
-  const flavor = game.i18n.format(flavorKey, { action: Handlebars.escapeExpression(title), type: typeText });
-  // More than one type: "5 Fire · 3 Cold" under the title.
+  let flavorKey = "LORD_OF_THE_MYSTERIES.Action.DamageFlavor";
+  if (!title) flavorKey = "LORD_OF_THE_MYSTERIES.Action.PlainDamageFlavor";
+  else if (bigSuccess) flavorKey = "LORD_OF_THE_MYSTERIES.Action.BigSuccessFlavor";
   const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
-  const breakdown = parts.length > 1
-    ? `<div class="lotm chat-damage-types">${parts.map((part) =>
-        `<span class="chat-damage-type" data-damage-type="${Handlebars.escapeExpression(part.type)}">${part.amount} ${Handlebars.escapeExpression(part.label || untyped)}</span>`
-      ).join(" · ")}</div>`
-    : "";
+  const flavor = renderTemplateSync("systems/lotm/templates/chat/damage-roll.hbs", {
+    flavorKey,
+    title,
+    typeText: typeNames.length ? ` (${typeNames.join(", ")})` : "",
+    // More than one type: "5 Fire · 3 Cold" under the title.
+    parts: parts.length > 1 ? parts.map((part) => ({ type: part.type, amount: part.amount, label: part.label || untyped })) : null,
+    bigSuccess: bigSuccessNote,
+    amount,
+  });
 
   return postRoll(roll, {
     speaker: ChatMessage.getSpeaker(actor ? { actor } : {}),
-    flavor: flavor + breakdown + note + applyButtonsHTML(amount),
+    flavor,
     flags: { lotm: { ...flags, ...(actor ? { actorUuid: actor.uuid } : {}), damage: {
       amount,
       bigSuccess,
@@ -637,28 +611,7 @@ async function postDamageRoll(roll, { actor = null, title = "", defaultType = ""
  * @returns {string}
  */
 export function damageButtonHTML() {
-  const damage = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.RollDamage");
-  const big = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccess");
-  const bigHint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.BigSuccessHint"));
-  return `<div class="lotm-damage-buttons">
-    <button type="button" class="lotm-roll-damage" data-lotm-action="damage">${damage}</button>
-    <button type="button" class="lotm-roll-damage big-success" data-lotm-action="bigSuccess" data-tooltip="${bigHint}">${big}</button>
-  </div>`;
-}
-
-/**
- * HTML for the buttons under a damage roll: apply it to the selected tokens as damage, or as healing.
- * @param {number} amount
- * @returns {string}
- */
-function applyButtonsHTML(amount) {
-  const hint = Handlebars.escapeExpression(game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.ApplyHint"));
-  const damage = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyDamage", { amount });
-  const heal = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.ApplyHeal", { amount });
-  return `<div class="lotm-apply-buttons">
-    <button type="button" class="lotm-apply" data-lotm-apply="damage" data-tooltip="${hint}"><i class="fa-solid fa-heart-crack"></i> ${damage}</button>
-    <button type="button" class="lotm-apply" data-lotm-apply="heal" data-tooltip="${hint}"><i class="fa-solid fa-heart"></i> ${heal}</button>
-  </div>`;
+  return renderTemplateSync("systems/lotm/templates/chat/damage-buttons.hbs");
 }
 
 /**
@@ -781,41 +734,18 @@ export async function applyDamageFromMessage(message, kind, { ignoreReduction = 
  * @returns {Promise<ChatMessage>}
  */
 async function postDamageTaken(token, result, source, { ignoreReduction = false } = {}) {
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Action.DamageTaken.${key}`);
-  const escape = Handlebars.escapeExpression;
   const untyped = game.i18n.localize("LORD_OF_THE_MYSTERIES.Action.Untyped");
   const minus = (n) => (n ? `−${n}` : "0");
-
-  const rows = result.parts.map((part) => `
-      <tr data-damage-type="${escape(part.type)}">
-        <td>${escape(part.label || untyped)}</td>
-        <td>${part.amount}</td>
-        <td>${minus(part.reduction)}</td>
-        <td><strong>${part.taken}</strong></td>
-      </tr>`).join("");
-  // With more than one type, a total row at the bottom.
-  const totals = result.parts.length > 1 ? `
-      <tr class="chat-damage-total">
-        <td>${localize("Total")}</td>
-        <td>${result.incoming}</td>
-        <td>${minus(result.reduced)}</td>
-        <td><strong>${result.total}</strong></td>
-      </tr>` : "";
-
-  const title = game.i18n.format("LORD_OF_THE_MYSTERIES.Action.DamageTaken.Title", {
-    name: escape(token.name), amount: result.total,
+  const content = renderTemplateSync("systems/lotm/templates/chat/damage-taken.hbs", {
+    name: token.name,
+    total: result.total,
+    parts: result.parts.map((part) => ({
+      type: part.type, label: part.label || untyped, amount: part.amount, reduced: minus(part.reduction), taken: part.taken,
+    })),
+    // With more than one type, a total row at the bottom.
+    totals: result.parts.length > 1 ? { incoming: result.incoming, reduced: minus(result.reduced), total: result.total } : null,
+    ignoreReduction,
   });
-  const content = `<div class="lotm chat-damage-taken">
-    <p class="chat-damage-title">${title}</p>
-    <table class="chat-damage-table">
-      <thead><tr>
-        <th>${localize("Type")}</th><th>${localize("Incoming")}</th><th>${localize("Reduced")}</th><th>${localize("Taken")}</th>
-      </tr></thead>
-      <tbody>${rows}${totals}
-      </tbody>
-    </table>
-    ${ignoreReduction ? `<p class="chat-damage-ignored">${localize("Ignored")}</p>` : ""}
-  </div>`;
 
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ token: token.document, actor: token.actor }),

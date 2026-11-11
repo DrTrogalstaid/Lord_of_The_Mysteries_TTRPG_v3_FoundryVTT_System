@@ -1,0 +1,6 @@
+{{!-- Before an action or spell is used while a status stops it (effects/status-restrictions.mjs): what stops it.
+      The dialog's buttons are Use Anyway and Cancel. --}}
+<p>{{lotmLang "LORD_OF_THE_MYSTERIES.Status.Restrictions.Intro" name=actorName item=itemName}}</p>
+<ul class="lotm-restriction-list">
+  {{#each reasons as |reason|}}<li>{{reason}}</li>{{/each}}
+</ul>

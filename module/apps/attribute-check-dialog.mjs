@@ -1,6 +1,7 @@
 import LotmRollDialog, { ROLL_DIALOG_PARTIALS } from "./roll-dialog.mjs";
 import { signedTerm } from "../helpers/skill-check-formula.mjs";
 import { spiritualIntuitionRows } from "../helpers/check-bonuses.mjs";
+import { formatHTML } from "../helpers/render.mjs";
 
 /**
  * AttributeCheckDialog
@@ -123,10 +124,8 @@ export default class AttributeCheckDialog extends LotmRollDialog {
 
   /** "Physique Check", "Bloodbath: Physique Check", or "Spiritual Intuition (Inspiration)". @override */
   _flavor() {
-    const check = this.isSpiritualIntuition
-      ? game.i18n.format("LORD_OF_THE_MYSTERIES.SpiritualIntuition.Flavor", { attribute: this.attributeName })
-      : game.i18n.format("LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor", { attribute: this.attributeName });
-    return this.reason ? `${Handlebars.escapeExpression(this.reason)}: ${check}` : check;
+    const key = this.isSpiritualIntuition ? "LORD_OF_THE_MYSTERIES.SpiritualIntuition.Flavor" : "LORD_OF_THE_MYSTERIES.AttributeCheck.Flavor";
+    return LotmRollDialog.withReason(this.reason, formatHTML(key, { attribute: this.attributeName }));
   }
 
   /** @override */

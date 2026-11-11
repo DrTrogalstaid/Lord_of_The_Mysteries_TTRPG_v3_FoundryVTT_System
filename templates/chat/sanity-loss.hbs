@@ -1,0 +1,7 @@
+{{!-- A rolled Sanity loss (helpers/sanity.mjs rollSanityLoss): "Shoot: Sanity Lost (Failure)", what it took, and notes
+      (Big Failure, mental solidification). losses: the HTML of sanityLossHTML. --}}
+{{lotmLang "LORD_OF_THE_MYSTERIES.Sanity.LossFlavor" title=title result=result}}
+<div class="lotm chat-sanity">
+  {{lotmHTML losses}}
+  {{#each notes as |note|}}<p class="hint">{{lotmLang note}}</p>{{/each}}
+</div>

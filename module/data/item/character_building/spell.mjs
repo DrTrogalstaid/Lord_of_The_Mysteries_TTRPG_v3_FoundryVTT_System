@@ -4,7 +4,7 @@ import { rollActionAttack, rollActionDamage } from "../../../helpers/action-roll
 /**
  * A spell. It rolls the same way an action does (helpers/action-roll.mjs), with the same roll fields and names:
  * skill, attackRollMacro, modifiers, damageRollMacro, damageType. The one difference: a spell with no skill set
- * rolls with Occultism (CONFIG.LORD_OF_THE_MYSTERIES.spellSkillUuid).
+ * rolls with Occultism (the skill with the key CONFIG.LORD_OF_THE_MYSTERIES.spellSkillKey).
  */
 export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase {
 
@@ -34,7 +34,8 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     // The skill it rolls with (UUID of a skill Item). Blank = Occultism. Set by dropping a skill on the spell
     // sheet's Skill slot (helpers/skill-slot.mjs).
     schema.skill = new fields.StringField({ required: true, blank: true, initial: "" });
-    // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). This used to be "attack".
+    // Dice rolled for the attack before the skill bonuses are added (blank = 1d20). Saved as "attack" on older
+    // spells; migrateData below moves it here.
     schema.attackRollMacro = new fields.StringField({ required: false, blank: true });
     // Which defense the attack roll goes against (same as an action's). Blank = no hit check.
     schema.defenseTarget = new fields.StringField({
@@ -53,19 +54,14 @@ export default class LordOfTheMysteriesSpell extends LordOfTheMysteriesItemBase 
     schema.damageRollMacro = new fields.StringField({ required: false, blank: true });
     // The damage type of every part of the damage formula that doesn't name its own.
     schema.damageType = new fields.StringField({ required: false, blank: true, initial: "" });
-    //DC_Results
-    //TODO: Make an array?? Mayebe, but it could also be a markdown table. Or the sheet would process the array into a markdown table??
+    // What each result against the DC does, as free text (the sheet's DC Results box). For results drawn
+    // automatically, use the success / failure tables above.
     schema.dcResults = new fields.StringField({ required: false, initial: "Results" });
 
+    // What the spell gains at higher Sequences: one line of text each (the sheet's Sequence Upgrades list).
     schema.higherSequenceUpgrades = new fields.ArrayField(
       new fields.StringField({ required: false, initial: "na" }),
     );
-
-    schema.spellMacro = new fields.StringField({ required: false, initial: "na" });
-    //Active effects?
-    //TODO: How do I do this? Is this another object that needs created? Is this the same as a spell macro??
-    //TODO: When a spell active effect is on a player, can I add actions to their actions tab? If so, that might be really nice.
-    schema.activeEffectMacro = new fields.StringField({ required: false, initial: "na" });
 
     /**
      * Exampled of spells for reference

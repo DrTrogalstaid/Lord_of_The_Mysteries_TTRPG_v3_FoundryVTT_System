@@ -1,0 +1,5 @@
+{{!-- How a check came out, after its title (apps/roll-dialog.mjs resultHTML): " DC 15: Success", Big Success / Big
+      Failure, and the GM's note when tokens were targeted but the action has no Defense Targeted to check. --}}
+{{#if result}} <span class="roll-dc-result {{#if result.success}}success{{else}}failure{{/if}}">{{lotmLang result.key result.data}}</span>{{/if}}
+{{#if natural}}<div class="lotm roll-natural {{natural.css}}"><i class="fa-solid {{natural.icon}}"></i> {{lotmLang natural.label}}</div>{{/if}}
+{{#if noDefenseFor}}<p class="lotm-gm-only hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Attack.NoDefenseTarget" name=noDefenseFor}}</p>{{/if}}

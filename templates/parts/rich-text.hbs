@@ -1,0 +1,14 @@
+{{!-- A rich text field: an editor while the sheet can be edited, otherwise the text as it shows (enriched).
+      {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description
+          enriched=enrichedDescription}}
+      name      the field it saves to
+      value     the field's saved text
+      enriched  the text with links and rolls worked out (the sheet's _enrich / enrichHTML)
+      class     optional CSS class for the editor --}}
+{{#if editable}}
+<prose-mirror{{#if class}} class="{{class}}"{{/if}} name="{{name}}" button="true" editable="{{editable}}" toggled="false" value="{{value}}">
+  {{{enriched}}}
+</prose-mirror>
+{{else}}
+{{{enriched}}}
+{{/if}}

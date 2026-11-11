@@ -55,21 +55,6 @@
   position: relative;
 }
 
-.lotm.sheet.actor .collapse-toggle {
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 14px;
-  height: 14px;
-  line-height: 12px;
-  text-align: center;
-  border: 1px solid var(--psx-border);
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
 /* Tabs: hidden unless active. Applies to both the "sheet" group (Character/Biography)
    and the nested "skills" group (Strength/Charisma/Agility/Perception). */
 .lotm.sheet.actor .tab {
@@ -161,11 +146,6 @@
   font-weight: normal;
   font-style: italic;
   opacity: 0.7;
-}
-
-.lotm.sheet.actor .sequence-title-input {
-  width: 180px;
-  margin-right: 8px;
 }
 
 .lotm.sheet.actor .basic-info-row {
@@ -415,12 +395,6 @@
   line-height: 1.4;
 }
 
-.lotm.sheet.actor .empty-note {
-  color: var(--psx-text-dim);
-  font-size: 11px;
-  font-style: italic;
-}
-
 /* -------------------------------------------------------------------- */
 /* Page tab nav ("Character Info" box header)                          */
 /* -------------------------------------------------------------------- */
@@ -567,16 +541,6 @@
 .lotm.sheet.actor .skill-tab.active {
   color: var(--psx-text);
   border-color: #888;
-}
-
-.lotm.sheet.actor .skill-tab-icon {
-  border: 1px solid currentColor;
-  border-radius: 2px;
-  width: 12px;
-  height: 12px;
-  line-height: 10px;
-  text-align: center;
-  font-size: 10px;
 }
 
 .lotm.sheet.actor .skills-content {
@@ -864,4 +828,34 @@
 
 .lotm.sheet.actor .damage-resistance-only-box {
   margin-top: 4px;
+}
+
+/* A skill whose number includes a bonus from an Active Effect (hover the number to see which). */
+.lotm.sheet.actor .skill-row .modifier.has-skill-bonus,
+.lotm.sheet.actor .granted-skill-entry .modifier.has-skill-bonus {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* Saved skills whose Item can't be found any more (player sheet, under the skill tabs). */
+.lotm.sheet.actor .missing-skills {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--psx-border, currentColor);
+}
+
+.lotm.sheet.actor .missing-skills .hint {
+  margin: 0 0 2px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.lotm.sheet.actor .missing-skill-row .skill-name {
+  flex: 1;
+  font-style: italic;
+}
+
+.lotm.sheet.actor .missing-skill-row .missing-skill-level {
+  opacity: 0.8;
+  margin-right: 6px;
 }

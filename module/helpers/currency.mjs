@@ -16,6 +16,8 @@
  *   (Game Settings > Configure Settings > System), stated as "how many of its main coin buy one gold pound".
  */
 
+import { renderTemplateSync } from "./render.mjs";
+
 const SYSTEM = "lotm";
 const L = "LORD_OF_THE_MYSTERIES.Currency";
 
@@ -265,32 +267,43 @@ export function parseMoney(text, key = BASE_CURRENCY) {
   // "£3" -> "3 £", so every coin name comes after its number.
   rest = rest.replace(/£\s*(\d+(?:\.\d+)?)/g, "$1 £");
 
-  // Swap each coin name for a placeholder, longest names first, so "s" can't eat the "s" in "soli".
-  const aliases = currency.units
-    .flatMap((unit, index) => unit.aliases.map((alias) => ({ alias, index })))
-    .sort((a, b) => b.alias.length - a.alias.length);
-  for (const { alias, index } of aliases) {
-    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Letter aliases must stand alone ("d" but not the "d" in "bad"); "£" can touch anything.
-    const pattern = /^[a-z]/.test(alias)
-      ? new RegExp(`(?<![a-z])${escaped}(?![a-z'’])`, "g")
-      : new RegExp(escaped, "g");
-    rest = rest.replace(pattern, ` \u0001${index}\u0001 `);
-  }
-
+  // Read "number [coin name]" pairs until the text is used up. A number with no coin name is the main coin.
+  const names = coinNames(currency);
   let total = 0;
-  let read = false;
-  const token = /(\d+(?:\.\d+)?)\s*(?:\u0001(\d+)\u0001)?/g;
-  rest = rest.replace(token, (match, number, unitIndex) => {
-    const unit = currency.units[unitIndex === undefined ? 0 : Number(unitIndex)];
-    total += Number(number) * unit.size;
-    read = true;
-    return " ";
-  });
+  while ((rest = rest.trimStart())) {
+    const number = rest.match(/^\d+(?:\.\d+)?/)?.[0];
+    // Anything else here (a coin name with no number, a word we don't know) means the text wasn't understood.
+    if (!number) return null;
+    rest = rest.slice(number.length).trimStart();
 
-  // Anything left (a coin name with no number, a word we don't know) means the text wasn't understood.
-  if (!read || rest.replace(/\s+/g, "") !== "") return null;
+    const coin = names.find(({ name }) => startsWithCoinName(rest, name));
+    if (coin) rest = rest.slice(coin.name.length);
+    total += Number(number) * (coin?.unit ?? currency.units[0]).size;
+  }
   return Math.round(total);
+}
+
+/**
+ * Every name a currency's coins go by, longest first, so "soli" is tried before "s".
+ * @param {object} currency   A CURRENCIES entry.
+ * @returns {{name: string, unit: object}[]}
+ */
+function coinNames(currency) {
+  return currency.units
+    .flatMap((unit) => unit.aliases.map((name) => ({ name, unit })))
+    .sort((a, b) => b.name.length - a.name.length);
+}
+
+/**
+ * Whether text starts with a coin name. A name made of letters must end there: "s" is a coin in "3s" or "3 s 6d",
+ * but not the start of "sword" or "s'"; "£" can touch anything.
+ * @param {string} text
+ * @param {string} name
+ * @returns {boolean}
+ */
+function startsWithCoinName(text, name) {
+  if (!text.startsWith(name)) return false;
+  return !/^[a-z]/.test(name) || !/^[a-z'’]/.test(text.slice(name.length));
 }
 
 
@@ -367,12 +380,15 @@ export function buildMoneyView(actor) {
 /*  Receive / Pay / Move / Exchange             */
 /* -------------------------------------------- */
 
-const escape = (text) => Handlebars.escapeExpression(text);
-
-/** <option> list. */
-function options(entries, selected) {
-  return entries.map(([value, label]) =>
-    `<option value="${escape(value)}"${value === selected ? " selected" : ""}>${escape(label)}</option>`).join("");
+/**
+ * A dropdown field for the money dialog (templates/dialogs/money.hbs).
+ * @param {string} label      Lang key.
+ * @param {string} name       Form field name.
+ * @param {[string, string][]} entries   [value, label] pairs.
+ * @param {string} selected
+ */
+function selectField(label, name, entries, selected) {
+  return { label, name, options: entries.map(([value, text]) => ({ value, label: text, selected: value === selected })) };
 }
 
 /** "£1 = 20 verl d'or = 5.5 gold hoorn · Exchange fee 2%" for the dialog. */
@@ -407,25 +423,24 @@ export async function openMoneyDialog(actor, mode) {
   const local = localCurrency();
   const otherCurrency = Object.keys(CURRENCIES).find((key) => key !== local) ?? local;
 
-  const field = (label, html) => `<div class="form-group"><label>${localize(label)}</label><div class="form-fields">${html}</div></div>`;
-  const select = (name, entries, selected) => `<select name="${name}">${options(entries, selected)}</select>`;
-
-  const rows = [];
-  if (mode === "pay" || mode === "move") rows.push(field(`${M}.From`, select("from", places, firstPlace)));
-  if (mode === "exchange") rows.push(field(`${M}.Where`, select("from", places, firstPlace)));
-  if (mode === "receive") rows.push(field(`${M}.To`, select("to", places, firstPlace)));
-  if (mode === "move") rows.push(field(`${M}.To`, select("to", places, STORED)));
-  rows.push(field(mode === "exchange" ? `${M}.ExchangeFrom` : `${M}.Currency`, select("currency", currencyOptions, local)));
-  rows.push(field(`${M}.Amount`, `<input type="text" name="amount" placeholder="${escape(localize(`${M}.AmountPlaceholder`))}" autofocus>`));
-  if (mode === "exchange") rows.push(field(`${M}.ExchangeTo`, select("toCurrency", currencyOptions, otherCurrency)));
-  rows.push(field(`${M}.Note`, `<input type="text" name="note" placeholder="${escape(localize(`${M}.NotePlaceholder`))}">`));
-  if (mode === "exchange") rows.push(`<p class="hint">${escape(ratesLine())}</p>`);
-  rows.push(`<p class="hint">${escape(localize(`${M}.AmountHint`))}</p>`);
+  const fields = [];
+  if (mode === "pay" || mode === "move") fields.push(selectField(`${M}.From`, "from", places, firstPlace));
+  if (mode === "exchange") fields.push(selectField(`${M}.Where`, "from", places, firstPlace));
+  if (mode === "receive") fields.push(selectField(`${M}.To`, "to", places, firstPlace));
+  if (mode === "move") fields.push(selectField(`${M}.To`, "to", places, STORED));
+  fields.push(selectField(mode === "exchange" ? `${M}.ExchangeFrom` : `${M}.Currency`, "currency", currencyOptions, local));
+  fields.push({ label: `${M}.Amount`, name: "amount", placeholder: `${M}.AmountPlaceholder`, autofocus: true });
+  if (mode === "exchange") fields.push(selectField(`${M}.ExchangeTo`, "toCurrency", currencyOptions, otherCurrency));
+  fields.push({ label: `${M}.Note`, name: "note", placeholder: `${M}.NotePlaceholder` });
+  const content = renderTemplateSync("systems/lotm/templates/dialogs/money.hbs", {
+    fields,
+    rates: mode === "exchange" ? ratesLine() : "",
+  });
 
   const data = await foundry.applications.api.DialogV2.prompt({
     window: { title: localize(`${M}.Modes.${mode}`) },
     classes: ["lotm", "money-dialog"],
-    content: rows.join(""),
+    content,
     ok: {
       label: localize(`${M}.Modes.${mode}`),
       callback: (event, button) => new foundry.applications.ux.FormDataExtended(button.form).object,
@@ -523,6 +538,6 @@ export async function runTransaction(actor, mode, data) {
   const note = String(data.note ?? "").trim();
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<p class="lotm-money-log"><i class="fa-solid fa-coins"></i> ${escape(message)}${note ? `<br><em>${escape(note)}</em>` : ""}</p>`,
+    content: renderTemplateSync("systems/lotm/templates/chat/money-log.hbs", { text: message, note }),
   });
 }

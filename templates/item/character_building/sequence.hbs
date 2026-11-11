@@ -1,25 +1,13 @@
-<!--TODO: Change this to a sheet that can be filled out based on Sequence's data model data -->
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
 
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
-      {{#if editable}}
-        <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-          {{{enrichedDescription}}}
-        </prose-mirror>
-      {{else}}
-        {{{enrichedDescription}}}
-      {{/if}}
+      {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
 
     </div>
 
@@ -28,35 +16,29 @@
 
       <!--Sequence Number (sequence number - overrides lower sequences on actor sheets)-->
       <div class="sequenceNumber flexrow">
-        <label>Sequence Number</label>
+        <label>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SequenceNumber"}}</label>
         <input type="number" name="system.sequence_number" value="{{system.sequence_number}}" data-dtype="Number"/>
       </div>
 
       <!--Digestion Amount-->
       <div class="digestionAmount flexrow">
-        <label>Digestion Amount</label>
+        <label>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DigestionAmount"}}</label>
         <input type="number" name="system.digestionAmount" value="{{system.digestionAmount}}" data-dtype="Number"/>
       </div>
 
       <!--Acting Principals (string GM secret)-->
       <fieldset class="actingPrincipals flexrow">
-        <legend>Acting Principals</legend>
-        {{#if editable}}
-          <prose-mirror name="system.acting_principals" button="true" editable="{{editable}}" toggled="false" value="{{system.acting_principals}}">
-            {{{enrichedActingPrincipals}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedActingPrincipals}}}
-        {{/if}}
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.ActingPrinciples"}}</legend>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.acting_principals" value=system.acting_principals enriched=enrichedActingPrincipals}}
       </fieldset>
 
       <!--Attribute Gain (list of attribute increases)-->
       <fieldset class="attribute-gain">
-        <legend>Attribute Gain</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.AttributeGain"}}</legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Attribute</div>
-            <div class="item-prop">Value</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Attribute"}}</div>
+            <div class="item-prop">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Value"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each attributeGain as |row|}}
@@ -70,7 +52,7 @@
               <input type="number" name="system.attribute_gain.{{row.index}}.value" value="{{row.value}}" data-dtype="Number"/>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteAttributeGain" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteAttributeGain" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
@@ -78,17 +60,17 @@
           {{/each}}
         </ol>
         <a class="item-control add-row" data-action="addAttributeGain">
-          <i class="fas fa-plus"></i> Add Attribute
+          <i class="fas fa-plus"></i> {{localize "LORD_OF_THE_MYSTERIES.ItemSheet.AddAttribute"}}
         </a>
       </fieldset>
 
       <!--Skill Increase -->
       <fieldset class="skill-increase" data-drop-zone="skill_increase">
-        <legend>Skill Increase</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SkillIncrease"}}</legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Skill</div>
-            <div class="item-prop">Value</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Skill"}}</div>
+            <div class="item-prop">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Value"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each skillIncrease as |row|}}
@@ -102,14 +84,14 @@
               <input type="hidden" name="system.skill_increase.{{row.index}}.skill_uuid" value="{{row.uuid}}"/>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteSkillIncrease" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteSkillIncrease" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
           {{#unless skillIncrease.length}}
-          <li class="item flexrow drop-hint">Drag a Skill</li>
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DragSkill"}}</li>
           {{/unless}}
         </ol>
       </fieldset>
@@ -120,7 +102,7 @@
         <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Learning.TrainingBonus.Hint"}}</p>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Skill</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Skill"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each trainingBonus as |row|}}
@@ -131,7 +113,7 @@
             </div>
             <div class="item-controls">
               {{#if @root.editable}}
-              <a class="item-control" data-action="deleteTrainingBonus" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteTrainingBonus" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
               {{/if}}
@@ -139,17 +121,17 @@
           </li>
           {{/each}}
           {{#unless trainingBonus.length}}
-          <li class="item flexrow drop-hint">Drag a Skill</li>
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DragSkill"}}</li>
           {{/unless}}
         </ol>
       </fieldset>
 
       <!--Abilities Gained -->
       <fieldset class="abilities-gained" data-drop-zone="abilities_gained">
-        <legend>Abilities Gained</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.AbilitiesGained"}}</legend>
         <ol class="items-list">
           <li class="items-header flexrow">
-            <div class="item-name">Ability</div>
+            <div class="item-name">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Ability"}}</div>
             <div class="item-controls"></div>
           </li>
           {{#each abilitiesGained as |row|}}
@@ -159,14 +141,14 @@
               <h4>{{row.name}}</h4>
             </div>
             <div class="item-controls">
-              <a class="item-control" data-action="deleteAbilityGained" data-index="{{row.index}}" title="Delete">
+              <a class="item-control" data-action="deleteAbilityGained" data-index="{{row.index}}" title="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.Delete'}}">
                 <i class="fas fa-trash"></i>
               </a>
             </div>
           </li>
           {{/each}}
           {{#unless abilitiesGained.length}}
-          <li class="item flexrow drop-hint">Drag an Ability</li>
+          <li class="item flexrow drop-hint">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DragAbility"}}</li>
           {{/unless}}
         </ol>
       </fieldset>

@@ -7,30 +7,20 @@
         zone="abilities" label="LORD_OF_THE_MYSTERIES.Drop.Sections.abilities"
         entries=sections.abilities remove="deleteAbility" add="addAbility"}}
 
-  zone     Key matching DROP_SECTIONS in player-character-sheet.mjs (read back from data-drop-zone on drop).
+  zone     Key matching DROP_SECTIONS in sheets/actor/sections.mjs (read back from data-drop-zone on drop).
   label    Localization key for the title.
   entries  Array from context.sections.<zone>.
   remove   data-action for the delete button (owned entries only).
   add      Optional data-action for the "+" button.
 
-  Action entries (entry.isAction) get extra fields (buildEntry / #addActionButtons in player-character-sheet.mjs):
+  Action entries (entry.isAction) get extra fields (buildEntry / addActionButtons in sheets/actor/sections.mjs):
     entry.attack   { label, bonusLabel, tooltip }  the attack button ("Pistol +5"). Empty = no skill set.
     entry.damage   { tooltip }                     the damage button. Empty = no damage formula.
     entry.hasRolls                                 true when there's at least one of the two buttons.
     entry.rangeLabel                               the Range stat ("30 ft", blank when unset).
 --}}
 <div class="drop-section" data-drop-zone="{{zone}}">
-  <header class="drop-section-header">
-    <h3 class="drop-section-title">{{localize label}}</h3>
-    {{#if editable}}
-      <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Drop.Hint"}}</span>
-      {{#if add}}
-        <button type="button" class="drop-section-add" data-action="{{add}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.Add" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Add'}}">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      {{/if}}
-    {{/if}}
-  </header>
+  {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label=label add=add}}
 
   {{#if entries.length}}
     <ol class="drop-section-list">

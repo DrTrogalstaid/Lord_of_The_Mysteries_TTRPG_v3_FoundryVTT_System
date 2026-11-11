@@ -16,6 +16,10 @@
 
 import { checkSucceeds, totalWithLuck } from "./check-results.mjs";
 import { luckBurnsOn } from "./luck.mjs";
+import { formatHTML } from "./render.mjs";
+import { langSection } from "./lang.mjs";
+
+const outcomeText = langSection("LORD_OF_THE_MYSTERIES.Outcome");
 
 
 /**
@@ -49,10 +53,9 @@ export function currentResult(message) {
  * @returns {Promise<ChatMessage|null>}  The outcome's message, or null when nothing was drawn.
  */
 export async function rollOutcome(message) {
-  const L = (key, data) => (data ? game.i18n.format(`LORD_OF_THE_MYSTERIES.Outcome.${key}`, data) : game.i18n.localize(`LORD_OF_THE_MYSTERIES.Outcome.${key}`));
   if (!canRollOutcome(message)) return null;
   if (message.getFlag("lotm", "outcomeRolled")) {
-    ui.notifications.warn(L("AlreadyRolled"));
+    ui.notifications.warn(outcomeText("AlreadyRolled"));
     return null;
   }
 
@@ -61,12 +64,12 @@ export async function rollOutcome(message) {
   const resultLabel = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${success ? "Success" : "Failure"}`);
   const uuid = success ? check.tables.success : check.tables.failure;
   if (!uuid) {
-    ui.notifications.info(L("NoTable", { result: resultLabel }));
+    ui.notifications.info(outcomeText("NoTable", { result: resultLabel }));
     return null;
   }
   const table = await fromUuid(uuid).catch(() => null);
   if (table?.documentName !== "RollTable") {
-    ui.notifications.warn(L("TableGone"));
+    ui.notifications.warn(outcomeText("TableGone"));
     return null;
   }
 
@@ -80,9 +83,7 @@ export async function rollOutcome(message) {
     roll: draw.roll,
     messageData: {
       speaker: ChatMessage.getSpeaker({ actor }),
-      flavor: L("Flavor", {
-        title: Handlebars.escapeExpression(check.title ?? ""), result: resultLabel, table: Handlebars.escapeExpression(table.name),
-      }),
+      flavor: formatHTML("LORD_OF_THE_MYSTERIES.Outcome.Flavor", { title: check.title ?? "", result: resultLabel, table: table.name }),
       // Seen by the same people as the roll.
       whisper: [...(message.whisper ?? [])],
       blind: !!message.blind,

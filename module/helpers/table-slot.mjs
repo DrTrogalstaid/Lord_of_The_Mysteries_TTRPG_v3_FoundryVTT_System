@@ -6,6 +6,8 @@
  * slot to set it (it replaces any table already there), click its name to open it, the trash can to clear it.
  */
 
+import { bindDropZone, takeDrop } from "./listeners.mjs";
+
 /** The two slots: the field each saves to, and its label. */
 export const TABLE_SLOTS = {
   successTable: "LORD_OF_THE_MYSTERIES.OutcomeTables.Success",
@@ -44,29 +46,16 @@ export async function prepareTableSlots(item) {
 export function bindTableSlots(sheet) {
   if (!sheet.isEditable) return;
   for (const zone of sheet.element.querySelectorAll("[data-table-slot]")) {
-    zone.addEventListener("dragover", (event) => {
-      event.preventDefault();               // without this the browser never fires "drop"
-      zone.classList.add("drag-over");
-    });
-    zone.addEventListener("dragleave", (event) => {
-      if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-    });
-    zone.addEventListener("drop", (event) => onDropTable(event, sheet, zone));
+    bindDropZone(zone, (event) => onDropTable(event, sheet, zone));
   }
 }
 
 
 /** A Roll Table was dropped on a slot: save it there. */
 async function onDropTable(event, sheet, zone) {
-  event.preventDefault();
-  event.stopPropagation();                  // don't let the sheet's own drop handling see it too
-  zone.classList.remove("drag-over");
-
+  const { data, doc } = await takeDrop(event);
   const field = zone.dataset.tableSlot;
-  if (!(field in TABLE_SLOTS)) return;
-  const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
-  if (!data?.uuid) return;
-  const doc = await fromUuid(data.uuid).catch(() => null);
+  if (!(field in TABLE_SLOTS) || !data?.uuid) return;
   if (doc?.documentName !== "RollTable") {
     ui.notifications.warn(game.i18n.format("LORD_OF_THE_MYSTERIES.OutcomeTables.NotATable", { name: doc?.name ?? data.type ?? "" }));
     return;

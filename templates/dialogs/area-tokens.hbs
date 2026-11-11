@@ -1,0 +1,12 @@
+{{!-- Which tokens inside an area get the effect (effects/effect-areas.mjs chooseTokens). All are ticked but the
+      caster's. tokens: [{ uuid, img, name, isCaster }] --}}
+<p>{{localize "LORD_OF_THE_MYSTERIES.Effects.Area.ChooseIntro"}}</p>
+<div class="lotm-area-tokens">
+  {{#each tokens as |token|}}
+    <label class="lotm-area-token">
+      <input type="checkbox" name="token" value="{{token.uuid}}" {{#unless token.isCaster}}checked{{/unless}}>
+      <img src="{{token.img}}" alt="" width="28" height="28">
+      <span>{{token.name}}{{#if token.isCaster}} <em>({{localize "LORD_OF_THE_MYSTERIES.Effects.Area.You"}})</em>{{/if}}</span>
+    </label>
+  {{/each}}
+</div>

@@ -1,0 +1,7 @@
+node_modules/
+
+# Compendium database files Foundry rewrites every time a world opens: a lock while it's open, and logs. Foundry
+# makes new ones when they're missing. The compendiums' data (*.ldb, *.log, CURRENT, MANIFEST-*) stays in git.
+packs/*/LOCK
+packs/*/LOG
+packs/*/LOG.old

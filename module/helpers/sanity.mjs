@@ -18,6 +18,7 @@
  */
 
 import { sanityCheckSucceeds, totalWithLuck } from "./check-results.mjs";
+import { paragraphsHTML, renderTemplateSync, safeHTML } from "./render.mjs";
 
 /** Losing this much Sanity at once makes a creature Semi-Out-of-Control. */
 export const SEMI_OUT_OF_CONTROL_LOSS = 3;
@@ -66,10 +67,10 @@ export function lossAfterSolidification(loss, isSolidified = false) {
  * @returns {string}  HTML.
  */
 export function rolledValueHTML(roll, value = roll?.total) {
-  const shown = Number(value) || 0;
-  if (!roll?.dice?.length) return `<strong class="lotm-rolled">${shown}</strong>`;
-  const escape = (text) => String(text ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  return `<strong class="lotm-rolled" data-tooltip="${escape(`${roll.formula}: ${roll.result}`)}">${shown}</strong>`;
+  return renderTemplateSync("systems/lotm/templates/chat/rolled-value.hbs", {
+    value: Number(value) || 0,
+    tooltip: roll?.dice?.length ? `${roll.formula}: ${roll.result}` : "",
+  }).trim();   // it sits inside a sentence
 }
 
 
@@ -198,21 +199,6 @@ export async function applySanityLoss(actor, loss) {
 
 
 /**
- * Give Sanity back (never above the maximum).
- * @param {Actor} actor
- * @param {number} amount
- * @returns {Promise<{before: number, after: number}>}
- */
-export async function restoreSanity(actor, amount) {
-  const rp = actor.system.resources.rp;
-  const before = Number(rp.value) || 0;
-  const after = Math.min(Number(rp.max) || 0, before + Math.max(0, Number(amount) || 0));
-  if (after !== before) await actor.update({ "system.resources.rp.value": after });
-  return { before, after };
-}
-
-
-/**
  * HTML for what a sanity loss did, for a chat card: "Loses 3 Sanity: 12 → 9.", and Semi-Out-of-Control.
  * The loss has already been rolled and taken off; this only reports it.
  * @param {object} result        What applySanityLoss returned.
@@ -220,16 +206,12 @@ export async function restoreSanity(actor, amount) {
  * @returns {string}
  */
 export function sanityLossHTML(result, lossRoll = null) {
-  const lines = [game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.Loses", {
-    loss: lossRoll ? rolledValueHTML(lossRoll, result.loss) : `<strong>${Number(result.loss) || 0}</strong>`,
-    before: result.before, after: result.after,
-  })];
+  const loss = lossRoll ? rolledValueHTML(lossRoll, result.loss) : `<strong>${Number(result.loss) || 0}</strong>`;
+  const lines = [{ key: "LORD_OF_THE_MYSTERIES.Sanity.Loses", data: { loss: safeHTML(loss), before: result.before, after: result.after } }];
   if (result.semi) {
-    lines.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.SemiStarted", {
-      rounds: result.semi.rounds, tendency: Handlebars.escapeExpression(result.semi.tendency),
-    }));
+    lines.push({ key: "LORD_OF_THE_MYSTERIES.Sanity.SemiStarted", data: { rounds: result.semi.rounds, tendency: result.semi.tendency } });
   }
-  return lines.map((line) => `<p>${line}</p>`).join("");
+  return paragraphsHTML(...lines);
 }
 
 
@@ -256,24 +238,21 @@ export async function changeSanityResult(state, success) {
   if (after !== before) await actor.update({ "system.resources.rp.value": after });
 
   let semiEffectId = state.semiEffectId ?? null;
-  const lines = [game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.LuckChanged", {
-    loss: rolledValueHTML(lossRoll, newLoss), old: oldLoss, before, after,
-  })];
+  const lines = [{ key: "LORD_OF_THE_MYSTERIES.Sanity.LuckChanged",
+    data: { loss: safeHTML(rolledValueHTML(lossRoll, newLoss)), old: oldLoss, before, after } }];
   if (newLoss >= SEMI_OUT_OF_CONTROL_LOSS && oldLoss < SEMI_OUT_OF_CONTROL_LOSS) {
     const semi = await startSemiOutOfControl(actor);
     semiEffectId = semi.effect?.id ?? null;
-    lines.push(game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.SemiStarted", {
-      rounds: semi.rounds, tendency: Handlebars.escapeExpression(semi.tendency),
-    }));
+    lines.push({ key: "LORD_OF_THE_MYSTERIES.Sanity.SemiStarted", data: { rounds: semi.rounds, tendency: semi.tendency } });
   }
   else if (newLoss < SEMI_OUT_OF_CONTROL_LOSS && oldLoss >= SEMI_OUT_OF_CONTROL_LOSS && semiEffectId) {
     await actor.effects.get(semiEffectId)?.delete();
     semiEffectId = null;
-    lines.push(game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.SemiEnded"));
+    lines.push({ key: "LORD_OF_THE_MYSTERIES.Sanity.SemiEnded" });
   }
 
   return {
-    html: lines.map((line) => `<p>${line}</p>`).join(""),
+    html: paragraphsHTML(...lines),
     state: { ...state, loss: newLoss, semiEffectId },
   };
 }
@@ -334,13 +313,15 @@ export async function rollSanityLoss(message) {
   const applied = await applySanityLoss(actor, loss);
 
   const result = game.i18n.localize(`LORD_OF_THE_MYSTERIES.RollDialog.${pending.success ? "Success" : "Failure"}`);
-  const notes = [
-    pending.isBigFailure ? game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.BigFailureLoss") : "",
-    check.isSolidified ? game.i18n.localize("LORD_OF_THE_MYSTERIES.Sanity.SolidifiedNote") : "",
-  ].filter(Boolean).map((note) => `<p class="hint">${note}</p>`).join("");
-  const flavor = game.i18n.format("LORD_OF_THE_MYSTERIES.Sanity.LossFlavor", {
-    title: Handlebars.escapeExpression(check.title ?? ""), result,
-  }) + `<div class="lotm chat-sanity">${sanityLossHTML(applied, lossRoll)}${notes}</div>`;
+  const flavor = renderTemplateSync("systems/lotm/templates/chat/sanity-loss.hbs", {
+    title: check.title ?? "",
+    result,
+    losses: sanityLossHTML(applied, lossRoll),
+    notes: [
+      pending.isBigFailure ? "LORD_OF_THE_MYSTERIES.Sanity.BigFailureLoss" : "",
+      check.isSolidified ? "LORD_OF_THE_MYSTERIES.Sanity.SolidifiedNote" : "",
+    ].filter(Boolean),
+  });
 
   return postRoll(lossRoll, {
     speaker: ChatMessage.getSpeaker({ actor }),

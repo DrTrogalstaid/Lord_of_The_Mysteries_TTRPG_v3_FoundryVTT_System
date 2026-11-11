@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  BarrelFeed, CylinderFeed, GunFeed, HANDLING_DEFAULTS, HANDLING_USES, MagazineFeed, feedType, isSpecialRound, roundFromAmmo,
+  BarrelFeed, CylinderFeed, GunFeed, HANDLING_DEFAULTS, MagazineFeed, feedType, isSpecialRound, roundFromAmmo,
   sameKind,
 } from "../module/helpers/gun-feed.mjs";
 
@@ -46,15 +46,15 @@ test("GunFeed.for picks the feed by system.firearm.feed", () => {
 });
 
 test("handling: every gun reloads and unloads; magazines with a chamber also chamber, revolvers also rotate", () => {
-  assert.deepEqual(HANDLING_USES, ["reload", "chamber", "rotate", "unload"]);
   assert.deepEqual(HANDLING_DEFAULTS, { reload: "attack", chamber: "free", rotate: "quick", unload: "attack" });
   assert.deepEqual(GunFeed.for({ feed: "magazine", capacity: 5, hasChamber: true }).handlingUses, ["reload", "chamber", "unload"]);
   assert.deepEqual(GunFeed.for({ feed: "magazine", capacity: 5, hasChamber: false }).handlingUses, ["reload", "unload"]);
   assert.deepEqual(GunFeed.for({ feed: "cylinder", capacity: 6 }).handlingUses, ["reload", "rotate", "unload"]);
   assert.deepEqual(GunFeed.for({ feed: "barrels", capacity: 2 }).handlingUses, ["reload", "unload"]);
+  const buttonOrder = ["reload", "chamber", "rotate", "unload"];
   for (const feed of ["magazine", "cylinder", "barrels"]) {
     const uses = GunFeed.for({ feed, capacity: 2, hasChamber: true }).handlingUses;
-    assert.deepEqual(uses, HANDLING_USES.filter((use) => uses.includes(use)), `${feed}: in button order`);
+    assert.deepEqual(uses, buttonOrder.filter((use) => uses.includes(use)), `${feed}: in button order`);
   }
 });
 

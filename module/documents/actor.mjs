@@ -1,7 +1,8 @@
 import { prototypeTokenDefaults } from "../helpers/token-settings.mjs";
 
 /**
- * Extend the base Actor document by defining a custom roll data structure which is ideal for the Simple system.
+ * The system's Actor: a fallback portrait and the token defaults on creation, and the data model's roll data.
+ * (Data preparation is in the data models: data/actor/base-actor.mjs and its subclasses.)
  * @extends {Actor}
  */
 export class LordOfTheMysteriesActor extends Actor {
@@ -30,35 +31,6 @@ export class LordOfTheMysteriesActor extends Actor {
     // Token defaults (helpers/token-settings.mjs): Health in bar 1, the world's name / bar display settings,
     // and player characters linked to their tokens.
     this.updateSource({ prototypeToken: prototypeTokenDefaults(data.type) });
-  }
-
-  /** @override */
-  prepareData() {
-    // Prepare data for the actor. Calling the super version of this executes
-    // the following, in order: data reset (to clear active effects),
-    // prepareBaseData(), prepareEmbeddedDocuments() (including active effects),
-    // prepareDerivedData().
-    super.prepareData();
-  }
-
-  /** @override */
-  prepareBaseData() {
-    super.prepareBaseData();
-    // Data modifications in this step occur before processing embedded
-    // documents or derived data.
-  }
-
-  /**
-   * @override
-   * Augment the actor source data with additional dynamic data that isn't 
-   * handled by the actor's DataModel. Data calculated in this step should be
-   * available both inside and outside of character sheets (such as if an actor
-   * is queried and has a roll executed directly from it).
-   */
-  prepareDerivedData() {
-    super.prepareDerivedData();
-    const actorData = this;
-    const flags = actorData.flags.lotm || {};
   }
 
   /**

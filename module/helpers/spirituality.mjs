@@ -1,5 +1,7 @@
 import { confirmStatusRestrictions, postUsedDespite } from "../effects/status-restrictions.mjs";
 import { recordActionUse } from "../effects/action-expiry.mjs";
+import { promptSpend } from "../apps/spend-dialog.mjs";
+import { langHTML, renderTemplateSync } from "./render.mjs";
 
 /**
  * Spending Spirituality.
@@ -61,16 +63,16 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
   const result = { amount, before: value, after };
 
   if (chat) {
-    const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.Chat", {
-      name: Handlebars.escapeExpression(actor.name),
-      amount,
-      reason: reason
-        ? game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.ChatReason", { reason: Handlebars.escapeExpression(reason) })
-        : "",
-    });
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="lotm chat-spirituality"><i class="fa-solid fa-sparkles"></i> ${text}</div>`,
+      content: renderTemplateSync("systems/lotm/templates/chat/spirituality.hbs", {
+        key: "LORD_OF_THE_MYSTERIES.Spirituality.Chat",
+        data: {
+          name: actor.name,
+          amount,
+          reason: reason ? langHTML("LORD_OF_THE_MYSTERIES.Spirituality.ChatReason", { reason }) : "",
+        },
+      }),
     });
   }
   return result;
@@ -83,8 +85,9 @@ export async function spendSpirituality(actor, amount, { reason = "", chat = tru
  */
 export function spiritualityNote(spent) {
   if (!spent) return "";
-  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.RollNote", { amount: spent.amount });
-  return `<div class="lotm chat-spirituality"><i class="fa-solid fa-sparkles"></i> ${text}</div>`;
+  return renderTemplateSync("systems/lotm/templates/chat/spirituality.hbs", {
+    key: "LORD_OF_THE_MYSTERIES.Spirituality.RollNote", data: { amount: spent.amount },
+  });
 }
 
 /**
@@ -94,43 +97,8 @@ export function spiritualityNote(spent) {
  */
 export async function openSpendSpiritualityDialog(actor) {
   const { value, max } = currentSpirituality(actor);
-  const localize = (key) => game.i18n.localize(`LORD_OF_THE_MYSTERIES.Spirituality.${key}`);
-
-  const content = `
-    <div class="lotm spend-spirituality-dialog">
-      <p class="spend-spirituality-current">
-        ${game.i18n.format("LORD_OF_THE_MYSTERIES.Spirituality.Current", { value, max })}
-      </p>
-      <div class="form-group">
-        <label>${localize("Amount")}</label>
-        <input type="number" name="amount" value="1" min="1" max="${value}" step="1" autofocus>
-      </div>
-      <div class="form-group">
-        <label>${localize("Reason")}</label>
-        <input type="text" name="reason" placeholder="${localize("ReasonPlaceholder")}">
-      </div>
-    </div>`;
-
-  // Closing the window gives null (rejectClose: false), so nothing is spent.
-  const input = await foundry.applications.api.DialogV2.prompt({
-    window: { title: "LORD_OF_THE_MYSTERIES.Spirituality.SpendTitle", icon: "fa-solid fa-sparkles" },
-    content,
-    ok: {
-      label: "LORD_OF_THE_MYSTERIES.Spirituality.Spend",
-      icon: "fa-solid fa-sparkles",
-      callback: (event, button) => ({
-        amount: button.form.elements.amount.valueAsNumber,
-        reason: button.form.elements.reason.value.trim(),
-      }),
-    },
-    rejectClose: false,
-  });
+  const input = await promptSpend({ section: "Spirituality", icon: "fa-solid fa-sparkles", value, max });
   if (!input) return null;
-
-  if (!Number.isFinite(input.amount) || input.amount < 1) {
-    ui.notifications.warn(localize("InvalidAmount"));
-    return null;
-  }
   return spendSpirituality(actor, input.amount, { reason: input.reason });
 }
 

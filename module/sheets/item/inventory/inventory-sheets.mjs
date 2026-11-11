@@ -12,6 +12,13 @@ import {
 import { FEEDS, ammoBoxStatus, chamberRound, feedOf, firearmStatus, reloadGun, rotateCylinder, unloadGun } from "../../../helpers/firearms.mjs";
 import { GunHandling } from "../../../helpers/gun-handling.mjs";
 import { LordOfTheMysteriesItemSheetBase, ITEM_EFFECTS_PARTIAL } from "../../base-item-sheet.mjs";
+import { bindDropZone, takeDrop } from "../../../helpers/listeners.mjs";
+
+/**
+ * The Value field both sheets show: typed in gold pounds ("£3 10s", "8d", "2.5s"), saved as pennies by
+ * InventoryItemSheet._processFormData. Listed in each sheet's PARTS so it's loaded before the sheet draws.
+ */
+const VALUE_FIELD_PARTIAL = "systems/lotm/templates/item/inventory/value-field.hbs";
 
 
 /**
@@ -93,7 +100,7 @@ class InventoryItemSheet extends LordOfTheMysteriesItemSheetBase {
 
 /**
  * The lists of Items a gear Item grants. Each is a list of UUIDs on the gear's system data, and the
- * character sheet already shows them (NESTED_FIELDS in player-character-sheet.mjs).
+ * character sheet already shows them (NESTED_FIELDS in sheets/actor/sections.mjs).
  *   field  The gear system field holding the UUIDs.
  *   type   The only Item type that can be dropped on this list.
  */
@@ -136,7 +143,7 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
   static HAS_EFFECTS = true;
 
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [ITEM_EFFECTS_PARTIAL] },
+    form: { template: "systems/lotm/templates/item/inventory/gear-sheet.hbs", templates: [VALUE_FIELD_PARTIAL, ITEM_EFFECTS_PARTIAL] },
   };
 
   /** @override */
@@ -207,16 +214,9 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
     super._onRender(context, options);
     if (!this.isEditable) return;
 
-    // Each list is its own drop target. The part is redrawn on every render, so these are always fresh elements.
+    // Each list is its own drop target.
     for (const zone of this.element.querySelectorAll("[data-grant-list]")) {
-      zone.addEventListener("dragover", (event) => {
-        event.preventDefault();               // without this the browser never fires "drop"
-        zone.classList.add("drag-over");
-      });
-      zone.addEventListener("dragleave", (event) => {
-        if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-      });
-      zone.addEventListener("drop", (event) => this.#onDropGrant(event, zone));
+      bindDropZone(zone, (event) => this.#onDropGrant(event, zone));
     }
   }
 
@@ -226,14 +226,8 @@ export class LordOfTheMysteriesGearSheet extends InventoryItemSheet {
    * @param {HTMLElement} zone   The list it landed on ([data-grant-list]).
    */
   async #onDropGrant(event, zone) {
-    event.preventDefault();
-    event.stopPropagation();                  // don't let the sheet's own drop handling see it too
-    zone.classList.remove("drag-over");
-
-    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
-    if (data?.type !== "Item" || !data.uuid) return;
-    const doc = await fromUuid(data.uuid);
-    if (!doc) return;
+    const { data, doc } = await takeDrop(event);
+    if (data?.type !== "Item" || !doc) return;
 
     const list = GRANT_LISTS[zone.dataset.grantList];
     if (!list) return;
@@ -315,7 +309,7 @@ export class LordOfTheMysteriesContainerSheet extends InventoryItemSheet {
   };
 
   static PARTS = {
-    form: { template: "systems/lotm/templates/item/inventory/container-sheet.hbs" },
+    form: { template: "systems/lotm/templates/item/inventory/container-sheet.hbs", templates: [VALUE_FIELD_PARTIAL] },
   };
 
   /** @override */

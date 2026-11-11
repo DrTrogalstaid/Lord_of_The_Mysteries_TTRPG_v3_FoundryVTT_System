@@ -1,0 +1,13 @@
+{{!-- A promotion card (helpers/promotion.mjs promotionCardHTML): what was just rolled, where the promotion stands,
+      and the button for its next step. --}}
+<div class="lotm chat-promotion">
+  {{#if line}}<p>{{lotmLang line.key line.data}}</p>{{/if}}
+  <div class="lotm promotion-stage {{css}}">
+    <p>{{lotmLang stageKey name=name sequence=sequence}}</p>
+    {{#if button}}
+    <div class="promotion-buttons">
+      <button type="button" data-lotm-promotion="{{button.step}}">{{lotmLang button.label}}</button>
+    </div>
+    {{/if}}
+  </div>
+</div>

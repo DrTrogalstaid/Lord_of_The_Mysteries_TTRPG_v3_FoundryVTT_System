@@ -65,16 +65,9 @@
   {{!-- One drop section for the whole tab, so drops and the move buttons work like the other tabs.
         Each group inside is its own list; data-inventory-place says where gear dropped on it goes. --}}
   <div class="drop-section inventory-section" data-drop-zone="inventory">
-    <header class="drop-section-header">
-      <h3 class="drop-section-title">{{localize "LORD_OF_THE_MYSTERIES.Drop.Sections.inventory"}}</h3>
-      {{#if editable}}
-        <span class="drop-section-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.DropHint"}}</span>
-        {{!-- New blank gear or clothing / bag (PlayerCharacterSheet.#onAddItem). --}}
-        <button type="button" class="drop-section-add" data-action="addItem" data-tooltip="LORD_OF_THE_MYSTERIES.Inventory.Add.Title" aria-label="{{localize 'LORD_OF_THE_MYSTERIES.Inventory.Add.Title'}}">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      {{/if}}
-    </header>
+    {{!-- "+": new blank gear or clothing / bag (PlayerCharacterSheet.#onAddItem). --}}
+    {{> "systems/lotm/templates/actor/player-character/parts/drop-section-header.hbs" label="LORD_OF_THE_MYSTERIES.Drop.Sections.inventory" hint="LORD_OF_THE_MYSTERIES.Inventory.DropHint"
+        add="addItem" addLabel="LORD_OF_THE_MYSTERIES.Inventory.Add.Title"}}
 
     {{#if inventory.noContainers}}
       <p class="inventory-hint">{{localize "LORD_OF_THE_MYSTERIES.Inventory.NoContainers"}}</p>
@@ -87,7 +80,7 @@
         <header class="inventory-group-header">
           {{#if group.container}}
             {{!-- A coat or bag: the image posts it to chat (same button as the item rows), its name opens its sheet. --}}
-            <button type="button" class="drop-entry-icon inventory-group-icon" data-action="sendToChat" data-uuid="{{group.uuid}}" data-tooltip="Send to chat">
+            <button type="button" class="drop-entry-icon inventory-group-icon" data-action="sendToChat" data-uuid="{{group.uuid}}" data-tooltip="LORD_OF_THE_MYSTERIES.Drop.SendToChat">
               <img class="drop-entry-img" src="{{group.img}}" alt="" width="28" height="28">
               <span class="drop-entry-icon-overlay"><i class="fa-solid fa-comment"></i></span>
             </button>

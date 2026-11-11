@@ -1,12 +1,6 @@
 <section class="tab backstory-tab {{tab.cssClass}}" data-group="sheet" data-tab="backstory">
   <div class="backstory-box">
-    <div class="box-title">Backstory</div>
-    {{#if editable}}
-      <prose-mirror class="backstory-editor" name="system.backstory" button="true" editable="{{editable}}" toggled="false" value="{{system.backstory}}">
-        {{{enrichedBackstory}}}
-      </prose-mirror>
-    {{else}}
-      {{{enrichedBackstory}}}
-    {{/if}}
+    <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Backstory"}}</div>
+    {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.backstory" value=system.backstory enriched=enrichedBackstory class="backstory-editor"}}
   </div>
 </section>

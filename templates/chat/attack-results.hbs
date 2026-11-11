@@ -1,0 +1,15 @@
+{{!-- An attack's hit check on its card (helpers/check-chat.mjs): "vs. Physical Defense", then each target with Hit or
+      Miss. A target's defense number is only there for the GM (showDefense). --}}
+<p class="attack-against">{{lotmLang "LORD_OF_THE_MYSTERIES.Attack.Against" defense=defense}}</p>
+{{#if targets.length}}
+<ul class="attack-targets">
+  {{#each targets as |target|}}
+  <li class="{{target.css}}">
+    <span class="attack-target">{{target.name}}</span>
+    <span class="attack-result">{{lotmLang target.word}}{{#if target.showDefense}} <span class="attack-defense" data-tooltip="{{localize "LORD_OF_THE_MYSTERIES.Attack.DefenseHint"}}">({{target.defense}})</span>{{/if}}</span>
+  </li>
+  {{/each}}
+</ul>
+{{else}}
+<p class="hint">{{lotmLang "LORD_OF_THE_MYSTERIES.Attack.NoTargets"}}</p>
+{{/if}}

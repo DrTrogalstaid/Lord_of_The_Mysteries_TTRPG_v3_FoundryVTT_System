@@ -2,12 +2,6 @@
 <section class="tab notes-tab {{tab.cssClass}}" data-group="sheet" data-tab="notes">
   <div class="biography-box npc-notes-box">
     <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Notes"}}</div>
-    {{#if editable}}
-      <prose-mirror name="system.biography" button="true" editable="{{editable}}" toggled="false" value="{{system.biography}}">
-        {{{enrichedNotes}}}
-      </prose-mirror>
-    {{else}}
-      {{{enrichedNotes}}}
-    {{/if}}
+    {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.biography" value=system.biography enriched=enrichedNotes}}
   </div>
 </section>

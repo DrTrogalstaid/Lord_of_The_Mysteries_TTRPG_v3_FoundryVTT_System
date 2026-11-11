@@ -1,11 +1,6 @@
 <div class="{{cssClass}} sequence-sheet-root">
 
-  {{!-- Sheet Tab Navigation --}}
-  <nav class="sheet-tabs tabs" data-group="sheet">
-    <a class="item {{tabs.description.cssClass}}" data-tab="description" data-group="sheet" data-action="tab">Description</a>
-    <a class="item {{tabs.details.cssClass}}" data-tab="details" data-group="sheet" data-action="tab">Details</a>
-    <a class="item {{tabs.effects.cssClass}}" data-tab="effects" data-group="sheet" data-action="tab">{{localize "LORD_OF_THE_MYSTERIES.Tabs.Effects"}}</a>
-  </nav>
+  {{> "systems/lotm/templates/item/parts/tab-nav.hbs" effects=true}}
 
   {{!-- Sheet Body --}}
   <section class="sheet-body">
@@ -13,37 +8,14 @@
     {{!-- Description Tab --}}
     <div class="tab description {{tabs.description.cssClass}}" data-group="sheet" data-tab="description">
       <div class="description-box">
-        <div class="box-title">Description</div>
-        {{#if editable}}
-          <prose-mirror name="system.description" button="true" editable="{{editable}}" toggled="false" value="{{system.description}}">
-            {{{enrichedDescription}}}
-          </prose-mirror>
-        {{else}}
-          {{{enrichedDescription}}}
-        {{/if}}
+        <div class="box-title">{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Description"}}</div>
+        {{> "systems/lotm/templates/parts/rich-text.hbs" name="system.description" value=system.description enriched=enrichedDescription}}
       </div>
       <div class="description-box">
       <!--Special Results (Great Success / Big Failure events)-->
-      <fieldset class="special-results">
-        <legend>Special Results</legend>
-        <ol class="items-list">
-          {{#each specialResults as |row|}}
-          <li class="item flexrow">
-            <input type="text" class="blend-input flexlarge"
-                  name="system.specialResults.{{row.index}}"
-                  value="{{row.value}}" placeholder="Great success / big failure event" />
-            <div class="item-controls">
-              <a class="item-control" data-action="deleteSpecialResult" data-index="{{row.index}}" title="Delete">
-                <i class="fas fa-trash"></i>
-              </a>
-            </div>
-          </li>
-          {{/each}}
-        </ol>
-        <a class="item-control add-row" data-action="addSpecialResult">
-          <i class="fas fa-plus"></i> Add Special Result
-        </a>
-      </fieldset>
+      {{> "systems/lotm/templates/item/parts/text-rows.hbs" field="system.specialResults" rows=specialResults
+          class="special-results" legend="LORD_OF_THE_MYSTERIES.ItemSheet.SpecialResults"
+          placeholder="LORD_OF_THE_MYSTERIES.ItemSheet.SpecialResultPlaceholder" addLabel="LORD_OF_THE_MYSTERIES.ItemSheet.AddSpecialResult"}}
       </div>
     </div>
 
@@ -52,13 +24,13 @@
 
       <!--Title-->
       <fieldset>
-        <legend>Title</legend>
-        <input id="title" class="blend-input" type="text" name="system.title" value="{{system.title}}" placeholder="Action Title" />
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Title"}}</legend>
+        <input id="title" class="blend-input" type="text" name="system.title" value="{{system.title}}" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.TitlePlaceholder'}}" />
       </fieldset>
 
       <!--Action Type-->
       <fieldset class="actionType">
-        <legend>Action Type</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.ActionType"}}</legend>
         <select name="system.actionType" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionTypes selected=system.actionType localize=true}}
         </select>
@@ -69,7 +41,7 @@
 
       <!--Category-->
       <fieldset class="category">
-        <legend>Category</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Category"}}</legend>
         <select name="system.category" {{#unless editable}}disabled{{/unless}}>
           {{selectOptions config.actionCategories selected=system.category localize=true}}
         </select>
@@ -77,116 +49,18 @@
 
       <!--Spirituality Cost-->
       <fieldset>
-        <legend>Spirituality Cost</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.SpiritualityCost"}}</legend>
         <input id="spiritualityCost" class="blend-input" type="number" name="system.spiritualityCost" value="{{system.spiritualityCost}}" min="0" step="1" />
       </fieldset>
 
       <!--Range-->
       <fieldset>
-        <legend>Range</legend>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.Range"}}</legend>
         <input id="range" class="blend-input" type="number" name="system.range" value="{{system.range}}" min="0" step="1" />
       </fieldset>
 
-      <!--Modifiers-->
-      <fieldset>
-        <legend>Modifiers</legend>
-        <input id="modifiers" class="blend-input" type="number" name="system.modifiers" value="{{system.modifiers}}" step="1" />
-      </fieldset>
-
-      <!--Skill: the skill this action rolls with (e.g. Pistol). Drop a skill here; dropping another replaces it.
-          Drop handling: bindSkillSlot() in helpers/skill-slot.mjs. -->
-      <fieldset class="action-skill" data-skill-slot>
-        <legend>{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.Label"}}</legend>
-        {{#if actionSkill}}
-          <div class="action-skill-entry">
-            <img src="{{actionSkill.img}}" alt="" width="24" height="24">
-            {{#if actionSkill.broken}}
-              <span class="action-skill-name">{{actionSkill.name}}</span>
-            {{else}}
-              <a class="action-skill-name" data-action="openSkill" data-uuid="{{actionSkill.uuid}}">{{actionSkill.name}}</a>
-            {{/if}}
-            {{#if editable}}
-              <a class="item-control" data-action="removeSkill" title="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
-                <i class="fas fa-trash"></i>
-              </a>
-            {{/if}}
-          </div>
-        {{else}}
-          <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.None"}}</p>
-        {{/if}}
-        {{#if editable}}<p class="hint">{{localize "LORD_OF_THE_MYSTERIES.ActionSkill.Hint"}}</p>{{/if}}
-      </fieldset>
-
-      <!--Attack Roll Macro-->
-      <fieldset>
-        <legend>Attack Roll Macro</legend>
-        <input id="attackRollMacro" class="blend-input" type="text" name="system.attackRollMacro" value="{{system.attackRollMacro}}" placeholder="1d20 (the skill bonus is added when rolled)" />
-      </fieldset>
-
-      <!--Defense Targeted: which defense of the targeted tokens the attack roll goes against (hit or miss).
-          Choices: CONFIG.LORD_OF_THE_MYSTERIES.defenseTargets (helpers/check-results.mjs). Blank = no hit check,
-          except a gun shot (Uses ammo: Fire), which is "too fast to dodge" when blank (effectiveDefenseTarget). -->
-      <fieldset class="defenseTarget">
-        <legend>{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Label"}}</legend>
-        <select name="system.defenseTarget" {{#unless editable}}disabled{{/unless}}>
-          {{#if (eq system.ammoUse "fire")}}
-          {{selectOptions config.defenseTargets selected=system.defenseTarget blank=(localize "LORD_OF_THE_MYSTERIES.DefenseTargets.gunDefault") localize=true}}
-          {{else}}
-          {{selectOptions config.defenseTargets selected=system.defenseTarget blank=(localize "LORD_OF_THE_MYSTERIES.DefenseTargets.none") localize=true}}
-          {{/if}}
-        </select>
-        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.DefenseTargets.Hint"}}</p>
-      </fieldset>
-
-      <!--DC: a fixed DC for the roll (blank = none). The roll window can change it for one roll. -->
-      <fieldset class="actionDc">
-        <legend>{{localize "LORD_OF_THE_MYSTERIES.Action.DC"}}</legend>
-        <input class="blend-input" type="number" name="system.dc" value="{{system.dc}}" min="0" step="1" placeholder="—" />
-        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DCHint"}}</p>
-      </fieldset>
-
-      <!--Outcome tables: Roll Tables drawn after the roll, by its result against the DC. Drop a Roll Table on a slot
-          (helpers/table-slot.mjs); the chat card's Roll Outcome button draws it (helpers/outcome-tables.mjs). -->
-      <fieldset class="outcome-tables">
-        <legend>{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Label"}}</legend>
-        {{#each outcomeTables as |slot|}}
-        <div class="action-skill-entry outcome-table-slot" data-table-slot="{{slot.field}}">
-          <span class="outcome-table-label">{{slot.label}}</span>
-          {{#if slot.uuid}}
-            <img src="{{slot.img}}" alt="" width="24" height="24">
-            {{#if slot.broken}}
-              <span class="action-skill-name">{{slot.name}}</span>
-            {{else}}
-              <a class="action-skill-name" data-action="openTable" data-uuid="{{slot.uuid}}">{{slot.name}}</a>
-            {{/if}}
-            {{#if @root.editable}}
-              <a class="item-control" data-action="removeTable" data-field="{{slot.field}}" title="{{localize 'LORD_OF_THE_MYSTERIES.Drop.Remove'}}">
-                <i class="fas fa-trash"></i>
-              </a>
-            {{/if}}
-          {{else}}
-            <span class="hint">{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Empty"}}</span>
-          {{/if}}
-        </div>
-        {{/each}}
-        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.OutcomeTables.Hint"}}</p>
-      </fieldset>
-
-      <!--Damage Roll Macro-->
-      <fieldset>
-        <legend>Damage Roll Macro</legend>
-        <input id="damageRollMacro" class="blend-input" type="text" name="system.damageRollMacro" value="{{system.damageRollMacro}}" placeholder="Damage roll macro" />
-        <p class="hint">{{localize "LORD_OF_THE_MYSTERIES.Action.DamageTypesHint"}}</p>
-      </fieldset>
-
-      <!--Damage Type: the type of every part of the damage formula that doesn't name its own (2d6[fire] does).
-          Choices come from CONFIG.LORD_OF_THE_MYSTERIES.damageTypes. The blank first option = no damage type. -->
-      <fieldset class="damageType">
-        <legend>Damage Type</legend>
-        <select name="system.damageType" {{#unless editable}}disabled{{/unless}}>
-          {{selectOptions config.damageTypes selected=system.damageType blank="" localize=true}}
-        </select>
-      </fieldset>
+      {{!-- Modifiers, Skill, Attack Roll Macro, Defense Targeted, DC, outcome tables, damage (shared with spells) --}}
+      {{> "systems/lotm/templates/item/parts/roll-fields.hbs"}}
 
       <!--Uses Ammo: whether this action fires its gun (helpers/firearms.mjs). Options from action-sheet.mjs (ammoUseOptions). -->
       <fieldset class="ammoUse">
@@ -211,8 +85,8 @@
 
       <!--DC Results-->
       <fieldset class="dc-results">
-        <legend>DC Results</legend>
-        <textarea id="dcResults" class="blend-input" name="system.dcResults" rows="4" placeholder="Results" {{#unless editable}}disabled{{/unless}}>{{system.dcResults}}</textarea>
+        <legend>{{localize "LORD_OF_THE_MYSTERIES.ItemSheet.DCResults"}}</legend>
+        <textarea id="dcResults" class="blend-input" name="system.dcResults" rows="4" placeholder="{{localize 'LORD_OF_THE_MYSTERIES.ItemSheet.ResultsPlaceholder'}}" {{#unless editable}}disabled{{/unless}}>{{system.dcResults}}</textarea>
       </fieldset>
 
     </div>

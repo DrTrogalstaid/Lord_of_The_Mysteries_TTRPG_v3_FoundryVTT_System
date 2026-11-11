@@ -33,14 +33,12 @@
  * Plain data in / data out at the top (no game / CONFIG), unit tested in tests/action-expiry.test.mjs.
  */
 
+import { postEffectLine } from "./effect-chat.mjs";
+
 
 /* -------------------------------------------- */
 /*  Counting (pure)                              */
 /* -------------------------------------------- */
-
-/** The expiry event types there are. Only Action Used for now. */
-export const EXPIRY_EVENT_TYPES = ["actionUsed"];
-
 
 /**
  * The UUIDs an action is known by: its own, and the compendium entry it was made from (old and new field names).
@@ -167,14 +165,10 @@ export async function recordActionUse(actor, action) {
  * @param {{uses: number}} row   The row that ran out.
  */
 async function postEnded(actor, effect, action, row) {
-  const escape = (text) => Handlebars.escapeExpression(text ?? "");
-  const text = game.i18n.format("LORD_OF_THE_MYSTERIES.Effects.Expiry.Ended", {
-    effect: escape(effect.name),
-    action: escape(action.name),
-    count: Math.max(1, Number(row?.uses) || 1),
-  });
-  await ChatMessage.create({
+  await postEffectLine({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="lotm chat-effect-applied"><img src="${escape(effect.img)}" alt="" width="24" height="24"><span>${text}</span></div>`,
+    img: effect.img,
+    key: "LORD_OF_THE_MYSTERIES.Effects.Expiry.Ended",
+    data: { effect: effect.name, action: action.name, count: Math.max(1, Number(row?.uses) || 1) },
   });
 }
