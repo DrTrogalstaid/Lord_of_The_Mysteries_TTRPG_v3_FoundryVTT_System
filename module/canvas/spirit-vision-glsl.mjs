@@ -395,7 +395,7 @@ export const DEATH_VISION_UNIFORMS = {
   lotmTint: [0.72, 1.0, 0.82], // pale green
   lotmTintStrength: 1.0,
   lotmMistColor: [0.65, 1.0, 0.78],
-  lotmMistStrength: 0.3,
+  lotmMistStrength: 0.75,
   lotmMistScale: 4.0,
   lotmMistSpeed: 0.08,
   lotmDarken: 0.35,
