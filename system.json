@@ -140,11 +140,23 @@
       },
       "flags": {}
     },
-        {
+    {
       "name": "roll_tables",
       "label": "Roll Tables",
       "path": "packs/roll_tables",
       "type": "RollTable",
+      "system": "lotm",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      },
+      "flags": {}
+    },
+    {
+      "name": "actors",
+      "label": "Actors",
+      "path": "packs/actors",
+      "type": "Actor",
       "system": "lotm",
       "ownership": {
         "PLAYER": "OBSERVER",
