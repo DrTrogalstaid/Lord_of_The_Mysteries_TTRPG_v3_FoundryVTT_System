@@ -13,6 +13,8 @@
  *
  * Hiding granted abilities, actions, spells and skill raises is handled by the base sheet; it's turned on
  * because NPC data has a hiddenGrants list (data/actor/actor-npc.mjs).
+ * Typing over the sidebar's maximums, defenses and Movement (stat overrides) is handled by the base sheet too; it's
+ * turned on because NPC data has statOverrides (helpers/stat-overrides.mjs).
  */
 
 import { LordOfTheMysteriesActorSheetBase, SHARED_PARTIALS, SIDEBAR_TEMPLATE } from "./base-actor-sheet.mjs";

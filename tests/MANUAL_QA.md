@@ -98,6 +98,30 @@ skills from the Skills compendium ready to drag.
 - [ ] Notes: type, close and reopen: the text is still there
 - [ ] An unlinked token: things hidden on the NPC are hidden on the token; hiding more on the token doesn't change the NPC
 
+## NPC stat overrides
+
+Files: `module/helpers/stat-overrides.mjs`, `module/data/actor/actor-npc.mjs`, `templates/actor/parts/stat-input.hbs`,
+`module/sheets/base-actor-sheet.mjs` (`_prepareSidebarStats`, `#onStatOverrideChange`)
+
+- [ ] NPC sidebar: the Health, Sanity, Spirituality and Luck maximums, the three defenses and Movement can be typed in.
+      Hovering one says "Calculated: N. Type a number to override it."
+- [ ] Type a different Health maximum (45): it shows 45 in blue, underlined; the hover says "Set by the GM: 45
+      (calculated: N)"; the token's Health bar maximum is 45; current Health didn't change
+- [ ] Change an attribute's base or add a Sequence: overridden boxes keep their number, the others update
+- [ ] Edit something else (Organization, current Health, a skill level): the overrides stay, and no box that wasn't
+      overridden turns blue
+- [ ] Clear an overridden box: back to the calculated number, not blue. Typing the calculated number does the same
+- [ ] Type letters: nothing is saved and the box shows the stat again. Type -5: it saves 0
+- [ ] Override Movement (60), then add Loss of Balance: Movement drops by as much as the calculated number does
+      (e.g. 60 → 54), gold text with a blue underline. Hover: the override, "Statuses: -6" and the Loss of Balance line.
+      Click into the box: it shows 60. Remove the status: 60
+- [ ] Override Physical Defense (25), then Bound: it loses what Bound takes off the calculated number
+- [ ] The Spend Spirituality dialog shows the overridden maximum; Heal from a damage card stops at the overridden
+      Health maximum
+- [ ] An unlinked token: overriding on its sheet doesn't change the NPC; an override on the NPC reaches its tokens
+- [ ] A player who can only observe the NPC can't type in the boxes
+- [ ] The player sheet's sidebar numbers are still read-only and unchanged
+
 ## Granted Skills box (Character tab)
 
 Files: `module/sheets/player-character-sheet.mjs`, `templates/actor/player-character/parts/`

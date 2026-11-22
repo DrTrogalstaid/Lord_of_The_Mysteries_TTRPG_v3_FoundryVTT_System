@@ -13,6 +13,7 @@
  *   - attribute, skill and action rolls (the roll dialogs in apps/; Shift-click skips the dialog),
  *     damage reduction / resistance rows, spending Spirituality
  *   - hiding granted entries, for actors whose data has a hiddenGrants list (NPCs, see actor-npc.mjs)
+ *   - the sidebar's worked-out numbers, and typing over them on actors whose data has statOverrides (NPCs)
  *   - the Effects tab's buttons (the rows and the sidebar's status notes: actor/effects-panel.mjs)
  *   - skill hover text for both sheets' skill lists: actor/skill-tooltips.mjs
  *
@@ -38,7 +39,8 @@ import { useToggleAction } from "../effects/toggle-effects.mjs";
 import { openSanityCheck } from "../helpers/sanity.mjs";
 import { deleteSkillUpdate, skillRecordUpdate } from "../helpers/skill-data.mjs";
 import { skillKeyFor } from "../helpers/skill-registry.mjs";
-import { bindDropZone, bindEach } from "../helpers/listeners.mjs";
+import { bindDropZone, bindEach, bindEvents } from "../helpers/listeners.mjs";
+import { OVERRIDABLE_STATS, overrideValue } from "../helpers/stat-overrides.mjs";
 import { prepareEffectsPanel, prepareStatusNotes } from "./actor/effects-panel.mjs";
 import { DIGESTION_MAX, DIGESTION_MIN, ORDER_FLAG, STACKABLE_TYPES, SectionBuilder, sectionForType, sectionLabel } from "./actor/sections.mjs";
 import { COLLAPSED_FLAG, COLLAPSED_SPELLS_FLAG, FAVORITES_FLAG, groupActions, groupSpellLists, spellListCollapseKey } from "./actor/groups.mjs";
@@ -77,6 +79,9 @@ export const ENTRY_FAVORITE_PARTIAL = `${PARTS_FOLDER}/entry-favorite.hbs`;
 
 /** The sidebar both sheets use as their "sidebar" part. */
 export const SIDEBAR_TEMPLATE = "systems/lotm/templates/actor/parts/sidebar.hbs";
+
+/** "+2", "0", "-1" */
+const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
 
 /** Every partial above, for a part's `templates` list. */
 export const SHARED_PARTIALS = [
@@ -248,6 +253,15 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     return Array.isArray(this.actor.system.hiddenGrants);
   }
 
+  /**
+   * Whether the GM can type over the sidebar's worked-out numbers (Health maximum, defenses, Movement...).
+   * True for actors whose data has statOverrides, which only NPCs have (actor-npc.mjs, helpers/stat-overrides.mjs).
+   * @type {boolean}
+   */
+  get canOverrideStats() {
+    return !!this.actor.system.statOverrides;
+  }
+
   /* -------------------------------------------- */
   /*  Context Preparation                          */
   /* -------------------------------------------- */
@@ -323,6 +337,8 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
         context.resistanceRows = this._prepareDefenseRows("resistances");
         // Hover text on Physical Defense and Movement when statuses change them.
         context.statusNotes = prepareStatusNotes(this.actor);
+        // The worked-out numbers: maximums, defenses, Movement (stat-input.hbs).
+        context.stats = this._prepareSidebarStats(context.statusNotes);
         break;
 
       case "effects":
@@ -349,6 +365,56 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
       game.user.getFlag("lotm", `${COLLAPSED_FLAG}.${this.actor.id}`) ?? [],
       { favorites, spells }
     );
+  }
+
+
+  /**
+   * The sidebar's worked-out numbers, one row per stat in helpers/stat-overrides.mjs, for stat-input.hbs:
+   *   key, name       the stat's key, and its field (the read-only box's name, as before)
+   *   value           the number now
+   *   canOverride     the GM can type over it (NPCs, canOverrideStats). Then also:
+   *     base          the number the GM sets: the override, or the calculated number (shown while typing)
+   *     isOverridden  an override is set (the box is highlighted)
+   *     tooltip       the calculated number, the override, and what statuses change
+   * @param {{physical: string, movement: string}} [statusNotes]   prepareStatusNotes: which statuses change Physical
+   *                                                               Defense and Movement, added to their hover text.
+   * @returns {Record<string, object>}  By stat key (hpMax, movement, ...).
+   */
+  _prepareSidebarStats(statusNotes = {}) {
+    const system = this.actor.system;
+    const notes = { physicalDefense: statusNotes.physical, movement: statusNotes.movement };
+    const stats = {};
+    for (const { key, path } of OVERRIDABLE_STATS) {
+      const info = this.canOverrideStats ? system.overridableStats?.[key] : null;
+      stats[key] = {
+        key,
+        name: `system.${path}`,
+        value: foundry.utils.getProperty(system, path),
+        canOverride: !!info,
+        ...(info ? { base: info.base, isOverridden: info.isOverridden, tooltip: this.#statOverrideTooltip(info, notes[key]) } : {}),
+      };
+    }
+    return stats;
+  }
+
+
+  /**
+   * Hover text for a stat the GM can type over: the calculated number (and the override, when there is one), then
+   * what statuses change.
+   * @param {object} info           system.overridableStats[key] (applyStatOverrides in helpers/stat-overrides.mjs)
+   * @param {string} [statusNotes]   The statuses that change it, already HTML (prepareStatusNotes).
+   * @returns {string}  HTML, lines joined with <br>.
+   */
+  #statOverrideTooltip(info, statusNotes = "") {
+    const lines = [info.isOverridden
+      ? game.i18n.format("LORD_OF_THE_MYSTERIES.NPC.StatOverride.Overridden", { value: info.base, calculated: info.calculated })
+      : game.i18n.format("LORD_OF_THE_MYSTERIES.NPC.StatOverride.Calculated", { calculated: info.calculated })];
+    if (info.statusChange) {
+      lines.push(game.i18n.format("LORD_OF_THE_MYSTERIES.NPC.StatOverride.Statuses", { value: signed(info.statusChange) }));
+    }
+    const html = lines.map((line) => Handlebars.escapeExpression(line));
+    if (statusNotes) html.push(statusNotes);
+    return html.join("<br>");
   }
 
 
@@ -383,6 +449,16 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     bindEach(root, "[data-skill-field]", "change", (event) => this.#onSkillFieldChange(event));
     //   inventory controls (quantity, hidden pocket, equipped): the gear or container Item
     bindEach(root, "[data-item-field]", "change", (event) => this.#onItemFieldChange(event));
+    //   the sidebar's stat override boxes (NPCs, stat-input.hbs): the box shows the number now, and while it's being
+    //   typed in, the number the GM sets (the override, or the calculated one). Only that stat's override is saved.
+    bindEvents(root, "input[data-stat-override]", {
+      focus: (event, input) => {
+        input.value = input.dataset.base;
+        input.select();
+      },
+      blur: (event, input) => { input.value = input.dataset.shown; },
+      change: (event, input) => this.#onStatOverrideChange(event, input),
+    });
     //   each gear row's location dropdown: Held, Worn, or one of the actor's coats / bags
     bindEach(root, "[data-gear-location]", "change", (event, select) => {
       return this.actor.items.get(select.dataset.itemId)?.update(placementUpdate(select.value));
@@ -408,6 +484,30 @@ export class LordOfTheMysteriesActorSheetBase extends HandlebarsApplicationMixin
     const value = Math.clamp(Number.isFinite(raw) ? raw : DIGESTION_MIN, DIGESTION_MIN, DIGESTION_MAX);
     input.value = value;
     if (value !== item.system.digestionAmount) await item.update({ "system.digestionAmount": value });
+  }
+
+
+  /**
+   * Save a sidebar stat override box (NPCs, stat-input.hbs) to system.statOverrides.<key>.
+   *   a number         the override (whole, 0 or more)
+   *   empty, or the calculated number   no override: the calculated number is used again
+   * Only this stat is saved, never the rest of the sheet's form.
+   * @param {Event} event
+   * @param {HTMLInputElement} input   data-stat-override = the stat's key (helpers/stat-overrides.mjs).
+   */
+  async #onStatOverrideChange(event, input) {
+    event.stopPropagation();
+    const key = input.dataset.statOverride;
+    const info = this.actor.system.overridableStats?.[key];
+    // Not a number (badInput): nothing is saved, and the box shows the stat again when it loses focus.
+    if (!this.isEditable || !info || input.validity?.badInput) return;
+
+    const typed = overrideValue(input.value.trim());
+    const override = (typed === null) ? null : Math.max(0, Math.round(typed));
+    // Typing the calculated number is the same as clearing the box.
+    const saved = (override === info.calculated) ? null : override;
+    if (saved === overrideValue(this.actor.system.statOverrides?.[key])) return;
+    await this.actor.update({ [`system.statOverrides.${key}`]: saved });
   }
 
 

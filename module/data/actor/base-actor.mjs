@@ -374,6 +374,10 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Agility itself isn't changed, so Agility checks are unaffected; only movement and defense use these.
         // Display only, not in the schema: { defense: {agility, dodge, modifier, sources}, movement: {agility, sources} }.
         this.statusModifiers = combineStatusRules(activeStatusRules(this.parent));
+        // How much those statuses change Movement and Physical Defense (0 or less), filled in by _prepareMovement and
+        // _prepareDefenseValues. An NPC's overrides keep these changes (helpers/stat-overrides.mjs).
+        // Display only, not in the schema.
+        this.statusChanges = { movement: 0, physicalDefense: 0 };
 
         // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
@@ -527,8 +531,11 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // then x3 for feet (the system's grid unit, system.json). The armor rule rounds in meters, so it's applied
         // before the conversion.
         // Loss of Balance halves the Agility used here (rounded up).
-        const meters = this.attributes.str.total + movementAgility(this.attributes.agi.total, this.statusModifiers.movement);
-        this.movement = armoredMovement(meters, armor.movement) * 3;
+        const feet = (agility) => armoredMovement(this.attributes.str.total + agility, armor.movement) * 3;
+        const agility = this.attributes.agi.total;
+        this.movement = feet(movementAgility(agility, this.statusModifiers.movement));
+        // What the statuses took off (an NPC's Movement override loses the same).
+        this.statusChanges.movement = this.movement - feet(agility);
     }
 
 
@@ -676,12 +683,10 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.dodge = dodge ? calculateSkillModifier(dodge.effectiveLevel, 0) + (dodge.bonusTotal ?? 0) : 0;
         // Physical: Agility + Armor + Dodge + 10. Statuses can halve or remove the Agility and Dodge parts, or lower
         // them (Disadvantage), see physicalDefense in effects/status-math.mjs. The Dodge value above isn't changed.
-        this.defenses.physical = physicalDefense({
-            agility: this.attributes.agi.total,
-            armor: this.defenses.armor,
-            dodge: this.defenses.dodge,
-            defense: this.statusModifiers?.defense,
-        });
+        const parts = { agility: this.attributes.agi.total, armor: this.defenses.armor, dodge: this.defenses.dodge };
+        this.defenses.physical = physicalDefense({ ...parts, defense: this.statusModifiers?.defense });
+        // What the statuses took off (an NPC's Physical Defense override loses the same).
+        this.statusChanges.physicalDefense = this.defenses.physical - physicalDefense(parts);
         // Will
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique

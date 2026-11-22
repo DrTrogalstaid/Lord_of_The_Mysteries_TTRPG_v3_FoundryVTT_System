@@ -174,6 +174,7 @@ Set these on the effect's **Changes** tab, with **Add** unless noted.
 | `system.attributes.wil.checkBonus` | `2` | +2 on Will checks and on skills that use Will, without changing Will itself. Shows as its own row in the roll window. |
 | `system.spiritualIntuitionBonus` | `2` | +2 on spiritual intuition checks only (Spirit Vision) |
 | `system.isQuickDodgable` | `true` (**Override**) | The character can dodge firearms ("too fast to dodge" attacks use their full Physical Defense) |
+| `system.statOverrides.movement` | `60` (**Override**) | NPCs only: the same as typing 60 over Movement on the sheet (see NPC Stat Overrides). The other keys: `hpMax`, `rpMax`, `sppMax`, `lpMax`, `physicalDefense`, `physiqueDefense`, `willDefense` |
 
 ### Statuses
 
@@ -205,6 +206,17 @@ Under **Status Conditions** on the effect's Details tab. The status's rules (rol
 | `spiritualOverflow` | Spiritual Overflow |
 
 Fear, Angry, and Advantage need to know *who* caused them. The Apply button fills that in using the user's target for the effect, or a token the user has targeted for a Self effect (Advantage over that enemy).
+
+## NPC Stat Overrides
+
+On an NPC's sheet, the numbers the system works out in the sidebar can be typed over: the Health, Sanity, Spirituality and Luck maximums, Physical, Physique and Will Defense, and Movement. Use it to copy a stat block or to make a creature tougher or faster than its attributes and Sequence would.
+
+- **Type a number** over the box. It turns blue: the NPC uses that number instead of the calculated one, whatever its attributes, Sequences or armor say.
+- **Hover the box** to see the calculated number.
+- **Clear the box** (or type the calculated number) to go back to it.
+- **Statuses still count.** Loss of Balance, Bound and the rest change an overridden Physical Defense or Movement by as much as they change the calculated number. Clicking into the box shows the number you set; the box shows the number with statuses.
+- **Only the maximum changes.** Overriding Health to 45 doesn't change the NPC's current Health; type that in as usual.
+- **Tokens:** overrides set on the NPC in the Actors sidebar reach its tokens. Overriding on an unlinked token's sheet changes only that token.
 
 ## Macros
 

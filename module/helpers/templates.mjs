@@ -55,9 +55,11 @@ export const preloadHandlebarsTemplates = async function () {
     'systems/lotm/templates/actor/player-character/parts/biography.hbs',
     'systems/lotm/templates/actor/player-character/parts/header.hbs',
     'systems/lotm/templates/actor/player-character/parts/tab-nav.hbs',
-    // The sidebar both actor sheets share, and its damage reduction / resistance boxes.
+    // The sidebar both actor sheets share, its damage reduction / resistance boxes, and its worked-out numbers
+    // (read-only, or typed over on NPCs).
     'systems/lotm/templates/actor/parts/sidebar.hbs',
     'systems/lotm/templates/actor/parts/damage-defenses.hbs',
+    'systems/lotm/templates/actor/parts/stat-input.hbs',
 
     // Partials shared by the player and NPC sheets (see SHARED_PARTIALS in sheets/base-actor-sheet.mjs).
     'systems/lotm/templates/actor/player-character/parts/drop-section.hbs',

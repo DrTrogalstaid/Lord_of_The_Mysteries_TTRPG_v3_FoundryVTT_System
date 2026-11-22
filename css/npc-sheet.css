@@ -150,6 +150,25 @@
   min-width: 0;
 }
 
+/* ---- Sidebar: stat overrides (helpers/stat-overrides.mjs, templates/actor/parts/stat-input.hbs) ---- */
+/* The maximums, defenses and Movement are boxes the GM can type over on NPCs. An overridden one is blue and
+   underlined, so it's clear the number isn't the calculated one. When a status changes it too, the text keeps the
+   status gold (effects.css) and the underline stays blue. */
+
+.lotm.sheet.actor.npc {
+  --lotm-stat-override: #6cb4e4;
+}
+
+.lotm.sheet.actor.npc input.stat-override.is-overridden {
+  color: var(--lotm-stat-override);
+  font-weight: bold;
+  border-bottom: 2px solid var(--lotm-stat-override);
+}
+
+.lotm.sheet.actor.npc .status-modified input.stat-override.is-overridden {
+  color: var(--lotm-status-active);
+}
+
 /* ---- Notes tab ---- */
 
 .lotm.sheet.actor.npc .npc-notes-box {

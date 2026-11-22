@@ -1,0 +1,13 @@
+{{!-- One of the sidebar's worked-out numbers (a maximum, a defense, Movement): `stat` is a row from
+      _prepareSidebarStats in sheets/base-actor-sheet.mjs.
+        Player characters: read-only, as always.
+        NPCs (stat.canOverride): the GM can type over it (helpers/stat-overrides.mjs). The box shows the number as it
+        is now; while it's being typed in it shows the number the GM sets (data-base: the override, or the calculated
+        number). No `name`: the box saves only its own override, so editing anything else never saves it. --}}
+{{#if stat.canOverride}}
+<input type="number" class="stat-override{{#if stat.isOverridden}} is-overridden{{/if}}" min="0" step="1"
+       value="{{stat.value}}" data-stat-override="{{stat.key}}" data-shown="{{stat.value}}" data-base="{{stat.base}}"
+       data-tooltip="{{stat.tooltip}}" {{#unless @root.editable}}disabled{{/unless}} />
+{{else}}
+<input type="number" name="{{stat.name}}" value="{{stat.value}}" readonly/>
+{{/if}}

@@ -2,6 +2,7 @@
  * Listener wiring the sheets and dialogs share, so each place says what should happen, not how to hook it up:
  *
  *   bindEach(root, selector, "change", handler)   a listener on every matching element, never added twice
+ *   bindEvents(root, selector, { focus, change }) the same with several events on each element
  *   bindDropZone(zone, onDrop)                    a drop target: highlighted (.drag-over) while something is
  *                                                 dragged over it; onDrop(event) runs when something lands on it
  *   takeDrop(event)                               in an onDrop: claim the drop (the sheet's own drop handling
@@ -28,15 +29,31 @@ function markBound(element) {
 
 /**
  * A listener on every element under `root` that matches `selector`, skipping elements that already have it.
+ * One event per element: for several (focus, blur and change on the same box), use bindEvents.
  * @param {HTMLElement} root
  * @param {string} selector
  * @param {string} type                     The event, e.g. "change" or "toggle".
  * @param {(event: Event, element: HTMLElement) => any} handler
  */
 export function bindEach(root, selector, type, handler) {
+  bindEvents(root, selector, { [type]: handler });
+}
+
+
+/**
+ * Several listeners on every element under `root` that matches `selector`, skipping elements that already have them.
+ * An element is only ever wired up once, so a second bindEach on the same element would be skipped: list all of
+ * its events here instead.
+ * @param {HTMLElement} root
+ * @param {string} selector
+ * @param {Record<string, (event: Event, element: HTMLElement) => any>} handlers   By event, e.g. { focus, change }.
+ */
+export function bindEvents(root, selector, handlers) {
   for (const element of root?.querySelectorAll(selector) ?? []) {
     if (!markBound(element)) continue;
-    element.addEventListener(type, (event) => handler(event, element));
+    for (const [type, handler] of Object.entries(handlers)) {
+      element.addEventListener(type, (event) => handler(event, element));
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bindDropZone, bindEach, takeDrop } from "../module/helpers/listeners.mjs";
+import { bindDropZone, bindEach, bindEvents, takeDrop } from "../module/helpers/listeners.mjs";
 
 /** Just enough of a DOM element: listeners, dataset, classList, contains, querySelectorAll. */
 class FakeElement {
@@ -40,6 +40,21 @@ test("bindEach: one listener per element, however many times the sheet renders",
   a.fire("change");
   b.fire("change");
   assert.deepEqual(seen, [a, b]);
+});
+
+test("bindEvents: several events on each element, still bound only once", () => {
+  const box = new FakeElement();
+  const root = new FakeElement([box]);
+  const seen = [];
+  const handlers = {
+    focus: (event, element) => seen.push(["focus", element]),
+    change: (event, element) => seen.push(["change", element]),
+  };
+  bindEvents(root, "[x]", handlers);
+  bindEvents(root, "[x]", handlers);   // a second render
+  box.fire("focus");
+  box.fire("change");
+  assert.deepEqual(seen, [["focus", box], ["change", box]]);
 });
 
 test("bindDropZone: highlighted while dragged over, cleared on leave and on drop; onDrop runs once", () => {

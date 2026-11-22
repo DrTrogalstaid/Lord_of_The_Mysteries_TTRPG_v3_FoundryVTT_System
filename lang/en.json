@@ -685,7 +685,12 @@
       "SkillsHint": "Drop skills here",
       "SkillsEmpty": "No skills yet. Drag skills here from the Skills compendium or the sidebar.",
       "RaisedBy": "Raised by {names}",
-      "AddGear": "Create blank gear"
+      "AddGear": "Create blank gear",
+      "StatOverride": {
+        "Calculated": "Calculated: {calculated}. Type a number to override it.",
+        "Overridden": "Set by the GM: {value} (calculated: {calculated}). Clear the box to use the calculated number.",
+        "Statuses": "Statuses: {value}"
+      }
     },
 
     "Sidebar": {
