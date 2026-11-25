@@ -1,6 +1,6 @@
 {{!-- Damage reduction, resistance and immunity, in the player and NPC sidebars (helpers/damage-math.mjs has the rules).
       reductionRows / resistanceRows: the saved rows, with their index and their type as a key
-      (_prepareDefenseRows in sheets/base-actor-sheet.mjs). Worn armor's reduction is listed read-only. --}}
+      (_prepareDefenseRows in sheets/base-actor-sheet.mjs). Worn armor's and Active Effects' reduction is listed read-only. --}}
 <div class="stat-box full-width damage-resistance-box damage-reduction-box">
   <label data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.DamageReduction.Hint'}}">{{localize "LORD_OF_THE_MYSTERIES.DamageReduction.Label"}}</label>
   <ul class="damage-resistance-list">
@@ -25,6 +25,14 @@
       <span class="damage-resistance-type">{{localize row.label}}</span>
       <span class="damage-resistance-value">{{row.value}}</span>
       <i class="damage-resistance-source fa-solid fa-shield-halved"></i>
+    </li>
+    {{/each}}
+    {{!-- From Active Effects (system.reductionBonus). Read-only: they go away with the effect. --}}
+    {{#each system.effectReductionList as |row|}}
+    <li class="damage-resistance-row from-armor" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.DamageReduction.FromEffects'}}">
+      <span class="damage-resistance-type">{{localize row.label}}</span>
+      <span class="damage-resistance-value">{{row.value}}</span>
+      <i class="damage-resistance-source fa-solid fa-wand-magic-sparkles"></i>
     </li>
     {{/each}}
   </ul>
@@ -55,6 +63,14 @@
         <i class="fas fa-trash"></i>
       </a>
       {{/if}}
+    </li>
+    {{/each}}
+    {{!-- From Active Effects (system.resistanceBonus). Read-only: they go away with the effect. --}}
+    {{#each system.effectResistanceList as |row|}}
+    <li class="damage-resistance-row from-armor" data-tooltip="{{localize 'LORD_OF_THE_MYSTERIES.DamageReduction.FromEffects'}}">
+      <span class="damage-resistance-type">{{localize row.label}}</span>
+      <span class="damage-resistance-value">{{row.value}}</span>
+      <i class="damage-resistance-source fa-solid fa-wand-magic-sparkles"></i>
     </li>
     {{/each}}
   </ul>

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bigSuccessDamage, normalizeDamageType, reduceHit, splitBigSuccess } from "../module/helpers/damage-math.mjs";
+import { bigSuccessDamage, bonusRows, normalizeDamageType, reduceHit, splitBigSuccess } from "../module/helpers/damage-math.mjs";
 
 /* Damage resistance, immunity and reduction on one hit, and Big Success damage (helpers/damage-math.mjs). */
 
@@ -68,4 +68,16 @@ test("damage types saved the old ways are read as keys", () => {
 
 test("a damage type with no reduction of its own gets the 'all' reduction", () => {
   assert.equal(reduceHit({ piercing: 9 }, { reduction: { all: 2, physical: 2 } }).total, 7);
+});
+
+test("bonusRows: only the types an Active Effect gave something to, in the order of the labels", () => {
+  const labels = { all: "All", physical: "Physical", fire: "Fire" };
+  assert.deepEqual(bonusRows({ all: 0, physical: 2, fire: 5 }, labels), [
+    { damageType: "physical", label: "Physical", value: 2 },
+    { damageType: "fire", label: "Fire", value: 5 },
+  ]);
+  assert.deepEqual(bonusRows({ fire: -1 }, labels), [{ damageType: "fire", label: "Fire", value: -1 }], "a Subtract change shows as negative");
+  assert.deepEqual(bonusRows({ acid: 3 }, labels), [], "a type that isn't listed is ignored");
+  assert.deepEqual(bonusRows(undefined, labels), []);
+  assert.deepEqual(bonusRows({ fire: "x" }, labels), [], "not a number: nothing");
 });

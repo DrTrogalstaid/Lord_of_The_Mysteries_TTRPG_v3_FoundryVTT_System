@@ -19,6 +19,21 @@
 
 
 /**
+ * The extra reduction or resistance Active Effects give, one row per damage type that has some.
+ * They're ordinary changes on system.reductionBonus.<type> / system.resistanceBonus.<type> (Add 2 = +2), 0 otherwise.
+ * "all" is a type of reductionBonus too (reduction against every damage type).
+ * @param {Record<string, number>} [bonus]   actor.system.reductionBonus or resistanceBonus.
+ * @param {Record<string, string>} labels     The types to look at: { key: language key }, in the order they're listed.
+ * @returns {{damageType: string, label: string, value: number}[]}   Types whose bonus is 0 are left out.
+ */
+export function bonusRows(bonus, labels) {
+  return Object.entries(labels ?? {})
+    .map(([damageType, label]) => ({ damageType, label, value: Number(bonus?.[damageType]) || 0 }))
+    .filter((row) => row.value !== 0);
+}
+
+
+/**
  * A damage type as its key ("physical"), whatever older data saved: the key itself, the sheet's old choice
  * ("Physical", the language key's last part), or the full language key ("LORD_OF_THE_MYSTERIES.DamageTypes.Physical").
  * "all" / "All" is the damage reduction rows' "all damage". Anything else comes back as it was.

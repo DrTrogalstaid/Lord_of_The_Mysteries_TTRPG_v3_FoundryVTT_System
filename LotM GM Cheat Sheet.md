@@ -164,6 +164,8 @@ Add effects on an item's **Effects** tab. Each effect's **LotM** tab sets:
 
 A player can apply an effect to an enemy they don't own only while a GM is logged in. The GM's client makes the change.
 
+The most useful console command making custom effects is ```game.actors.getName("Character").system```(change name to fit an actor you have in your world). It shows all system data from an actor.
+
 ### Change Keys
 
 Set these on the effect's **Changes** tab, with **Add** unless noted.

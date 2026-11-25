@@ -13,7 +13,7 @@ import { syncHealthStatuses } from "../../effects/health-statuses.mjs";
 import { syncGrantedEffects } from "../../effects/granted-effects.mjs";
 import { collectSkillRaises, isEffectActive } from "../../effects/effect-grants.mjs";
 import { syncSanityStatuses } from "../../helpers/sanity.mjs";
-import { normalizeDamageType } from "../../helpers/damage-math.mjs";
+import { bonusRows, normalizeDamageType } from "../../helpers/damage-math.mjs";
 
 
 export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataModel {
@@ -54,7 +54,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         schema.movement = new fields.NumberField({ required: true, integer: true});
         
         schema.defenses = new fields.SchemaField({
-            armor: new fields.NumberField({ required: true, integer: true}),
+            // Worked out every time (worn armor + what Active Effects add), so it starts at 0 for an Add change to work on.
+            armor: new fields.NumberField({ ...requiredInteger, initial: 0 }),
             physical: new fields.NumberField({ required: true, integer: true}),
             dodge: new fields.NumberField({ required: true, integer: true}),
             physique: new fields.NumberField({ required: true, integer: true}),
@@ -81,6 +82,17 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
                 isImmune: new fields.BooleanField({ required: true, initial: false })
             })
         );
+
+        // Reduction and resistance from Active Effects: one number per damage type, 0 unless an effect adds to it, e.g.
+        //   system.reductionBonus.physical  Add  2     system.reductionBonus.all  Add  1     system.resistanceBonus.fire  Add  5
+        // They're added to the rows above in _prepareDamageReduction. Worked out fresh every time, so removing the effect
+        // takes them away. (An effect can't change the rows themselves: they're lists, and the totals are rebuilt each time.)
+        const typeBonuses = (types) => new fields.SchemaField(Object.keys(types).reduce((obj, key) => {
+            obj[key] = new fields.NumberField({ ...requiredInteger, initial: 0 });
+            return obj;
+        }, {}));
+        schema.reductionBonus = typeBonuses(CONFIG.LORD_OF_THE_MYSTERIES.damageReductionTypes);
+        schema.resistanceBonus = typeBonuses(CONFIG.LORD_OF_THE_MYSTERIES.damageTypes);
 
         // Quick Dodge (fast / high-speed dodge): true = this creature can dodge bullets, so attacks that are too fast
         // to dodge (defenseTarget "physicalNoEvasion", e.g. firearms) still face its full Physical Defense
@@ -374,10 +386,6 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // Agility itself isn't changed, so Agility checks are unaffected; only movement and defense use these.
         // Display only, not in the schema: { defense: {agility, dodge, modifier, sources}, movement: {agility, sources} }.
         this.statusModifiers = combineStatusRules(activeStatusRules(this.parent));
-        // How much those statuses change Movement and Physical Defense (0 or less), filled in by _prepareMovement and
-        // _prepareDefenseValues. An NPC's overrides keep these changes (helpers/stat-overrides.mjs).
-        // Display only, not in the schema.
-        this.statusChanges = { movement: 0, physicalDefense: 0 };
 
         // NOTE: Many resources are calculated one sequence at a time. To do this, we must loop through every sequence
         this._prepareResources();
@@ -389,6 +397,7 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
 
         this._prepareDefenseValues();
         this._prepareDamageReduction();
+        this._prepareDamageResistance();
 
         // NOTE: THIS NEEDS TO BE CALLED LAST
         this._prepareSequenceCalculations(sequences);
@@ -531,11 +540,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         // then x3 for feet (the system's grid unit, system.json). The armor rule rounds in meters, so it's applied
         // before the conversion.
         // Loss of Balance halves the Agility used here (rounded up).
-        const feet = (agility) => armoredMovement(this.attributes.str.total + agility, armor.movement) * 3;
-        const agility = this.attributes.agi.total;
-        this.movement = feet(movementAgility(agility, this.statusModifiers.movement));
-        // What the statuses took off (an NPC's Movement override loses the same).
-        this.statusChanges.movement = this.movement - feet(agility);
+        const meters = this.attributes.str.total + movementAgility(this.attributes.agi.total, this.statusModifiers.movement);
+        this.movement = armoredMovement(meters, armor.movement) * 3;
     }
 
 
@@ -673,8 +679,9 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      * Armor, Dodge, Physical, Will, and Physique
      */
     _prepareDefenseValues() {
-        // Armor: the worn suit's armor points (0 without one). Added to Physical below.
-        this.defenses.armor = this.carrying?.armor.value ?? 0;
+        // Armor: the worn suit's armor points (0 without one) plus what Active Effects added to system.defenses.armor
+        // (they're applied before this runs, so adding keeps them). Added to Physical below.
+        this.defenses.armor = (Number(this.defenses.armor) || 0) + (this.carrying?.armor.value ?? 0);
         // Dodge: the Dodge skill's level bonus (+2 Trained, +4 Proficient, ...), the same table as every other skill,
         // plus its bonuses from Active Effects (system.skills.dodge.bonus, effects/skill-bonuses.mjs).
         // Every character has Dodge at Trained or better (CONFIG.LORD_OF_THE_MYSTERIES.defaultSkillLevels), so
@@ -683,10 +690,12 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
         this.defenses.dodge = dodge ? calculateSkillModifier(dodge.effectiveLevel, 0) + (dodge.bonusTotal ?? 0) : 0;
         // Physical: Agility + Armor + Dodge + 10. Statuses can halve or remove the Agility and Dodge parts, or lower
         // them (Disadvantage), see physicalDefense in effects/status-math.mjs. The Dodge value above isn't changed.
-        const parts = { agility: this.attributes.agi.total, armor: this.defenses.armor, dodge: this.defenses.dodge };
-        this.defenses.physical = physicalDefense({ ...parts, defense: this.statusModifiers?.defense });
-        // What the statuses took off (an NPC's Physical Defense override loses the same).
-        this.statusChanges.physicalDefense = this.defenses.physical - physicalDefense(parts);
+        this.defenses.physical = physicalDefense({
+            agility: this.attributes.agi.total,
+            armor: this.defenses.armor,
+            dodge: this.defenses.dodge,
+            defense: this.statusModifiers?.defense,
+        });
         // Will
         this.defenses.will = (this.attributes.wil.total + 10);
         // Physique
@@ -701,6 +710,8 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
      *   damageReduction       { physical: 7, fire: 5, all: 0, ... }  reduction per type. An "all" row counts for every
      *                         type (and for untyped damage, under "all"). Rows typed in on the sheet plus the worn armor's.
      *   armorReductionList    [{ damageType, label, value, source }]  the armor's rows, for a read-only list on the sheet.
+     *   effectReductionList   [{ damageType, label, value }]  what Active Effects add (system.reductionBonus), same use.
+     *   effectResistanceList  [{ damageType, label, value }]  what Active Effects add to resistance (system.resistanceBonus).
      *   damageResistance      { fire: 5, ... }  resistance per type (the resistance rows that aren't immunities).
      *   damageImmunities      ["poison", ...]   types that do no damage.
      */
@@ -722,12 +733,25 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             return { damageType: key, label: damageTypes[key] ?? key, value, source: armor.name };
         });
 
+        // What Active Effects add (system.reductionBonus), stacked with the rows and the armor. Listed read-only on the sheet.
+        this.effectReductionList = bonusRows(this.reductionBonus, CONFIG.LORD_OF_THE_MYSTERIES.damageReductionTypes);
+        for (const { damageType, value } of this.effectReductionList) reduction[damageType] = (reduction[damageType] ?? 0) + value;
+
         // "All" counts for every damage type too.
         if (reduction.all) {
             for (const key of Object.keys(damageTypes)) reduction[key] = (reduction[key] ?? 0) + reduction.all;
         }
+        // Subtract effects can't push a total below 0.
+        for (const key of Object.keys(reduction)) reduction[key] = Math.max(0, reduction[key]);
         this.damageReduction = reduction;   // display only, not in the schema
+    }
 
+
+    /**
+     * Resistance and immunity totals: the saved rows plus what Active Effects add (see _prepareDamageReduction's list
+     * for damageResistance, damageImmunities and effectResistanceList).
+     */
+    _prepareDamageResistance() {
         const resistance = {};
         const immunities = new Set();
         for (const row of this.resistances ?? []) {
@@ -736,6 +760,9 @@ export default class LordOfTheMysteriesActorBase extends LordOfTheMysteriesDataM
             if (row.isImmune) immunities.add(key);
             else resistance[key] = (resistance[key] ?? 0) + (row.value ?? 0);
         }
+        // What Active Effects add (system.resistanceBonus), stacked with the rows. Listed read-only on the sheet.
+        this.effectResistanceList = bonusRows(this.resistanceBonus, CONFIG.LORD_OF_THE_MYSTERIES.damageTypes);
+        for (const { damageType, value } of this.effectResistanceList) resistance[damageType] = Math.max(0, (resistance[damageType] ?? 0) + value);
         this.damageResistance = resistance;          // display only, not in the schema
         this.damageImmunities = [...immunities];     // display only, not in the schema
     }

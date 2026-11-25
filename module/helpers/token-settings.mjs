@@ -6,7 +6,6 @@
  *     character itself. NPCs keep Foundry's default (unlinked), so each NPC token tracks its own Health.
  *   - Two world settings, "Display Name" and "Resource Bars": who sees each token's name and bars.
  *     They apply to new actors, and changing one updates every actor and every token already on a scene.
- *
  * Used by documents/actor.mjs (_preCreate) and lotm.mjs (registerTokenSettings, in the init hook).
  * Foundry's own "Prototype Token Overrides" (Core settings) can set the same things; these come after it,
  * so for these four the system's choice wins.
@@ -46,6 +45,37 @@ export function registerTokenSettings() {
   });
   setting("tokenDisplayName", "displayName", modes.OWNER_HOVER);
   setting("tokenDisplayBars", "displayBars", modes.OWNER_HOVER);
+
+  // Remembers that the one-time linking of existing player characters has run (not shown in the settings).
+  game.settings.register("lotm", LINKED_CHARACTERS_SETTING, { scope: "world", config: false, type: Boolean, default: false });
+
+  Hooks.once("ready", async () => {
+    try {
+      await linkExistingCharacters();
+    } catch (error) {
+      console.error("Lord of the Mysteries | Linking player character tokens failed", error);
+    }
+  });
+}
+
+/** World setting: the one-time linking of existing player characters has run. */
+const LINKED_CHARACTERS_SETTING = "charactersTokensLinked";
+
+/**
+ * Once per world, for the GM: link the prototype token of every player character that isn't linked yet, so dropping
+ * it on a scene makes a token that shares the character's Health (new characters already get this in _preCreate).
+ * It runs once, so a character the GM unlinks on purpose afterwards stays unlinked.
+ * @returns {Promise<number>}  How many characters were linked.
+ */
+export async function linkExistingCharacters() {
+  if (!game.user?.isActiveGM || game.settings.get("lotm", LINKED_CHARACTERS_SETTING)) return 0;
+
+  const updates = game.actors
+    .filter((actor) => actor.type === "character" && !actor.prototypeToken.actorLink)
+    .map((actor) => ({ _id: actor.id, "prototypeToken.actorLink": true }));
+  if (updates.length) await Actor.implementation.updateDocuments(updates);
+  await game.settings.set("lotm", LINKED_CHARACTERS_SETTING, true);
+  return updates.length;
 }
 
 /**
